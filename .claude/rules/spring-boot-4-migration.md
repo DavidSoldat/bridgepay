@@ -1,0 +1,24 @@
+---
+paths:
+  - "services/**/pom.xml"
+  - "services/**/*.java"
+---
+
+# Spring Boot 4.1.1 migration notes
+
+Confirmed against the official Boot 4 migration guide and GitHub issues while building this project — not guessed:
+
+- `spring-boot-starter-web` → `spring-boot-starter-webmvc`
+- `spring-boot-starter-oauth2-resource-server` → `spring-boot-starter-security-oauth2-resource-server`
+- `spring-security-test` (`org.springframework.security`) → `spring-boot-starter-security-test` (`org.springframework.boot`)
+- `flyway-core` + `flyway-database-postgresql` → `spring-boot-starter-flyway` (`org.springframework.boot`) — **confirmed**: `flyway-database-postgresql` is still required alongside `spring-boot-starter-flyway`, or schema migrations fail to pick up the Postgres dialect.
+- `spring-kafka` (`org.springframework.kafka`) → `spring-boot-starter-kafka` (`org.springframework.boot`)
+- `@AutoConfigureMockMvc` moved from `org.springframework.boot.test.autoconfigure.web.servlet` to `org.springframework.boot.webmvc.test.autoconfigure`, and now needs its own dependency: `spring-boot-starter-webmvc-test`
+- `resilience4j-spring-boot3`'s dependency chain was still pinned to Spring Framework 6 as of this project's build — no confirmed Boot 4 support. This codebase uses `resilience4j-circuitbreaker` (core, framework-agnostic) wired programmatically instead of the annotation-based integration. See `services/application-service/.../client/HttpCreditRiskClient.java` for the pattern — reuse it for the Credit Risk Engine rather than re-litigating this.
+- Older starter names mostly still resolve (deprecated, not yet removed) — **except** where a class was outright relocated (e.g. `AutoConfigureMockMvc`). For those, the old artifact plus the old import path won't compile at all, no matter which starter name is used.
+- **Jackson 3 is Boot 4's default**, not classic Jackson 2. `ObjectMapper`/`SerializationFeature`/etc. live under `tools.jackson.databind`, not `com.fasterxml.jackson.databind` (only `jackson-annotations` — `@JsonProperty` and friends — stayed under `com.fasterxml.jackson.annotation`). JSR-310 java-time support is now built into `jackson-databind` itself; there's no separate `JavaTimeModule` to register. Timestamp formatting toggles like `WRITE_DATES_AS_TIMESTAMPS` moved from `SerializationFeature` to `tools.jackson.databind.cfg.DateTimeFeature`, and are set at build time via `JsonMapper.builder().disable(DateTimeFeature...).build()` rather than `ObjectMapper.disable(...)` (a plain `new ObjectMapper()` still exists and works for simple cases).
+- `RestClient.Builder` autoconfiguration was split out of `spring-boot-starter-webmvc`/`-web` into its own starter: `spring-boot-starter-restclient`. Without it, `RestClient.Builder` injection throws `NoSuchBeanDefinitionException` at context startup (not at compile time).
+- Custom `Converter<S, T>` beans (e.g. a JWT-to-authentication-token converter for `SecurityConfig`) must NOT be lambdas if anything else in the context (observed: Spring Kafka's `KafkaListenerAnnotationBeanPostProcessor`) scans the `ApplicationContext` for `Converter` beans to register with a `ConversionService` — lambdas erase their generic type parameters, so `GenericTypeResolver` throws `IllegalArgumentException: Unable to determine source type <S> and target type <T>` at context startup. Use a concrete class instead (e.g. Spring Security's `JwtAuthenticationConverter` with `setJwtGrantedAuthoritiesConverter(...)` taking the lambda instead — that lambda is just a constructor arg, not itself a bean, so it's fine).
+- Spring's `SpringBootTestContextBootstrapper` finds the `@SpringBootConfiguration` class by walking **up the package hierarchy from the test's own package** — it does not scan sibling packages. If the `@SpringBootApplication` class's declared `package` line doesn't match its actual directory (e.g. left over from a Spring Initializr scaffold using the artifactId-derived default like `com.bridgepay.application_service` while sitting in `com/bridgepay/application/`), tests in the "real" package get `IllegalStateException: Unable to find a @SpringBootConfiguration` even though everything compiles fine (javac doesn't enforce package-matches-directory). This is not just a test-discovery problem — in a real run it also means component scanning never reaches the actual `@Service`/`@RestController`/`@Repository` classes. Check every new service's generated `*Application.java` (and its matching `*ApplicationTests.java`/`TestApplicationServiceApplication.java`) for this before anything else.
+
+If a `cannot find symbol` shows up on a Spring class that used to exist: search for "Spring Boot 4 migration" plus the class name before guessing a fix. Don't assume Boot 3-era package layouts just because they're more familiar.

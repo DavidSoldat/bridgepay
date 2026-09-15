@@ -1,4 +1,4 @@
-package com.bridgepay.application_service;
+package com.bridgepay.application;
 
 import org.springframework.boot.SpringApplication;
 

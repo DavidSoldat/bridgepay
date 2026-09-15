@@ -14,9 +14,9 @@ import com.bridgepay.application.repository.IdempotencyKeyRepository;
 import com.bridgepay.application.repository.MerchantPayoutRepository;
 import com.bridgepay.application.repository.MerchantRepository;
 import com.bridgepay.application.repository.OutboxEventRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.cfg.DateTimeFeature;
+import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,9 +60,9 @@ class CreditApplicationServiceTest {
 
     @BeforeEach
     void setUp() {
-        objectMapper = new ObjectMapper()
-                .registerModule(new JavaTimeModule())
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        objectMapper = JsonMapper.builder()
+                .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .build();
         service = new CreditApplicationService(applicationRepository, merchantRepository, merchantPayoutRepository,
                 idempotencyKeyRepository, outboxEventRepository, creditRiskClient, objectMapper);
         merchant = new Merchant("Test Merchant", new BigDecimal("3.50"));

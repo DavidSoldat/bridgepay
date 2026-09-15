@@ -5,15 +5,16 @@ import com.bridgepay.application.client.ScoreDecision;
 import com.bridgepay.application.client.ScoreResult;
 import com.bridgepay.application.domain.Merchant;
 import com.bridgepay.application.repository.MerchantRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -98,7 +99,7 @@ class CreditApplicationControllerIntegrationTest {
     @Test
     void checkout_approvesAndCreatesInstallmentPlan() throws Exception {
         mockMvc.perform(post("/api/v1/applications")
-                        .with(jwt().jwt(j -> j.subject("kc-shopper-1")))
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString())))
                         .header("Idempotency-Key", "idem-1")
                         .contentType("application/json")
                         .content(checkoutPayload(merchantId.toString(), "200.00")))
@@ -111,9 +112,10 @@ class CreditApplicationControllerIntegrationTest {
     @Test
     void checkout_replaysCachedResponse_onRetryWithSameIdempotencyKey() throws Exception {
         String payload = checkoutPayload(merchantId.toString(), "80.00");
+        String subject = UUID.randomUUID().toString();
 
         String firstResponse = mockMvc.perform(post("/api/v1/applications")
-                        .with(jwt().jwt(j -> j.subject("kc-shopper-2")))
+                        .with(jwt().jwt(j -> j.subject(subject)))
                         .header("Idempotency-Key", "idem-2")
                         .contentType("application/json")
                         .content(payload))
@@ -121,7 +123,7 @@ class CreditApplicationControllerIntegrationTest {
                 .andReturn().getResponse().getContentAsString();
 
         mockMvc.perform(post("/api/v1/applications")
-                        .with(jwt().jwt(j -> j.subject("kc-shopper-2")))
+                        .with(jwt().jwt(j -> j.subject(subject)))
                         .header("Idempotency-Key", "idem-2")
                         .contentType("application/json")
                         .content(payload))
@@ -135,7 +137,7 @@ class CreditApplicationControllerIntegrationTest {
     @Test
     void checkout_rejectsMissingIdempotencyKey() throws Exception {
         mockMvc.perform(post("/api/v1/applications")
-                        .with(jwt().jwt(j -> j.subject("kc-shopper-3")))
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString())))
                         .contentType("application/json")
                         .content(checkoutPayload(merchantId.toString(), "80.00")))
                 .andExpect(status().isBadRequest());
@@ -144,15 +146,16 @@ class CreditApplicationControllerIntegrationTest {
     @Test
     void opsEndpoints_rejectShoppersWithoutOpsRole() throws Exception {
         mockMvc.perform(get("/api/v1/applications")
-                        .with(jwt().jwt(j -> j.subject("kc-shopper-4"))))
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString()))))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     void opsEndpoints_allowUsersWithOpsRole() throws Exception {
         mockMvc.perform(get("/api/v1/applications")
-                        .with(jwt().jwt(j -> j.subject("kc-ops-1")
-                                .claim("realm_access", Map.of("roles", List.of("ops"))))))
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString())
+                                        .claim("realm_access", Map.of("roles", List.of("ops"))))
+                                .authorities(new SimpleGrantedAuthority("ROLE_OPS"))))
                 .andExpect(status().isOk());
     }
 }

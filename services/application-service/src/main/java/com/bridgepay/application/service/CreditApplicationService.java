@@ -20,7 +20,7 @@ import com.bridgepay.application.repository.IdempotencyKeyRepository;
 import com.bridgepay.application.repository.MerchantPayoutRepository;
 import com.bridgepay.application.repository.MerchantRepository;
 import com.bridgepay.application.repository.OutboxEventRepository;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
