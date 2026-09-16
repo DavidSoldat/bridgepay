@@ -1,0 +1,55 @@
+{
+  "intercept": -0.4090896546840668,
+  "features": {
+    "revolvingUtilization": {
+      "mean": 5.833585720807088,
+      "scale": 244.29723479860272,
+      "coefficient": 0.00413273461163044
+    },
+    "age": {
+      "mean": 52.331114285714285,
+      "scale": 14.763662324591342,
+      "coefficient": -0.4493178725242615
+    },
+    "numberOfTime30to59DaysPastDueNotWorse": {
+      "mean": 0.2770285714285714,
+      "scale": 1.0282384053473652,
+      "coefficient": 0.7068217992782593
+    },
+    "debtRatio": {
+      "mean": 350.0178766561825,
+      "scale": 1936.8691720697861,
+      "coefficient": -0.07912295311689377
+    },
+    "monthlyIncome": {
+      "mean": 6422.180495238095,
+      "scale": 14299.103406726574,
+      "coefficient": -0.3882472813129425
+    },
+    "numberOfOpenCreditLinesAndLoans": {
+      "mean": 8.449133333333334,
+      "scale": 5.162242334059449,
+      "coefficient": 0.06185298413038254
+    },
+    "numberOfTimes90DaysLate": {
+      "mean": 0.12308571428571428,
+      "scale": 0.9025532050196022,
+      "coefficient": 0.9703800082206726
+    },
+    "numberRealEstateLoansOrLines": {
+      "mean": 1.0170380952380953,
+      "scale": 1.1294605490596323,
+      "coefficient": 0.0997675210237503
+    },
+    "numberOfTime60to89DaysPastDueNotWorse": {
+      "mean": 0.09798095238095238,
+      "scale": 0.8329406996665477,
+      "coefficient": 0.6428195834159851
+    },
+    "numberOfDependents": {
+      "mean": 0.7355904761904762,
+      "scale": 1.105786504798739,
+      "coefficient": 0.04914160445332527
+    }
+  }
+}
