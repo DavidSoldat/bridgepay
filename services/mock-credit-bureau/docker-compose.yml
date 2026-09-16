@@ -1,0 +1,7 @@
+services:
+  mock-credit-bureau:
+    build: .
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+    ports:
+      - "8083:8083"

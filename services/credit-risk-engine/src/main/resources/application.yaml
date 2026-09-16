@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: credit-risk-engine
+  threads:
+    virtual:
+      enabled: true
+  cache:
+    type: redis
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/bridgepay}
+
+bridgepay:
+  mock-credit-bureau:
+    base-url: ${MOCK_CREDIT_BUREAU_URL:http://localhost:8083}
+  repayment-reconciliation:
+    base-url: ${REPAYMENT_RECONCILIATION_URL:http://localhost:8084}
+  credit-risk-model:
+    model-path: ${CREDIT_RISK_MODEL_PATH:classpath:model/model.onnx}
+    coefficients-path: ${CREDIT_RISK_COEFFICIENTS_PATH:classpath:model/coefficients.json}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+
+server:
+  port: 8082
+
+---
+spring:
+  config:
+    activate:
+      on-profile: local
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.oauth2.resource.servlet.OAuth2ResourceServerAutoConfiguration

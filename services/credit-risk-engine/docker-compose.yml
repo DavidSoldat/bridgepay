@@ -1,0 +1,16 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  credit-risk-engine:
+    build: .
+    depends_on:
+      - redis
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "8082:8082"
