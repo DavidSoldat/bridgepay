@@ -6,6 +6,9 @@ target/
 
 .env
 
+### Python ###
+.venv/
+
 ### STS ###
 .apt_generated
 .classpath
