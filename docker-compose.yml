@@ -1,0 +1,125 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: bridgepay
+      POSTGRES_USER: bridgepay
+      POSTGRES_PASSWORD: bridgepay
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  kafka:
+    image: apache/kafka:latest
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,PLAINTEXT_HOST://:29092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    ports:
+      - "29092:29092"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  applicant-service:
+    build: ./services/applicant-service
+    depends_on:
+      - postgres
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: bridgepay
+      DB_USERNAME: bridgepay
+      DB_PASSWORD: bridgepay
+    ports:
+      - "8080:8080"
+
+  application-service:
+    build: ./services/application-service
+    depends_on:
+      - postgres
+      - kafka
+      - credit-risk-engine
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: bridgepay
+      DB_USERNAME: bridgepay
+      DB_PASSWORD: bridgepay
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      CREDIT_RISK_ENGINE_URL: http://credit-risk-engine:8082
+    ports:
+      - "8081:8081"
+
+  credit-risk-engine:
+    build: ./services/credit-risk-engine
+    depends_on:
+      - redis
+      - mock-credit-bureau
+      - repayment-reconciliation-service
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MOCK_CREDIT_BUREAU_URL: http://mock-credit-bureau:8083
+      REPAYMENT_RECONCILIATION_URL: http://repayment-reconciliation-service:8084
+    ports:
+      - "8082:8082"
+
+  mock-credit-bureau:
+    build: ./services/mock-credit-bureau
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+    ports:
+      - "8083:8083"
+
+  repayment-reconciliation-service:
+    build: ./services/repayment-reconciliation-service
+    depends_on:
+      - postgres
+      - kafka
+      - applicant-service
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: bridgepay
+      DB_USERNAME: bridgepay
+      DB_PASSWORD: bridgepay
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      APPLICANT_SERVICE_URL: http://applicant-service:8080
+      PADDLE_BASE_URL: https://sandbox-api.paddle.com
+      PADDLE_API_KEY: ${PADDLE_API_KEY:-changeme}
+      PADDLE_WEBHOOK_SECRET: ${PADDLE_WEBHOOK_SECRET:-changeme}
+    ports:
+      - "8084:8084"
+
+  notifications-service:
+    build: ./services/notifications-service
+    depends_on:
+      - postgres
+      - kafka
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: bridgepay
+      DB_USERNAME: bridgepay
+      DB_PASSWORD: bridgepay
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8085:8085"
+
+volumes:
+  postgres_data:

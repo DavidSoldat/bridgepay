@@ -27,6 +27,7 @@ This project hit real Boot 4 modularization breakage (renamed starters, relocate
 ## Commands
 - Build + test one service: `cd services/<service> && mvn clean verify`
 - Run one service locally: `cd services/<service> && docker-compose up --build` (uses the `local` profile, no Keycloak/Kafka required — see that service's own README for specifics)
+- Run the whole stack together: `docker-compose up --build` from the repo root — one shared Postgres/Kafka/Redis, all six services wired to each other by compose service name. For solo work on a single service, prefer that service's own `docker-compose.yml` instead (lighter, isolated).
 
 ## Don't
 - Add a foreign key or JPA relationship across service schemas — cross-service references are plain UUID columns, validated at the application layer only.
