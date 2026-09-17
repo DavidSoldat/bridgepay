@@ -2,12 +2,14 @@ package com.bridgepay.applicant.service;
 
 import com.bridgepay.applicant.domain.Applicant;
 import com.bridgepay.applicant.dto.ApplicantResponse;
+import com.bridgepay.applicant.dto.InternalApplicantResponse;
 import com.bridgepay.applicant.dto.SignupRequest;
 import com.bridgepay.applicant.repository.ApplicantRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.NoSuchElementException;
+import java.util.UUID;
 
 @Service
 public class ApplicantService {
@@ -45,6 +47,21 @@ public class ApplicantService {
         Applicant applicant = applicantRepository.findByKeycloakSubjectId(keycloakSubjectId)
                 .orElseThrow(() -> new NoSuchElementException("No applicant profile found for this account"));
         return toResponse(applicant);
+    }
+
+    @Transactional(readOnly = true)
+    public InternalApplicantResponse getById(UUID id) {
+        Applicant applicant = applicantRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("No applicant found with id " + id));
+        return new InternalApplicantResponse(applicant.getId(), applicant.getFirstName(), applicant.getLastName(),
+                applicant.getEmail(), applicant.getPaddleCustomerId());
+    }
+
+    @Transactional
+    public void setPaddleCustomerId(UUID id, String paddleCustomerId) {
+        Applicant applicant = applicantRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("No applicant found with id " + id));
+        applicant.setPaddleCustomerId(paddleCustomerId);
     }
 
     private ApplicantResponse toResponse(Applicant applicant) {

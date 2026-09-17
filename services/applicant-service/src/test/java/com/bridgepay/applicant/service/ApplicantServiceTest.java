@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -78,5 +79,40 @@ class ApplicantServiceTest {
 
         assertThatThrownBy(() -> applicantService.getBySubject("kc-999"))
                 .isInstanceOf(NoSuchElementException.class);
+    }
+
+    @Test
+    void getById_returnsApplicant_whenFound() {
+        applicantService = new ApplicantService(applicantRepository);
+        Applicant applicant = new Applicant("kc-123", "Ana", "Doe",
+                LocalDate.of(1995, 4, 12), "ana@example.com", "+38765123456");
+        when(applicantRepository.findById(applicant.getId())).thenReturn(Optional.of(applicant));
+
+        var response = applicantService.getById(applicant.getId());
+
+        assertThat(response.email()).isEqualTo("ana@example.com");
+        assertThat(response.paddleCustomerId()).isNull();
+    }
+
+    @Test
+    void getById_throws_whenNotFound() {
+        applicantService = new ApplicantService(applicantRepository);
+        UUID missingId = UUID.randomUUID();
+        when(applicantRepository.findById(missingId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> applicantService.getById(missingId))
+                .isInstanceOf(NoSuchElementException.class);
+    }
+
+    @Test
+    void setPaddleCustomerId_updatesTheManagedEntity() {
+        applicantService = new ApplicantService(applicantRepository);
+        Applicant applicant = new Applicant("kc-123", "Ana", "Doe",
+                LocalDate.of(1995, 4, 12), "ana@example.com", "+38765123456");
+        when(applicantRepository.findById(applicant.getId())).thenReturn(Optional.of(applicant));
+
+        applicantService.setPaddleCustomerId(applicant.getId(), "ctm_01abc");
+
+        assertThat(applicant.getPaddleCustomerId()).isEqualTo("ctm_01abc");
     }
 }

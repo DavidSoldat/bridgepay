@@ -18,9 +18,11 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -123,5 +125,36 @@ class ApplicantControllerIntegrationTest {
     void endpoints_rejectUnauthenticatedRequests() throws Exception {
         mockMvc.perform(get("/api/v1/applicants/me"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void internalEndpoints_areReachableWithoutAJwt() throws Exception {
+        String body = mockMvc.perform(post("/api/v1/applicants")
+                        .with(jwt().jwt(j -> j.subject("kc-internal")))
+                        .contentType("application/json")
+                        .content(signupPayload("internal@example.com")))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String id = objectMapper.readTree(body).get("id").asText();
+
+        mockMvc.perform(get("/internal/applicants/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("internal@example.com"))
+                .andExpect(jsonPath("$.paddleCustomerId").doesNotExist());
+
+        mockMvc.perform(patch("/internal/applicants/{id}/paddle-customer", id)
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(Map.of("paddleCustomerId", "ctm_01abc"))))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/internal/applicants/{id}", id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paddleCustomerId").value("ctm_01abc"));
+    }
+
+    @Test
+    void internalGetById_returnsNotFound_whenApplicantDoesNotExist() throws Exception {
+        mockMvc.perform(get("/internal/applicants/{id}", UUID.randomUUID()))
+                .andExpect(status().isNotFound());
     }
 }
