@@ -1,0 +1,37 @@
+<div class="max-w-md">
+  <h1 class="font-serif text-2xl mb-1">Tell us who you are</h1>
+  <p class="text-ink-muted mb-6">Just once — we'll remember you next time.</p>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
+    <label class="flex flex-col gap-1">
+      <span class="text-sm text-ink-muted">First name</span>
+      <input formControlName="firstName" class="border border-hairline px-3 py-2 rounded-lg" />
+    </label>
+    <label class="flex flex-col gap-1">
+      <span class="text-sm text-ink-muted">Last name</span>
+      <input formControlName="lastName" class="border border-hairline px-3 py-2 rounded-lg" />
+    </label>
+    <label class="flex flex-col gap-1">
+      <span class="text-sm text-ink-muted">Date of birth</span>
+      <input formControlName="dateOfBirth" type="date" class="border border-hairline px-3 py-2 rounded-lg" />
+    </label>
+    <label class="flex flex-col gap-1">
+      <span class="text-sm text-ink-muted">Email</span>
+      <input formControlName="email" type="email" class="border border-hairline px-3 py-2 rounded-lg" />
+    </label>
+    <label class="flex flex-col gap-1">
+      <span class="text-sm text-ink-muted">Phone</span>
+      <input formControlName="phone" type="tel" class="border border-hairline px-3 py-2 rounded-lg" />
+    </label>
+
+    @if (error(); as message) {
+      <p class="text-sm text-red-700">{{ message }}</p>
+    }
+
+    <button
+      type="submit"
+      [disabled]="submitting()"
+      class="mt-2 px-4 py-2 rounded-lg bg-widget-accent text-white font-widget font-medium disabled:opacity-50"
+    >Continue</button>
+  </form>
+</div>
