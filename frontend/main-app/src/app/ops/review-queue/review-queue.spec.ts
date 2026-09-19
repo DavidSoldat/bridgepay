@@ -1,22 +1,58 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import { of } from 'rxjs';
 import { ReviewQueue } from './review-queue';
+import { Applications } from '../applications';
+import { Page } from '../../shared/models/page';
+import { ApplicationResponse } from '../../shared/models/application';
 
 describe('ReviewQueue', () => {
-  let component: ReviewQueue;
-  let fixture: ComponentFixture<ReviewQueue>;
+  it('renders a row per application returned by the service', () => {
+    const page: Page<ApplicationResponse> = {
+      content: [
+        {
+          applicationId: 'app-1', applicantId: 'a-1', merchantId: 'm-1', amount: 200,
+          status: 'MANUAL_REVIEW', riskScore: 0.5, scoreFactors: [],
+          installmentCount: null, installmentAmount: null, decisionAt: '2026-09-12T00:00:00Z',
+        },
+      ],
+      totalElements: 1, totalPages: 1, number: 0, size: 20,
+    };
 
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
+    TestBed.configureTestingModule({
       imports: [ReviewQueue],
-    }).compileComponents();
+      providers: [
+        provideRouter([]),
+        { provide: Applications, useValue: { listManualReview: () => of(page) } },
+      ],
+    });
 
-    fixture = TestBed.createComponent(ReviewQueue);
-    component = fixture.componentInstance;
-    await fixture.whenStable();
+    const fixture = TestBed.createComponent(ReviewQueue);
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('m-1');
+    expect(text).toContain('200.00');
   });
 
-  it('should create', () => {
-    expect(component).toBeTruthy();
+  it('shows an empty-state message when there are no applications', () => {
+    const emptyPage: Page<ApplicationResponse> = {
+      content: [], totalElements: 0, totalPages: 0, number: 0, size: 20,
+    };
+
+    TestBed.configureTestingModule({
+      imports: [ReviewQueue],
+      providers: [
+        provideRouter([]),
+        { provide: Applications, useValue: { listManualReview: () => of(emptyPage) } },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(ReviewQueue);
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'No applications waiting for review',
+    );
   });
 });

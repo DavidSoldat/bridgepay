@@ -1,1 +1,29 @@
-<p>review-queue works!</p>
+<h1 class="text-xl font-medium mb-4">Review queue</h1>
+<table class="w-full text-sm">
+  <thead>
+    <tr class="border-b border-hairline text-left text-ink-muted">
+      <th class="py-2 font-normal">Merchant</th>
+      <th class="py-2 font-normal text-right">Amount</th>
+      <th class="py-2 font-normal">Decisioned</th>
+      <th class="py-2"></th>
+    </tr>
+  </thead>
+  <tbody>
+    @for (row of rows(); track row.applicationId) {
+      <tr class="border-b border-hairline">
+        <td class="py-2 font-mono">{{ row.merchantId }}</td>
+        <td class="py-2 font-mono text-right">{{ row.amount | number: '1.2-2' }}</td>
+        <td class="py-2 font-mono">{{ row.decisionAt ? (row.decisionAt | date: 'MMM d, y') : '—' }}</td>
+        <td class="py-2 text-right">
+          <a [routerLink]="['/ops', row.applicationId]" class="text-accent hover:underline">Review</a>
+        </td>
+      </tr>
+    } @empty {
+      <tr>
+        <td colspan="4" class="py-6 text-center text-ink-muted">
+          No applications waiting for review.
+        </td>
+      </tr>
+    }
+  </tbody>
+</table>
