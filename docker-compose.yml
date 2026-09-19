@@ -155,5 +155,10 @@ services:
     ports:
       - "8086:8086"
 
+  main-app:
+    build: ./frontend/main-app
+    ports:
+      - "4200:80"
+
 volumes:
   postgres_data:
