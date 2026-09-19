@@ -53,7 +53,11 @@ the version research behind them):
   scaffolded via `ng new` (not hand-rolled files), package manager npm
   (matching what's already resolvable in this environment).
 - Tailwind v4 via `ng add tailwindcss` immediately after scaffolding.
-- Angular CLI's default unit test setup (Karma/Jasmine) — not replaced.
+- Angular CLI's default unit test setup — verified empirically against a
+  real `ng new` on this machine's Angular 21: the `@angular/build:unit-test`
+  builder backed by Vitest (Jasmine-compatible `describe`/`it`/`expect` API,
+  run via `ng test`), not Karma/Jasmine as older Angular versions used. Not
+  replaced with anything else.
 - No custom ESLint/Prettier config beyond whatever `ng new` scaffolds by
   default — nothing in this project's conventions calls for more.
 
@@ -202,8 +206,8 @@ a decision action just re-fetches the list on success.
 ## Testing
 
 - Angular CLI's default scaffolded spec files for every new
-  component/service/guard (Karma/Jasmine) — real component/service tests,
-  not skipped.
+  component/service/guard (Vitest via `@angular/build:unit-test`, run with
+  `ng test`) — real component/service tests, not skipped.
 - `AuthService`/route guards tested against a faked Keycloak token shape
   (the three realm roles, with/without a `merchantId` claim), not a real
   Keycloak instance — no browser-based e2e/Keycloak-integration test in
