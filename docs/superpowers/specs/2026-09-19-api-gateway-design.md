@@ -138,7 +138,7 @@ copied verbatim), covering:
 
 | Case | Status | `error` |
 |---|---|---|
-| Missing/invalid/expired JWT | 401 | `UNAUTHORIZED` |
+| Missing/invalid/expired JWT | 401 | Spring Security's default `BearerTokenAuthenticationEntryPoint` response — empty body, not the shared `ApiError` shape. None of the other 6 services customize the `AuthenticationEntryPoint` either, so this is consistent project-wide, not a gateway-specific gap. |
 | Rate limit tripped | 429 | `RATE_LIMITED` |
 | No matching route | 404 | `NOT_FOUND` |
 | Downstream connection failure/timeout | 502 | `BAD_GATEWAY` |
@@ -152,16 +152,17 @@ copied verbatim), covering:
   `KEYCLOAK_ISSUER_URI` (same default-port fix already applied to the other
   6 services).
 - `services/api-gateway/docker-compose.yml`: same shape, pointing at
-  `localhost:8080`/`localhost:8081` defaults for solo use alongside those
-  two services run separately — no Postgres/Kafka/Redis needed for this
-  service's own compose file.
+  `host.docker.internal:8080`/`host.docker.internal:8081` for solo use
+  alongside those two services run separately on the host — no
+  Postgres/Kafka/Redis needed for this service's own compose file.
 
 ## Testing
 
 Sized to this service's small surface (comparable to Mock Credit Bureau's
 7 tests — no JPA/Flyway/Kafka/Redis here either):
 
-- Unauthenticated request to a real route → `401`, matching `ApiError` shape.
+- Unauthenticated request to a real route → `401` (Spring Security's
+  default empty-body response, not the shared `ApiError` shape).
 - Valid JWT + routed request reaches a stubbed downstream (WireMock) and
   the response passes through unchanged.
 - Rate limiter: N+1th request within the window → `429`.

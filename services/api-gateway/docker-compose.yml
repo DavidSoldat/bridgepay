@@ -3,7 +3,7 @@ services:
     build: .
     environment:
       SPRING_PROFILES_ACTIVE: local
-      APPLICANT_SERVICE_URL: http://localhost:8080
-      APPLICATION_SERVICE_URL: http://localhost:8081
+      APPLICANT_SERVICE_URL: http://host.docker.internal:8080
+      APPLICATION_SERVICE_URL: http://host.docker.internal:8081
     ports:
       - "8086:8086"

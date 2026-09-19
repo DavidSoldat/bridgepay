@@ -8,6 +8,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,6 +53,12 @@ public class RateLimitFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
+        String path = ((HttpServletRequest) request).getRequestURI();
+        if (path.startsWith("/actuator/")) {
+            chain.doFilter(request, response);
+            return;
+        }
+
         if (rateLimiter.acquirePermission()) {
             chain.doFilter(request, response);
             return;

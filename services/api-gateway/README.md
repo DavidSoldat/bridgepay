@@ -22,9 +22,10 @@ docker-compose up --build
 ```
 
 Uses the `local` Spring profile (JWT auth disabled) and defaults to
-`localhost:8080`/`localhost:8081` for the two downstream services - run
-their own `docker-compose.yml` files alongside this one, or run the whole
-stack from the repo root instead.
+`host.docker.internal:8080`/`host.docker.internal:8081` for the two
+downstream services - run their own `docker-compose.yml` files alongside
+this one (so they're reachable on the host), or run the whole stack from
+the repo root instead.
 
 ## Run tests
 
@@ -42,3 +43,10 @@ against a fake `FilterChain`.
 No route for Repayment Reconciliation Service's public `/webhooks/paddle`
 endpoint (a non-`/api/v1` path) - it's reached directly for now. Revisit
 when the k3s Ingress rules are written.
+
+No CORS configuration exists yet. The two Angular apps (main app on
+`localhost:4200`, storefront on `localhost:4201`, per the Keycloak
+realm's registered client origins) will need
+`spring.security.web.cors`/`CorsConfigurationSource` wiring in both
+`SecurityConfig` and `LocalDevSecurityConfig` before real browser traffic
+can reach this gateway. Revisit when the Main Angular app work starts.

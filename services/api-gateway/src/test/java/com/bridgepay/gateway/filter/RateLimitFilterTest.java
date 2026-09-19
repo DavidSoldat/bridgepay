@@ -34,4 +34,30 @@ class RateLimitFilterTest {
         assertThat(thirdResponse.getContentAsString()).contains("RATE_LIMITED");
         verify(chain, times(2)).doFilter(any(), any()); // still 2 - the 3rd never reached the chain
     }
+
+    @Test
+    void actuatorHealthIsNeverRateLimited() throws Exception {
+        RateLimitFilter filter = new RateLimitFilter(1);
+        FilterChain chain = mock(FilterChain.class);
+
+        // Exhaust the single permit on a normal path.
+        MockHttpServletRequest firstRequest = new MockHttpServletRequest();
+        MockHttpServletResponse firstResponse = new MockHttpServletResponse();
+        filter.doFilter(firstRequest, firstResponse, chain);
+        assertThat(firstResponse.getStatus()).isEqualTo(200);
+
+        MockHttpServletRequest exhaustingRequest = new MockHttpServletRequest();
+        MockHttpServletResponse exhaustingResponse = new MockHttpServletResponse();
+        filter.doFilter(exhaustingRequest, exhaustingResponse, chain);
+        assertThat(exhaustingResponse.getStatus()).isEqualTo(429);
+
+        // The limiter is now exhausted, but /actuator/health must still pass through.
+        MockHttpServletRequest healthRequest = new MockHttpServletRequest();
+        healthRequest.setRequestURI("/actuator/health");
+        MockHttpServletResponse healthResponse = new MockHttpServletResponse();
+        filter.doFilter(healthRequest, healthResponse, chain);
+
+        assertThat(healthResponse.getStatus()).isEqualTo(200); // untouched by the filter
+        verify(chain, times(2)).doFilter(any(), any()); // first request + health request
+    }
 }
