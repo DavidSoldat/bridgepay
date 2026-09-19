@@ -12,6 +12,7 @@ import com.bridgepay.application.domain.MerchantPayout;
 import com.bridgepay.application.domain.OutboxEvent;
 import com.bridgepay.application.dto.ApplicationResponse;
 import com.bridgepay.application.dto.CheckoutRequest;
+import com.bridgepay.application.dto.MerchantPayoutResponse;
 import com.bridgepay.application.dto.ReviewDecisionRequest;
 import com.bridgepay.application.event.ApplicationEvents;
 import com.bridgepay.application.event.EventEnvelope;
@@ -123,6 +124,19 @@ public class CreditApplicationService {
                 .map(this::toResponse);
     }
 
+    @Transactional(readOnly = true)
+    public Page<MerchantPayoutResponse> listPayoutsForMerchant(UUID merchantId, Pageable pageable) {
+        return merchantPayoutRepository.findByMerchantId(merchantId, pageable)
+                .map(payout -> new MerchantPayoutResponse(
+                        payout.getId(),
+                        payout.getApplication().getId(),
+                        payout.getAmount(),
+                        payout.getFeeAmount(),
+                        payout.getStatus().name(),
+                        payout.getPaidAt()
+                ));
+    }
+
     /**
      * The single place both the automated checkout path and the ops manual
      * review path terminate - status update, installment/payout creation, and
@@ -173,11 +187,28 @@ public class CreditApplicationService {
     private ApplicationResponse toResponse(CreditApplication application) {
         return new ApplicationResponse(
                 application.getId(),
+                application.getApplicantId(),
+                application.getMerchant().getId(),
+                application.getAmount(),
                 application.getStatus().name(),
+                application.getRiskScore(),
+                readScoreFactors(application.getScoreFactorsJson()),
                 application.getInstallmentCount(),
                 application.getInstallmentAmount(),
                 application.getDecisionAt()
         );
+    }
+
+    private List<ScoreResult.ScoreFactor> readScoreFactors(String scoreFactorsJson) {
+        if (scoreFactorsJson == null) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(scoreFactorsJson,
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, ScoreResult.ScoreFactor.class));
+        } catch (Exception ex) {
+            throw new IllegalStateException("Failed to deserialize stored score factors", ex);
+        }
     }
 
     private String writeSnapshot(Object value) {

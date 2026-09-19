@@ -98,15 +98,22 @@ class CreditApplicationControllerIntegrationTest {
 
     @Test
     void checkout_approvesAndCreatesInstallmentPlan() throws Exception {
+        String applicantId = UUID.randomUUID().toString();
+
         mockMvc.perform(post("/api/v1/applications")
-                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString())))
+                        .with(jwt().jwt(j -> j.subject(applicantId)))
                         .header("Idempotency-Key", "idem-1")
                         .contentType("application/json")
                         .content(checkoutPayload(merchantId.toString(), "200.00")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("APPROVED"))
                 .andExpect(jsonPath("$.installmentCount").value(4))
-                .andExpect(jsonPath("$.installmentAmount").value(50.00));
+                .andExpect(jsonPath("$.installmentAmount").value(50.00))
+                .andExpect(jsonPath("$.applicantId").value(applicantId))
+                .andExpect(jsonPath("$.merchantId").value(merchantId.toString()))
+                .andExpect(jsonPath("$.amount").value(200.00))
+                .andExpect(jsonPath("$.riskScore").value(0.1))
+                .andExpect(jsonPath("$.scoreFactors").isArray());
     }
 
     @Test
