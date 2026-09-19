@@ -1,23 +1,40 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { App } from './app';
+import { Auth } from './core/auth';
 
 describe('App', () => {
-  beforeEach(async () => {
-    await TestBed.configureTestingModule({
+  function setup(roles: string[]) {
+    TestBed.configureTestingModule({
       imports: [App],
-    }).compileComponents();
+      providers: [
+        provideRouter([]),
+        {
+          provide: Auth,
+          useValue: {
+            hasRole: (r: string) => roles.includes(r),
+            username: () => 'test-user',
+            logout: () => {},
+          },
+        },
+      ],
+    });
+    return TestBed.createComponent(App);
+  }
+
+  it('shows the Review Queue link for an ops role', () => {
+    const fixture = setup(['ops']);
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Review Queue');
+    expect(text).not.toContain('Payouts');
   });
 
-  it('should create the app', () => {
-    const fixture = TestBed.createComponent(App);
-    const app = fixture.componentInstance;
-    expect(app).toBeTruthy();
-  });
-
-  it('should render title', async () => {
-    const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, main-app');
+  it('shows the Payouts link for a merchant role', () => {
+    const fixture = setup(['merchant']);
+    fixture.detectChanges();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Payouts');
+    expect(text).not.toContain('Review Queue');
   });
 });

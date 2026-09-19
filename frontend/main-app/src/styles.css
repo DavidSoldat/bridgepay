@@ -1,3 +1,20 @@
-/* You can add global styles to this file, and also import other style files */
-
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 @import 'tailwindcss';
+
+@theme {
+  --color-paper: #FAFAF9;
+  --color-ink: #1C1C1B;
+  --color-ink-muted: #6B6963;
+  --color-hairline: #D8D6D0;
+  --color-accent: #2F5D50;
+  --color-status-review: #8A6A2F;
+  --color-status-declined: #8A3B32;
+  --font-sans: "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+@layer base {
+  body {
+    @apply bg-paper text-ink;
+  }
+}
