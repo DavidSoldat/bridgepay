@@ -1,3 +1,22 @@
 /* You can add global styles to this file, and also import other style files */
 
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Work+Sans:wght@400;500&family=Manrope:wght@500;700&display=swap');
 @import 'tailwindcss';
+
+@theme {
+  --color-paper: #FAFAF8;
+  --color-ink: #26241F;
+  --color-ink-muted: #6B6A63;
+  --color-hairline: #E4E1DA;
+  --color-widget-accent: #4B3F72;
+  --color-widget-surface: #F6F4FB;
+  --font-sans: "Work Sans", sans-serif;
+  --font-serif: "Fraunces", serif;
+  --font-widget: "Manrope", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-paper text-ink;
+  }
+}

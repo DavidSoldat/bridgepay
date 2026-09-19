@@ -1,0 +1,17 @@
+<header class="mb-10">
+  <h1 class="font-serif text-3xl">Ridgeline Supply Co.</h1>
+  <p class="text-ink-muted">Considered gear for slow trips outside.</p>
+</header>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-2xl">
+  @for (product of products; track product.id) {
+    <article class="flex flex-col">
+      <div class="aspect-square mb-3" [style.background-color]="product.swatchColor"></div>
+      <h2 class="font-serif text-lg">{{ product.name }}</h2>
+      <p class="text-ink-muted mb-3">${{ product.price | number: '1.2-2' }}</p>
+      <button
+        (click)="payInFour.emit(product.id)"
+        class="self-start px-4 py-2 rounded-lg bg-widget-accent text-white font-widget font-medium hover:opacity-90"
+      >Pay in 4</button>
+    </article>
+  }
+</div>
