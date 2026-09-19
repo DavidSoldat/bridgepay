@@ -137,6 +137,50 @@ interfaces don't justify introducing one.
 - Paginated payout ledger table: amount, fee amount, status (`PENDING`/
   `PAID`), paid date.
 
+## Visual design
+
+Designed via the `frontend-design` skill against an explicit brief:
+enterprise/back-office, not a SaaS product — restrained palette, no
+gradients. Full rationale and self-critique against generic-AI-design
+defaults is in the chat history; tokens below are what implementation
+follows.
+
+**Color** — functional, not decorative; used sparingly:
+- `#FAFAF9` page background, `#1C1C1B` primary ink, `#6B6963` secondary
+  ink (metadata/timestamps), `#D8D6D0` the one hairline border weight
+  used everywhere.
+- `#2F5D50` — the single accent (primary actions, active nav, links,
+  focus ring, and the "approved/paid" status meaning).
+- `#8A6A2F` (muted ochre, "review/pending") and `#8A3B32` (muted brick,
+  "declined") — small dot indicators next to status text only, never
+  filled badges.
+- No gradients, no bright saturated fills anywhere.
+
+**Type**:
+- **IBM Plex Sans** for all interface text/headings/labels.
+- **IBM Plex Mono** for every number — currency amounts, dates,
+  application/merchant IDs — functionally justified (tabular figures
+  need to align and scan like a real ledger), not a stylistic flourish.
+  Prose is never monospaced; numbers are never proportional.
+- No all-caps labels, no tracked-out eyebrows, no em-dash label
+  constructions, no arrow-suffixed button text.
+
+**Layout**: left-aligned, dense, 0–2px border radius (nothing
+load-bearing rounded), zero drop shadows. Persistent left sidebar with
+only the nav items the caller's role can reach (an `ops` token never
+sees "Payouts"), a slim top bar showing the signed-in user, real
+`<table>`-based data views rather than a grid of cards.
+
+**The one designed moment**: the application-detail score-factors view
+renders `scoreFactors` as diverging horizontal bars off a shared
+zero-line (positive contributions right, negative left) — the actual
+shape of signed logistic-regression coefficient contributions, matching
+how real SHAP/coefficient-explainability plots look. This is the only
+illustrated element in the app; every other view is type, tables, and
+hairline rules. Spending the one deliberate visual choice here is
+directly motivated by spec §4/§12 — this chart *is* the explainability
+feature, not decoration bolted onto it.
+
 Both views are read-mostly with one write action (the ops decision) —
 nothing here needs optimistic updates or complex client-side caching;
 a decision action just re-fetches the list on success.
