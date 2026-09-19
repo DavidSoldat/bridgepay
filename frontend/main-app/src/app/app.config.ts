@@ -12,7 +12,7 @@ import {
 import { routes } from './app.routes';
 
 const gatewayUrlCondition = createInterceptorCondition<IncludeBearerTokenCondition>({
-  urlPattern: /^http:\/\/localhost:8086(\/.*)?$/i,
+  urlPattern: /^\/api\/.*$/i,
   bearerPrefix: 'Bearer',
 });
 

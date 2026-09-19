@@ -1,13 +1,16 @@
-import { Injectable, computed, effect, inject, signal } from '@angular/core';
+import { Injectable, computed, inject } from '@angular/core';
 import Keycloak from 'keycloak-js';
-import { KEYCLOAK_EVENT_SIGNAL, KeycloakEventType } from 'keycloak-angular';
+import { KEYCLOAK_EVENT_SIGNAL } from 'keycloak-angular';
 
 @Injectable({ providedIn: 'root' })
 export class Auth {
   private readonly keycloak = inject(Keycloak);
   private readonly keycloakEvent = inject(KEYCLOAK_EVENT_SIGNAL);
 
-  private readonly tokenClaims = signal<Record<string, unknown> | undefined>(undefined);
+  private readonly tokenClaims = computed<Record<string, unknown> | undefined>(() => {
+    this.keycloakEvent(); // re-evaluate whenever a Keycloak event fires
+    return this.keycloak.tokenParsed;
+  });
 
   readonly roles = computed<string[]>(() => {
     const realmAccess = this.tokenClaims()?.['realm_access'] as { roles?: string[] } | undefined;
@@ -21,19 +24,6 @@ export class Auth {
   readonly username = computed<string | null>(() => {
     return (this.tokenClaims()?.['preferred_username'] as string | undefined) ?? null;
   });
-
-  constructor() {
-    effect(() => {
-      const event = this.keycloakEvent();
-      if (
-        event.type === KeycloakEventType.Ready ||
-        event.type === KeycloakEventType.AuthSuccess ||
-        event.type === KeycloakEventType.AuthRefreshSuccess
-      ) {
-        this.tokenClaims.set(this.keycloak.tokenParsed);
-      }
-    });
-  }
 
   hasRole(role: string): boolean {
     return this.roles().includes(role);

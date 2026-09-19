@@ -4,7 +4,8 @@
   <h1 class="text-xl font-medium mt-3 mb-1 font-mono">{{ app.amount | number: '1.2-2' }}</h1>
   <p class="text-sm text-ink-muted mb-6">
     Merchant <span class="font-mono">{{ app.merchantId }}</span>
-    @if (app.decisionAt) { · decisioned {{ app.decisionAt | date: 'MMM d, y' }} }
+    @if (app.riskScore !== null) { · risk score <span class="font-mono">{{ app.riskScore | number: '1.2-2' }}</span> }
+    @if (app.decisionAt) { · decisioned <span class="font-mono">{{ app.decisionAt | date: 'MMM d, y' }}</span> }
   </p>
 
   <h2 class="text-sm font-medium mb-3">Score factors</h2>
@@ -33,13 +34,28 @@
     }
   </div>
 
+  <label class="block text-sm font-medium mb-1" for="reviewer-note">Note (optional)</label>
+  <textarea
+    id="reviewer-note"
+    [value]="reviewerNote()"
+    (input)="reviewerNote.set($any($event.target).value)"
+    rows="2"
+    class="w-full border border-hairline p-2 text-sm mb-4"
+  ></textarea>
+
+  @if (decisionError(); as error) {
+    <p class="text-sm text-status-declined mb-3">{{ error }}</p>
+  }
   <div class="flex gap-3">
     <button
       (click)="decide('DECLINE')"
-      class="px-4 py-2 border border-hairline hover:border-status-declined hover:text-status-declined"
+      [disabled]="submitting()"
+      class="px-4 py-2 border border-hairline hover:border-status-declined hover:text-status-declined disabled:opacity-50"
     >Decline</button>
-    <button (click)="decide('APPROVE')" class="px-4 py-2 bg-accent text-paper hover:opacity-90">
-      Approve
-    </button>
+    <button
+      (click)="decide('APPROVE')"
+      [disabled]="submitting()"
+      class="px-4 py-2 bg-accent text-paper hover:opacity-90 disabled:opacity-50"
+    >Approve</button>
   </div>
 }

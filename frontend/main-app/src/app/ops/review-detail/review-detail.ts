@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe, DecimalPipe } from '@angular/common';
@@ -20,6 +20,10 @@ export class ReviewDetail {
     this.route.paramMap.pipe(switchMap((params) => this.applications.getApplication(params.get('id')!))),
   );
 
+  protected readonly reviewerNote = signal('');
+  protected readonly submitting = signal(false);
+  protected readonly decisionError = signal<string | null>(null);
+
   protected maxContribution(): number {
     const factors = this.application()?.scoreFactors ?? [];
     return Math.max(1e-9, ...factors.map((f) => Math.abs(f.contribution)));
@@ -27,11 +31,15 @@ export class ReviewDetail {
 
   decide(decision: 'APPROVE' | 'DECLINE'): void {
     const id = this.application()?.applicationId;
-    if (!id) return;
-    this.applications.reviewDecision(id, decision).subscribe(() => {
-      // Swallow navigation rejection (e.g. no matching route configured, as in unit tests) —
-      // the decision already succeeded, a failed redirect shouldn't surface as an app error.
-      this.router.navigateByUrl('/ops').catch(() => {});
+    if (!id || this.submitting()) return;
+    this.submitting.set(true);
+    this.decisionError.set(null);
+    this.applications.reviewDecision(id, decision, this.reviewerNote() || undefined).subscribe({
+      next: () => this.router.navigateByUrl('/ops').catch((err) => console.error('Failed to navigate to /ops after decision', err)),
+      error: () => {
+        this.submitting.set(false);
+        this.decisionError.set('Could not save this decision. Try again.');
+      },
     });
   }
 }

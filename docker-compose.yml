@@ -157,6 +157,8 @@ services:
 
   main-app:
     build: ./frontend/main-app
+    depends_on:
+      - api-gateway
     ports:
       - "4200:80"
 

@@ -16,12 +16,7 @@ describe('Auth', () => {
         },
       ],
     });
-    const auth = TestBed.inject(Auth);
-    // The constructor's effect() schedules its first run as a microtask rather than
-    // running synchronously — TestBed.tick() flushes pending effects so the signal-derived
-    // computed()s below see the token claims immediately, in this same synchronous test body.
-    TestBed.tick();
-    return auth;
+    return TestBed.inject(Auth);
   }
 
   it('reads realm roles from the token', () => {
