@@ -16,6 +16,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -90,5 +91,20 @@ class RoutingIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("NOT_FOUND"))
                 .andExpect(jsonPath("$.traceId").exists());
+    }
+
+    @Test
+    void generatesAndForwardsACorrelationId_whenClientSendsNone() throws Exception {
+        wireMock.stubFor(WireMock.post(urlEqualTo("/api/v1/applicants")).willReturn(okJson("{}")));
+
+        String responseCorrelationId = mockMvc.perform(post("/api/v1/applicants")
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getHeader("X-Correlation-Id");
+
+        assertThat(responseCorrelationId).isNotBlank();
+        wireMock.verify(postRequestedFor(urlEqualTo("/api/v1/applicants"))
+                .withHeader("X-Correlation-Id", equalTo(responseCorrelationId)));
     }
 }
