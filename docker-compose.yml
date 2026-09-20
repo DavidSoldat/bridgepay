@@ -162,5 +162,12 @@ services:
     ports:
       - "4200:80"
 
+  storefront:
+    build: ./frontend/storefront
+    depends_on:
+      - api-gateway
+    ports:
+      - "4201:80"
+
 volumes:
   postgres_data:
