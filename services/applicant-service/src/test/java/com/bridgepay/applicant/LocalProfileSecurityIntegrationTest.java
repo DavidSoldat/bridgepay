@@ -13,6 +13,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import tools.jackson.databind.ObjectMapper;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.Map;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -71,5 +73,38 @@ class LocalProfileSecurityIntegrationTest {
         mockMvc.perform(get("/api/v1/applicants/me"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("local-dev@example.com"));
+    }
+
+    @Test
+    void twoRealBearerTokensWithDifferentSubjects_areTreatedAsDifferentApplicants() throws Exception {
+        String tokenA = unsignedTestToken("real-shopper-a");
+        String tokenB = unsignedTestToken("real-shopper-b");
+
+        mockMvc.perform(post("/api/v1/applicants")
+                        .header("Authorization", "Bearer " + tokenA)
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "firstName", "Shopper", "lastName", "A", "dateOfBirth", "1995-04-12",
+                                "email", "shopper-a@example.com", "phone", "+38765123456"))))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/v1/applicants/me").header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("shopper-a@example.com"));
+
+        // A different real subject has no profile yet - proves it's not silently
+        // collapsed onto tokenA's identity.
+        mockMvc.perform(get("/api/v1/applicants/me").header("Authorization", "Bearer " + tokenB))
+                .andExpect(status().isNotFound());
+    }
+
+    private static String unsignedTestToken(String subject) {
+        String header = base64Url("{\"alg\":\"none\"}");
+        String payload = base64Url("{\"sub\":\"" + subject + "\"}");
+        return header + "." + payload + ".";
+    }
+
+    private static String base64Url(String json) {
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(json.getBytes(StandardCharsets.UTF_8));
     }
 }

@@ -23,8 +23,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -108,5 +111,29 @@ class LocalProfileSecurityIntegrationTest {
     void opsEndpoints_stillRejectRequestsUnderLocalProfile() throws Exception {
         mockMvc.perform(get("/api/v1/applications"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void checkout_usesTheRealSubjectFromABearerTokenWhenOnePresent() throws Exception {
+        String realSubject = UUID.randomUUID().toString();
+        String payload = objectMapper.writeValueAsString(Map.of("merchantId", merchantId, "amount", "150.00"));
+
+        mockMvc.perform(post("/api/v1/applications")
+                        .header("Authorization", "Bearer " + unsignedTestToken(realSubject))
+                        .header("Idempotency-Key", "local-idem-real-subject")
+                        .contentType("application/json")
+                        .content(payload))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.applicantId").value(realSubject));
+    }
+
+    private static String unsignedTestToken(String subject) {
+        String header = base64Url("{\"alg\":\"none\"}");
+        String payloadJson = base64Url("{\"sub\":\"" + subject + "\"}");
+        return header + "." + payloadJson + ".";
+    }
+
+    private static String base64Url(String json) {
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(json.getBytes(StandardCharsets.UTF_8));
     }
 }
