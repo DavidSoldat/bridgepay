@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { ReviewQueue } from './review-queue';
 import { Applications } from '../applications';
 import { Page } from '../../shared/models/page';
@@ -54,5 +54,22 @@ describe('ReviewQueue', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain(
       'No applications waiting for review',
     );
+  });
+
+  it('shows a distinct error message instead of the empty state when the request fails', () => {
+    TestBed.configureTestingModule({
+      imports: [ReviewQueue],
+      providers: [
+        provideRouter([]),
+        { provide: Applications, useValue: { listManualReview: () => throwError(() => new Error('403')) } },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(ReviewQueue);
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Could not load the review queue');
+    expect(text).not.toContain('No applications waiting for review');
   });
 });
