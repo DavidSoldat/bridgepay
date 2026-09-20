@@ -19,7 +19,7 @@ const PENDING_PRODUCT_KEY = 'storefront.pendingProductId';
   styleUrl: './app.css',
 })
 export class App {
-  private readonly auth = inject(Auth);
+  protected readonly auth = inject(Auth);
   private readonly applicants = inject(Applicants);
 
   protected readonly step = signal<Step>('catalog');
@@ -54,7 +54,7 @@ export class App {
     if (this.auth.authenticated()) {
       this.resumeAfterLogin();
     } else {
-      this.auth.login(window.location.origin);
+      this.auth.login(`${window.location.origin}/`);
     }
   }
 
@@ -68,9 +68,14 @@ export class App {
     this.step.set('result');
   }
 
-  protected backToShop(): void {
+  protected keepShopping(): void {
+    sessionStorage.removeItem(PENDING_PRODUCT_KEY);
     this.step.set('catalog');
     this.selectedProduct.set(null);
     this.result.set(null);
+  }
+
+  protected backToShop(): void {
+    this.keepShopping();
   }
 }

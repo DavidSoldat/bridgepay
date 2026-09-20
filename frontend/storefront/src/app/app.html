@@ -1,18 +1,29 @@
-@switch (step()) {
-  @case ('catalog') {
-    <app-product-catalog (payInFour)="onPayInFour($event)" />
+<div class="min-h-screen p-6 sm:p-10 max-w-3xl mx-auto">
+  @if (step() !== 'catalog') {
+    <div class="flex justify-between items-center mb-6 text-sm">
+      <button (click)="keepShopping()" class="text-widget-accent underline">← Keep shopping</button>
+      @if (auth.authenticated()) {
+        <button (click)="auth.logout()" class="text-ink-muted underline">Sign out</button>
+      }
+    </div>
   }
-  @case ('signup') {
-    <app-signup-form (signedUp)="onSignedUp()" />
-  }
-  @case ('confirm') {
-    @if (selectedProduct(); as product) {
-      <app-checkout-confirm [product]="product" (decided)="onDecided($event)" />
+
+  @switch (step()) {
+    @case ('catalog') {
+      <app-product-catalog (payInFour)="onPayInFour($event)" />
+    }
+    @case ('signup') {
+      <app-signup-form (signedUp)="onSignedUp()" />
+    }
+    @case ('confirm') {
+      @if (selectedProduct(); as product) {
+        <app-checkout-confirm [product]="product" (decided)="onDecided($event)" />
+      }
+    }
+    @case ('result') {
+      @if (result(); as response) {
+        <app-checkout-result [response]="response" (backToShop)="backToShop()" />
+      }
     }
   }
-  @case ('result') {
-    @if (result(); as response) {
-      <app-checkout-result [response]="response" (backToShop)="backToShop()" />
-    }
-  }
-}
+</div>

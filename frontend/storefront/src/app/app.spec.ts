@@ -66,4 +66,59 @@ describe('App', () => {
     expect(app.step()).toBe('result');
     expect(sessionStorage.getItem(PENDING_KEY)).toBeNull();
   });
+
+  it('moves to confirm when signup completes', () => {
+    const fixture = setup(true, () => of({ id: 'a-1' }));
+    const app = fixture.componentInstance as any;
+
+    app.onSignedUp();
+
+    expect(app.step()).toBe('confirm');
+  });
+
+  it('keepShopping resets to catalog and clears the pending checkout', () => {
+    sessionStorage.setItem(PENDING_KEY, 'basin-rain-jacket');
+    const fixture = setup(true, () => of({ id: 'a-1' }));
+    const app = fixture.componentInstance as any;
+
+    app.keepShopping();
+
+    expect(app.step()).toBe('catalog');
+    expect(sessionStorage.getItem(PENDING_KEY)).toBeNull();
+  });
+
+  it('backToShop behaves the same as keepShopping', () => {
+    const fixture = setup(true, () => of({ id: 'a-1' }));
+    const app = fixture.componentInstance as any;
+    app.onPayInFour('basin-rain-jacket');
+    app.onDecided({ applicationId: 'app-1', status: 'DECLINED', installmentCount: null, installmentAmount: null });
+
+    app.backToShop();
+
+    expect(app.step()).toBe('catalog');
+    expect(sessionStorage.getItem(PENDING_KEY)).toBeNull();
+  });
+
+  it('does not resume automatically when a pending checkout exists but the user is not authenticated', () => {
+    sessionStorage.setItem(PENDING_KEY, 'basin-rain-jacket');
+    const fixture = setup(false, () => of({}));
+
+    expect((fixture.componentInstance as any).step()).toBe('catalog');
+  });
+
+  it('renders the product catalog on the catalog step', () => {
+    const fixture = setup(true, () => of({ id: 'a-1' }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-product-catalog')).toBeTruthy();
+  });
+
+  it('renders the checkout confirmation on the confirm step', () => {
+    const fixture = setup(true, () => of({ id: 'a-1' }));
+    const app = fixture.componentInstance as any;
+    app.onPayInFour('basin-rain-jacket');
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('app-checkout-confirm')).toBeTruthy();
+  });
 });
