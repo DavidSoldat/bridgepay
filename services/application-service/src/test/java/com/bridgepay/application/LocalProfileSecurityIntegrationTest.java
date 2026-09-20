@@ -119,7 +119,7 @@ class LocalProfileSecurityIntegrationTest {
         String payload = objectMapper.writeValueAsString(Map.of("merchantId", merchantId, "amount", "150.00"));
 
         mockMvc.perform(post("/api/v1/applications")
-                        .header("Authorization", "Bearer " + unsignedTestToken(realSubject))
+                        .header("Authorization", "Bearer " + unsignedTestToken(Map.of("sub", realSubject)))
                         .header("Idempotency-Key", "local-idem-real-subject")
                         .contentType("application/json")
                         .content(payload))
@@ -127,9 +127,30 @@ class LocalProfileSecurityIntegrationTest {
                 .andExpect(jsonPath("$.applicantId").value(realSubject));
     }
 
-    private static String unsignedTestToken(String subject) {
+    @Test
+    void opsEndpoints_allowARealBearerTokenCarryingTheOpsRole() throws Exception {
+        String token = unsignedTestToken(Map.of(
+                "sub", UUID.randomUUID().toString(),
+                "realm_access", Map.of("roles", List.of("ops"))));
+
+        mockMvc.perform(get("/api/v1/applications").header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void merchantPayouts_allowARealBearerTokenCarryingTheMerchantRoleAndMatchingMerchantId() throws Exception {
+        String token = unsignedTestToken(Map.of(
+                "sub", UUID.randomUUID().toString(),
+                "realm_access", Map.of("roles", List.of("merchant")),
+                "merchantId", merchantId));
+
+        mockMvc.perform(get("/api/v1/merchants/{id}/payouts", merchantId).header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    private String unsignedTestToken(Map<String, Object> claims) throws Exception {
         String header = base64Url("{\"alg\":\"none\"}");
-        String payloadJson = base64Url("{\"sub\":\"" + subject + "\"}");
+        String payloadJson = base64Url(objectMapper.writeValueAsString(claims));
         return header + "." + payloadJson + ".";
     }
 
