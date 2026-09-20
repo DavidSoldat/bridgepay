@@ -38,6 +38,29 @@ describe('ReviewDetail', () => {
     expect(text).toContain('debt_ratio');
   });
 
+  it('shows a human-readable label for known score-factor keys instead of the raw camelCase name', () => {
+    const app: ApplicationResponse = {
+      ...baseApp,
+      scoreFactors: [{ feature: 'numberOfTime30to59DaysPastDueNotWorse', contribution: 0.5 }],
+    };
+
+    TestBed.configureTestingModule({
+      imports: [ReviewDetail],
+      providers: [
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: app.applicationId })) } },
+        { provide: Applications, useValue: { getApplication: () => of(app), reviewDecision: () => of(app) } },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(ReviewDetail);
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('30-59 days past due');
+    expect(text).not.toContain('numberOfTime30to59DaysPastDueNotWorse');
+  });
+
   it('calls reviewDecision with APPROVE when Approve is clicked', () => {
     const decisionCalls: unknown[][] = [];
     const reviewDecision = (id: string, decision: string) => {

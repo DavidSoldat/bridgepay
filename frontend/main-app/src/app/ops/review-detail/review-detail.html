@@ -12,7 +12,7 @@
   <div class="space-y-2 mb-8">
     @for (factor of app.scoreFactors; track factor.feature) {
       <div class="flex items-center gap-3 text-sm">
-        <div class="w-40 shrink-0 truncate">{{ factor.feature }}</div>
+        <div class="w-40 shrink-0 truncate" [title]="factor.feature">{{ featureLabel(factor.feature) }}</div>
         <div class="flex-1 h-4 relative bg-hairline/30">
           <div class="absolute inset-y-0 left-1/2 w-px bg-hairline"></div>
           @if (factor.contribution >= 0) {

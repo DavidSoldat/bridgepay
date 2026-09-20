@@ -5,6 +5,21 @@ import { DatePipe, DecimalPipe } from '@angular/common';
 import { switchMap } from 'rxjs';
 import { Applications } from '../applications';
 
+// The model's 10 bureau-shaped feature keys (services/credit-risk-engine's
+// coefficients.json) - unknown keys fall back to the raw name as-is.
+const FEATURE_LABELS: Record<string, string> = {
+  revolvingUtilization: 'Revolving utilization',
+  age: 'Age',
+  numberOfTime30to59DaysPastDueNotWorse: '30-59 days past due',
+  debtRatio: 'Debt ratio',
+  monthlyIncome: 'Monthly income',
+  numberOfOpenCreditLinesAndLoans: 'Open credit lines & loans',
+  numberOfTimes90DaysLate: '90+ days late',
+  numberRealEstateLoansOrLines: 'Real estate loans/lines',
+  numberOfTime60to89DaysPastDueNotWorse: '60-89 days past due',
+  numberOfDependents: 'Dependents',
+};
+
 @Component({
   selector: 'app-review-detail',
   imports: [RouterLink, DatePipe, DecimalPipe],
@@ -27,6 +42,10 @@ export class ReviewDetail {
   protected maxContribution(): number {
     const factors = this.application()?.scoreFactors ?? [];
     return Math.max(1e-9, ...factors.map((f) => Math.abs(f.contribution)));
+  }
+
+  protected featureLabel(feature: string): string {
+    return FEATURE_LABELS[feature] ?? feature;
   }
 
   decide(decision: 'APPROVE' | 'DECLINE'): void {
