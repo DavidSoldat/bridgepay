@@ -168,3 +168,8 @@ Same "verify for real" standard as the rest of this project:
 - No caching layer (e.g. `actions/cache` for the Maven/npm dependency
   trees) — worth adding if build times become a real annoyance, not
   speculatively now.
+- `build-and-push` never runs on PRs (only on push to main), so a broken
+  Dockerfile or build-time dependency change is first exercised on a
+  merge to main rather than caught in review — a deliberate cost-vs-coverage
+  tradeoff (9 QEMU-emulated ARM64 builds per PR push would be expensive),
+  not an oversight.
