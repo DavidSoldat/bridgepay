@@ -165,4 +165,41 @@ class CreditApplicationControllerIntegrationTest {
                                 .authorities(new SimpleGrantedAuthority("ROLE_OPS"))))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void opsEndpoints_filterByStatus_andSupportAllAsNoFilter() throws Exception {
+        var opsUser = jwt().jwt(j -> j.subject(UUID.randomUUID().toString())
+                        .claim("realm_access", Map.of("roles", List.of("ops"))))
+                .authorities(new SimpleGrantedAuthority("ROLE_OPS"));
+
+        mockMvc.perform(post("/api/v1/applications")
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString())))
+                        .header("Idempotency-Key", "idem-status-filter")
+                        .contentType("application/json")
+                        .content(checkoutPayload(merchantId.toString(), "40.00")))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/v1/applications").param("status", "APPROVED").with(opsUser))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].status").value("APPROVED"));
+
+        mockMvc.perform(get("/api/v1/applications").param("status", "DECLINED").with(opsUser))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isEmpty());
+
+        mockMvc.perform(get("/api/v1/applications").param("status", "ALL").with(opsUser))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].status").exists());
+    }
+
+    @Test
+    void opsEndpoints_rejectUnknownStatus() throws Exception {
+        mockMvc.perform(get("/api/v1/applications")
+                        .param("status", "NOT_A_STATUS")
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString())
+                                        .claim("realm_access", Map.of("roles", List.of("ops"))))
+                                .authorities(new SimpleGrantedAuthority("ROLE_OPS"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+    }
 }

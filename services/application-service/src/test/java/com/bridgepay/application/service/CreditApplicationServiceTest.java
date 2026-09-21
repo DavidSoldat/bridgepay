@@ -7,6 +7,7 @@ import com.bridgepay.application.domain.ApplicationStatus;
 import com.bridgepay.application.domain.CreditApplication;
 import com.bridgepay.application.domain.IdempotencyKey;
 import com.bridgepay.application.domain.Merchant;
+import com.bridgepay.application.dto.ApplicationResponse;
 import com.bridgepay.application.dto.CheckoutRequest;
 import com.bridgepay.application.dto.ReviewDecisionRequest;
 import com.bridgepay.application.repository.CreditApplicationRepository;
@@ -22,6 +23,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -135,5 +140,41 @@ class CreditApplicationServiceTest {
         assertThat(response.status()).isEqualTo("APPROVED");
         assertThat(response.installmentAmount()).isEqualByComparingTo("25.00");
         verify(merchantPayoutRepository).save(any());
+    }
+
+    @Test
+    void listApplications_filtersByGivenStatus_whenStatusIsNotAll() {
+        Pageable pageable = PageRequest.of(0, 20);
+        CreditApplication declined = new CreditApplication(applicantId, merchant, new BigDecimal("100.00"));
+        declined.applyDecision(ApplicationStatus.DECLINED, 0.9, "[]", null, null);
+        when(applicationRepository.findByStatus(ApplicationStatus.DECLINED, pageable))
+                .thenReturn(new PageImpl<>(List.of(declined)));
+
+        Page<ApplicationResponse> result = service.listApplications("DECLINED", pageable);
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).status()).isEqualTo("DECLINED");
+        verify(applicationRepository, never()).findAll(any(Pageable.class));
+    }
+
+    @Test
+    void listApplications_returnsEveryStatus_whenStatusIsAll() {
+        Pageable pageable = PageRequest.of(0, 20);
+        CreditApplication approved = new CreditApplication(applicantId, merchant, new BigDecimal("100.00"));
+        approved.applyDecision(ApplicationStatus.APPROVED, 0.1, "[]", 4, new BigDecimal("25.00"));
+        when(applicationRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(approved)));
+
+        Page<ApplicationResponse> result = service.listApplications("ALL", pageable);
+
+        assertThat(result.getContent()).hasSize(1);
+        verify(applicationRepository, never()).findByStatus(any(), any());
+    }
+
+    @Test
+    void listApplications_throwsIllegalArgument_whenStatusIsUnknown() {
+        Pageable pageable = PageRequest.of(0, 20);
+
+        assertThatThrownBy(() -> service.listApplications("NOT_A_STATUS", pageable))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

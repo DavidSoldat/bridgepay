@@ -23,7 +23,7 @@ describe('ReviewQueue', () => {
       imports: [ReviewQueue],
       providers: [
         provideRouter([]),
-        { provide: Applications, useValue: { listManualReview: () => of(page) } },
+        { provide: Applications, useValue: { list: () => of(page) } },
       ],
     });
 
@@ -44,7 +44,7 @@ describe('ReviewQueue', () => {
       imports: [ReviewQueue],
       providers: [
         provideRouter([]),
-        { provide: Applications, useValue: { listManualReview: () => of(emptyPage) } },
+        { provide: Applications, useValue: { list: () => of(emptyPage) } },
       ],
     });
 
@@ -61,7 +61,7 @@ describe('ReviewQueue', () => {
       imports: [ReviewQueue],
       providers: [
         provideRouter([]),
-        { provide: Applications, useValue: { listManualReview: () => throwError(() => new Error('403')) } },
+        { provide: Applications, useValue: { list: () => throwError(() => new Error('403')) } },
       ],
     });
 
@@ -71,5 +71,56 @@ describe('ReviewQueue', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Could not load the review queue');
     expect(text).not.toContain('No applications waiting for review');
+  });
+
+  it('defaults to the pending (manual review) filter', () => {
+    const calls: (string | undefined)[] = [];
+    const emptyPage: Page<ApplicationResponse> = {
+      content: [], totalElements: 0, totalPages: 0, number: 0, size: 20,
+    };
+
+    TestBed.configureTestingModule({
+      imports: [ReviewQueue],
+      providers: [
+        provideRouter([]),
+        {
+          provide: Applications,
+          useValue: { list: (status?: string) => (calls.push(status), of(emptyPage)) },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(ReviewQueue);
+    fixture.detectChanges();
+
+    expect(calls).toEqual(['MANUAL_REVIEW']);
+  });
+
+  it('re-fetches with the newly selected status when a filter button is clicked', () => {
+    const calls: (string | undefined)[] = [];
+    const emptyPage: Page<ApplicationResponse> = {
+      content: [], totalElements: 0, totalPages: 0, number: 0, size: 20,
+    };
+
+    TestBed.configureTestingModule({
+      imports: [ReviewQueue],
+      providers: [
+        provideRouter([]),
+        {
+          provide: Applications,
+          useValue: { list: (status?: string) => (calls.push(status), of(emptyPage)) },
+        },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(ReviewQueue);
+    fixture.detectChanges();
+
+    const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll('button');
+    const allButton = Array.from(buttons).find((b) => b.textContent?.trim() === 'All') as HTMLButtonElement;
+    allButton.click();
+    fixture.detectChanges();
+
+    expect(calls).toEqual(['MANUAL_REVIEW', 'ALL']);
   });
 });

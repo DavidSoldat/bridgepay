@@ -18,9 +18,9 @@ describe('Applications', () => {
 
   afterEach(() => httpMock.verify());
 
-  it('lists manual-review applications', () => {
+  it('defaults to manual-review applications', () => {
     let result: ApplicationResponse[] | undefined;
-    service.listManualReview().subscribe((page) => (result = page.content));
+    service.list().subscribe((page) => (result = page.content));
 
     const req = httpMock.expectOne(
       (r) => r.url.endsWith('/api/v1/applications') && r.params.get('status') === 'MANUAL_REVIEW',
@@ -29,6 +29,15 @@ describe('Applications', () => {
     req.flush({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 });
 
     expect(result).toEqual([]);
+  });
+
+  it('passes the requested status through to the query param', () => {
+    service.list('APPROVED').subscribe();
+
+    const req = httpMock.expectOne(
+      (r) => r.url.endsWith('/api/v1/applications') && r.params.get('status') === 'APPROVED',
+    );
+    req.flush({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 });
   });
 
   it('fetches a single application', () => {

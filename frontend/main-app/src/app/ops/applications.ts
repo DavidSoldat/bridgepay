@@ -10,9 +10,9 @@ export class Applications {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = `${environment.gatewayBaseUrl}/api/v1/applications`;
 
-  listManualReview(page = 0, size = 20): Observable<Page<ApplicationResponse>> {
+  list(status = 'MANUAL_REVIEW', page = 0, size = 20): Observable<Page<ApplicationResponse>> {
     return this.http.get<Page<ApplicationResponse>>(this.baseUrl, {
-      params: { status: 'MANUAL_REVIEW', page, size },
+      params: { status, page, size },
     });
   }
 

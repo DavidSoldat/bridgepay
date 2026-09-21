@@ -68,7 +68,7 @@ public class CreditApplicationController {
     public ResponseEntity<Page<ApplicationResponse>> listManualReview(
             @RequestParam(defaultValue = "MANUAL_REVIEW") String status,
             Pageable pageable) {
-        return ResponseEntity.ok(applicationService.listManualReview(pageable));
+        return ResponseEntity.ok(applicationService.listApplications(status, pageable));
     }
 
     @PostMapping("/{id}/review-decision")

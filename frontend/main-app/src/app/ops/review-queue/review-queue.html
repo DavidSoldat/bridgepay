@@ -1,9 +1,25 @@
 <h1 class="text-xl font-medium mb-4">Review queue</h1>
+<div class="flex gap-2 mb-4">
+  @for (status of statusFilters; track status) {
+    <button
+      type="button"
+      (click)="selectFilter(status)"
+      class="px-3 py-1 text-sm border rounded"
+      [class.border-accent]="filter() === status"
+      [class.text-accent]="filter() === status"
+      [class.border-hairline]="filter() !== status"
+      [class.text-ink-muted]="filter() !== status"
+    >
+      {{ statusFilterLabels[status] }}
+    </button>
+  }
+</div>
 <table class="w-full text-sm">
   <thead>
     <tr class="border-b border-hairline text-left text-ink-muted">
       <th class="py-2 font-normal">Merchant</th>
       <th class="py-2 font-normal text-right">Amount</th>
+      <th class="py-2 font-normal">Status</th>
       <th class="py-2 font-normal">Decisioned</th>
       <th class="py-2"></th>
     </tr>
@@ -11,7 +27,7 @@
   <tbody>
     @if (loadError()) {
       <tr>
-        <td colspan="4" class="py-6 text-center text-status-declined">
+        <td colspan="5" class="py-6 text-center text-status-declined">
           Could not load the review queue. Try refreshing.
         </td>
       </tr>
@@ -20,6 +36,7 @@
         <tr class="border-b border-hairline">
           <td class="py-2 font-mono">{{ row.merchantId }}</td>
           <td class="py-2 font-mono text-right">{{ row.amount | number: '1.2-2' }}</td>
+          <td class="py-2 font-mono">{{ row.status }}</td>
           <td class="py-2 font-mono">{{ row.decisionAt ? (row.decisionAt | date: 'MMM d, y') : '—' }}</td>
           <td class="py-2 text-right">
             <a [routerLink]="['/ops', row.applicationId]" class="text-accent hover:underline">Review</a>
@@ -27,7 +44,7 @@
         </tr>
       } @empty {
         <tr>
-          <td colspan="4" class="py-6 text-center text-ink-muted">
+          <td colspan="5" class="py-6 text-center text-ink-muted">
             No applications waiting for review.
           </td>
         </tr>

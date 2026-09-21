@@ -119,8 +119,11 @@ public class CreditApplicationService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ApplicationResponse> listManualReview(Pageable pageable) {
-        return applicationRepository.findByStatus(ApplicationStatus.MANUAL_REVIEW, pageable)
+    public Page<ApplicationResponse> listApplications(String status, Pageable pageable) {
+        if ("ALL".equalsIgnoreCase(status)) {
+            return applicationRepository.findAll(pageable).map(this::toResponse);
+        }
+        return applicationRepository.findByStatus(ApplicationStatus.valueOf(status), pageable)
                 .map(this::toResponse);
     }
 

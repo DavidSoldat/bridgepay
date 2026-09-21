@@ -1,10 +1,20 @@
 import { Component, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { catchError, map, of } from 'rxjs';
+import { catchError, map, of, switchMap } from 'rxjs';
 import { Applications } from '../applications';
 import { ApplicationResponse } from '../../shared/models/application';
+
+export const STATUS_FILTERS = ['ALL', 'MANUAL_REVIEW', 'APPROVED', 'DECLINED'] as const;
+export type StatusFilter = (typeof STATUS_FILTERS)[number];
+
+const STATUS_FILTER_LABELS: Record<StatusFilter, string> = {
+  ALL: 'All',
+  MANUAL_REVIEW: 'Pending',
+  APPROVED: 'Approved',
+  DECLINED: 'Declined',
+};
 
 @Component({
   selector: 'app-review-queue',
@@ -15,16 +25,28 @@ import { ApplicationResponse } from '../../shared/models/application';
 export class ReviewQueue {
   private readonly applications = inject(Applications);
 
+  protected readonly statusFilters = STATUS_FILTERS;
+  protected readonly statusFilterLabels = STATUS_FILTER_LABELS;
+  protected readonly filter = signal<StatusFilter>('MANUAL_REVIEW');
   protected readonly loadError = signal(false);
 
   protected readonly rows = toSignal(
-    this.applications.listManualReview().pipe(
-      map((page) => page.content),
-      catchError(() => {
-        this.loadError.set(true);
-        return of([] as ApplicationResponse[]);
-      }),
+    toObservable(this.filter).pipe(
+      switchMap((status) =>
+        this.applications.list(status).pipe(
+          map((page) => page.content),
+          catchError(() => {
+            this.loadError.set(true);
+            return of([] as ApplicationResponse[]);
+          }),
+        ),
+      ),
     ),
     { initialValue: [] as ApplicationResponse[] },
   );
+
+  protected selectFilter(status: StatusFilter): void {
+    this.loadError.set(false);
+    this.filter.set(status);
+  }
 }
