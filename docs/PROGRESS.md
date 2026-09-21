@@ -91,7 +91,7 @@ r` loads the real model at startup ("`Loaded credit risk model from classpath:mo
   - Installed the `gh` CLI (via `winget`) partway through this task specifically so verification could be real (actual PR checks, actual run logs, actual package listings) instead of asking a human to read the GitHub UI — consistent with this project's standing "verify for real" bar.
 
 ## Next, in order
-- [ ] k3s manifests, referencing the GHCR image tags the CI/CD pipeline below now produces
+- [ ] k3s manifests, referencing the GHCR image tags the CI/CD pipeline above now produces. The 9 published GHCR packages are all **private** (confirmed via `gh api user/packages?package_type=container`), so the manifests will need a GHCR `imagePullSecret` (a PAT with `read:packages`, stored as a Kubernetes Secret) to actually pull these images — or the packages need to be made public first.
 
 All four "frontend" sub-projects (Keycloak realm export, API gateway, Main Angular app, Storefront demo Angular app) are now done — what remains is what was already next on the list before that decomposition started.
 
