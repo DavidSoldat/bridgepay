@@ -28,3 +28,25 @@ jobs:
           java-version: '21'
       - name: mvn clean verify
         run: mvn -f services/${{ matrix.service }} clean verify
+
+  test-angular:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - main-app
+          - storefront
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install pinned npm and dependencies
+        working-directory: frontend/${{ matrix.app }}
+        run: |
+          npm install -g npm@11.6.1
+          npm ci
+      - name: ng test
+        working-directory: frontend/${{ matrix.app }}
+        run: npx ng test --watch=false
