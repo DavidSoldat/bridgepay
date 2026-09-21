@@ -19,6 +19,17 @@ dev-only credentials).
 | `merchant1` | `merchant1` | `merchant` | `merchantId` claim = `00000000-0000-7000-8000-000000000001` (the seeded demo merchant, see Application Service's `V2__seed_demo_merchant.sql`) |
 | `ops1` | `ops1` | `ops` | |
 
+## Login theme
+
+`themes/bridgepay/login/` is a CSS-only reskin of Keycloak's default
+`keycloak.v2` theme (no FTL templates touched, so the actual PKCE
+form/flow is exactly stock Keycloak) — brand colors/fonts/logo only, via
+the CSS custom properties Keycloak documents for this. Mounted into the
+container at `/opt/keycloak/themes` by the root `docker-compose.yml` and
+selected as the realm's `loginTheme` in `bridgepay-realm.json`. The
+wordmark/mark SVGs live at `../assets/brand/` (canonical source) and are
+copied into `themes/bridgepay/login/resources/img/`.
+
 ## Clients
 
 Both public (no secret), PKCE required:
