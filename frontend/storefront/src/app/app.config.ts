@@ -1,5 +1,6 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideRouter } from '@angular/router';
 import {
   provideKeycloak,
   includeBearerTokenInterceptor,
@@ -7,6 +8,7 @@ import {
   INCLUDE_BEARER_TOKEN_INTERCEPTOR_CONFIG,
   IncludeBearerTokenCondition,
 } from 'keycloak-angular';
+import { routes } from './app.routes';
 
 const gatewayUrlCondition = createInterceptorCondition<IncludeBearerTokenCondition>({
   urlPattern: /^\/api\/.*$/i,
@@ -16,6 +18,7 @@ const gatewayUrlCondition = createInterceptorCondition<IncludeBearerTokenConditi
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
+    provideRouter(routes),
     provideKeycloak({
       config: {
         url: 'http://localhost:8180',
