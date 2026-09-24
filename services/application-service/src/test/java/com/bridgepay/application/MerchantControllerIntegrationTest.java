@@ -71,7 +71,17 @@ class MerchantControllerIntegrationTest {
         @Bean
         @Primary
         CreditRiskClient stubCreditRiskClient() {
-            return request -> new ScoreResult(0.1, ScoreDecision.APPROVE, List.of());
+            // Amount picks the decision so tests can create every outcome through the real checkout path.
+            return request -> {
+                BigDecimal amount = request.amount();
+                if (amount.compareTo(new BigDecimal("1000")) >= 0) {
+                    return new ScoreResult(0.8, ScoreDecision.DECLINE, List.of());
+                }
+                if (amount.compareTo(new BigDecimal("500")) >= 0) {
+                    return new ScoreResult(0.5, ScoreDecision.MANUAL_REVIEW, List.of());
+                }
+                return new ScoreResult(0.1, ScoreDecision.APPROVE, List.of());
+            };
         }
     }
 
@@ -116,6 +126,66 @@ class MerchantControllerIntegrationTest {
         Merchant merchantB = merchantRepository.save(new Merchant("Merchant B", new BigDecimal("3.50")));
 
         mockMvc.perform(get("/api/v1/merchants/{id}/payouts", merchantB.getId())
+                        .with(merchantJwt(merchantA.getId())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void merchantSeesOwnSalesNewestFirst_withoutShopperCreditData() throws Exception {
+        Merchant merchant = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("3.50")));
+        Merchant other = merchantRepository.save(new Merchant("Merchant B", new BigDecimal("3.50")));
+        checkout(merchant.getId(), "100.00");
+        checkout(merchant.getId(), "1500.00");
+        checkout(other.getId(), "200.00");
+
+        mockMvc.perform(get("/api/v1/merchants/{id}/sales", merchant.getId())
+                        .with(merchantJwt(merchant.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.content[0].amount").value(1500.00))
+                .andExpect(jsonPath("$.content[0].status").value("DECLINED"))
+                .andExpect(jsonPath("$.content[1].amount").value(100.00))
+                .andExpect(jsonPath("$.content[1].status").value("APPROVED"))
+                .andExpect(jsonPath("$.content[1].installmentCount").value(4))
+                .andExpect(jsonPath("$.content[1].installmentAmount").value(25.00))
+                .andExpect(jsonPath("$.content[0].applicantId").doesNotExist())
+                .andExpect(jsonPath("$.content[0].riskScore").doesNotExist())
+                .andExpect(jsonPath("$.content[0].scoreFactors").doesNotExist());
+    }
+
+    @Test
+    void salesCanBeFilteredByStatus() throws Exception {
+        Merchant merchant = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("3.50")));
+        checkout(merchant.getId(), "100.00");
+        checkout(merchant.getId(), "600.00");
+        checkout(merchant.getId(), "1500.00");
+
+        mockMvc.perform(get("/api/v1/merchants/{id}/sales", merchant.getId())
+                        .param("status", "MANUAL_REVIEW")
+                        .with(merchantJwt(merchant.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].status").value("MANUAL_REVIEW"));
+    }
+
+    @Test
+    void unknownSalesStatusIsRejectedWith400() throws Exception {
+        Merchant merchant = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("3.50")));
+
+        mockMvc.perform(get("/api/v1/merchants/{id}/sales", merchant.getId())
+                        .param("status", "BOGUS")
+                        .with(merchantJwt(merchant.getId())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void merchantIsBlockedFromAnotherMerchantsSales() throws Exception {
+        Merchant merchantA = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("3.50")));
+        Merchant merchantB = merchantRepository.save(new Merchant("Merchant B", new BigDecimal("3.50")));
+
+        mockMvc.perform(get("/api/v1/merchants/{id}/sales", merchantB.getId())
                         .with(merchantJwt(merchantA.getId())))
                 .andExpect(status().isForbidden());
     }

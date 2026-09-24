@@ -13,6 +13,7 @@ import com.bridgepay.application.domain.OutboxEvent;
 import com.bridgepay.application.dto.ApplicationResponse;
 import com.bridgepay.application.dto.CheckoutRequest;
 import com.bridgepay.application.dto.MerchantPayoutResponse;
+import com.bridgepay.application.dto.MerchantSaleResponse;
 import com.bridgepay.application.dto.ReviewDecisionRequest;
 import com.bridgepay.application.event.ApplicationEvents;
 import com.bridgepay.application.event.EventEnvelope;
@@ -143,6 +144,23 @@ public class CreditApplicationService {
                         payout.getStatus().name(),
                         payout.getPaidAt()
                 ));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<MerchantSaleResponse> listSalesForMerchant(UUID merchantId, String status, Pageable pageable) {
+        Page<CreditApplication> page = "ALL".equalsIgnoreCase(status)
+                ? applicationRepository.findByMerchantIdOrderByCreatedAtDesc(merchantId, pageable)
+                : applicationRepository.findByMerchantIdAndStatusOrderByCreatedAtDesc(
+                        merchantId, ApplicationStatus.valueOf(status), pageable);
+        return page.map(application -> new MerchantSaleResponse(
+                application.getId(),
+                application.getCreatedAt(),
+                application.getAmount(),
+                application.getStatus().name(),
+                application.getInstallmentCount(),
+                application.getInstallmentAmount(),
+                application.getDecisionAt()
+        ));
     }
 
     /**
