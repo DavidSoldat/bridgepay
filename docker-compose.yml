@@ -149,10 +149,12 @@ services:
     depends_on:
       - applicant-service
       - application-service
+      - repayment-reconciliation-service
     environment:
       SPRING_PROFILES_ACTIVE: local
       APPLICANT_SERVICE_URL: http://applicant-service:8080
       APPLICATION_SERVICE_URL: http://application-service:8081
+      REPAYMENT_RECONCILIATION_SERVICE_URL: http://repayment-reconciliation-service:8084
     ports:
       - "8086:8086"
 

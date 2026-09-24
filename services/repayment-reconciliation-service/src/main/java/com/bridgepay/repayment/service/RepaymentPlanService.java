@@ -6,16 +6,21 @@ import com.bridgepay.repayment.client.PaddleClient;
 import com.bridgepay.repayment.client.PaddleTransactionResult;
 import com.bridgepay.repayment.domain.Installment;
 import com.bridgepay.repayment.domain.RepaymentPlan;
+import com.bridgepay.repayment.dto.InstallmentResponse;
+import com.bridgepay.repayment.dto.RepaymentPlanResponse;
 import com.bridgepay.repayment.event.ApplicationEvents;
 import com.bridgepay.repayment.repository.InstallmentRepository;
 import com.bridgepay.repayment.repository.RepaymentPlanRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @Service
@@ -80,5 +85,24 @@ public class RepaymentPlanService {
 
         log.info("Created repayment plan {} for application {} - complete the sandbox checkout at {}",
                 plan.getId(), applicationId, transaction.checkoutUrl());
+    }
+
+    @Transactional(readOnly = true)
+    public RepaymentPlanResponse getForApplicant(UUID applicationId, UUID applicantId) {
+        RepaymentPlan plan = repaymentPlanRepository.findByApplicationId(applicationId)
+                .orElseThrow(() -> new NoSuchElementException("Repayment plan not found"));
+        if (!plan.getApplicantId().equals(applicantId)) {
+            throw new AccessDeniedException("Repayment plan does not belong to this applicant");
+        }
+        List<Installment> installments = installmentRepository.findByRepaymentPlanOrderBySequenceNumberAsc(plan);
+        return new RepaymentPlanResponse(
+                plan.getId(), plan.getApplicationId(), plan.getStatus().name(),
+                plan.getTotalAmount(), plan.getInstallmentCount(), plan.getInstallmentAmount(),
+                installments.stream().map(this::toInstallmentResponse).toList());
+    }
+
+    private InstallmentResponse toInstallmentResponse(Installment installment) {
+        return new InstallmentResponse(installment.getSequenceNumber(), installment.getDueDate(),
+                installment.getAmount(), installment.getStatus().name(), installment.getPaidAt());
     }
 }

@@ -44,6 +44,7 @@ class RoutingIntegrationTest {
     static void registerProperties(DynamicPropertyRegistry registry) {
         registry.add("bridgepay.applicant-service.base-url", wireMock::baseUrl);
         registry.add("bridgepay.application-service.base-url", wireMock::baseUrl);
+        registry.add("bridgepay.repayment-reconciliation-service.base-url", wireMock::baseUrl);
     }
 
     @Autowired
@@ -82,6 +83,15 @@ class RoutingIntegrationTest {
                 .willReturn(okJson("[]")));
 
         mockMvc.perform(get("/api/v1/merchants/m-1/payouts"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void routesRepaymentPlanPaths_toRepaymentReconciliationService() throws Exception {
+        wireMock.stubFor(WireMock.get(urlPathEqualTo("/api/v1/repayment-plans/plan-1"))
+                .willReturn(okJson("{}")));
+
+        mockMvc.perform(get("/api/v1/repayment-plans/plan-1"))
                 .andExpect(status().isOk());
     }
 

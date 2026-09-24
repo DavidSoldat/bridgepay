@@ -193,6 +193,59 @@ class CreditApplicationControllerIntegrationTest {
     }
 
     @Test
+    void listMine_returnsOnlyTheAuthenticatedShoppersOwnApplications() throws Exception {
+        String subject = UUID.randomUUID().toString();
+
+        mockMvc.perform(post("/api/v1/applications")
+                        .with(jwt().jwt(j -> j.subject(subject)))
+                        .header("Idempotency-Key", "idem-mine-1")
+                        .contentType("application/json")
+                        .content(checkoutPayload(merchantId.toString(), "60.00")))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/v1/applications")
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString())))
+                        .header("Idempotency-Key", "idem-mine-other")
+                        .contentType("application/json")
+                        .content(checkoutPayload(merchantId.toString(), "60.00")))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/v1/applications/me").with(jwt().jwt(j -> j.subject(subject))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].applicantId").value(subject));
+    }
+
+    @Test
+    void listMine_returnsTheShoppersOwnApplicationsNewestFirst() throws Exception {
+        String subject = UUID.randomUUID().toString();
+
+        String firstResponse = mockMvc.perform(post("/api/v1/applications")
+                        .with(jwt().jwt(j -> j.subject(subject)))
+                        .header("Idempotency-Key", "idem-order-1")
+                        .contentType("application/json")
+                        .content(checkoutPayload(merchantId.toString(), "60.00")))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String firstApplicationId = objectMapper.readTree(firstResponse).get("applicationId").asText();
+
+        String secondResponse = mockMvc.perform(post("/api/v1/applications")
+                        .with(jwt().jwt(j -> j.subject(subject)))
+                        .header("Idempotency-Key", "idem-order-2")
+                        .contentType("application/json")
+                        .content(checkoutPayload(merchantId.toString(), "60.00")))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String secondApplicationId = objectMapper.readTree(secondResponse).get("applicationId").asText();
+
+        mockMvc.perform(get("/api/v1/applications/me").with(jwt().jwt(j -> j.subject(subject))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].applicationId").value(secondApplicationId))
+                .andExpect(jsonPath("$.content[1].applicationId").value(firstApplicationId));
+    }
+
+    @Test
     void opsEndpoints_rejectUnknownStatus() throws Exception {
         mockMvc.perform(get("/api/v1/applications")
                         .param("status", "NOT_A_STATUS")

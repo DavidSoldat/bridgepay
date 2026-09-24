@@ -177,4 +177,18 @@ class CreditApplicationServiceTest {
         assertThatThrownBy(() -> service.listApplications("NOT_A_STATUS", pageable))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void listForApplicant_returnsOnlyThatApplicantsApplications() {
+        Pageable pageable = PageRequest.of(0, 20);
+        CreditApplication mine = new CreditApplication(applicantId, merchant, new BigDecimal("100.00"));
+        mine.applyDecision(ApplicationStatus.APPROVED, 0.1, "[]", 4, new BigDecimal("25.00"));
+        when(applicationRepository.findByApplicantIdOrderByCreatedAtDesc(applicantId, pageable))
+                .thenReturn(new PageImpl<>(List.of(mine)));
+
+        Page<ApplicationResponse> result = service.listForApplicant(applicantId, pageable);
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).applicantId()).isEqualTo(applicantId);
+    }
 }
