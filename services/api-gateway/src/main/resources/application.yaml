@@ -31,12 +31,18 @@ spring:
               uri: ${bridgepay.application-service.base-url}
               predicates:
                 - Path=/api/v1/merchants/**
+            - id: repayment-plans
+              uri: ${bridgepay.repayment-reconciliation-service.base-url}
+              predicates:
+                - Path=/api/v1/repayment-plans/**
 
 bridgepay:
   applicant-service:
     base-url: ${APPLICANT_SERVICE_URL:http://localhost:8080}
   application-service:
     base-url: ${APPLICATION_SERVICE_URL:http://localhost:8081}
+  repayment-reconciliation-service:
+    base-url: ${REPAYMENT_RECONCILIATION_SERVICE_URL:http://localhost:8084}
 
 management:
   endpoints:
