@@ -52,6 +52,11 @@ public class CreditApplicationController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<Page<ApplicationResponse>> listMine(@AuthenticationPrincipal Jwt jwt, Pageable pageable) {
+        return ResponseEntity.ok(applicationService.listForApplicant(UUID.fromString(jwt.getSubject()), pageable));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<ApplicationResponse> get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         boolean isOps = jwt.getClaimAsMap("realm_access") != null

@@ -193,6 +193,30 @@ class CreditApplicationControllerIntegrationTest {
     }
 
     @Test
+    void listMine_returnsOnlyTheAuthenticatedShoppersOwnApplications() throws Exception {
+        String subject = UUID.randomUUID().toString();
+
+        mockMvc.perform(post("/api/v1/applications")
+                        .with(jwt().jwt(j -> j.subject(subject)))
+                        .header("Idempotency-Key", "idem-mine-1")
+                        .contentType("application/json")
+                        .content(checkoutPayload(merchantId.toString(), "60.00")))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/v1/applications")
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString())))
+                        .header("Idempotency-Key", "idem-mine-other")
+                        .contentType("application/json")
+                        .content(checkoutPayload(merchantId.toString(), "60.00")))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/v1/applications/me").with(jwt().jwt(j -> j.subject(subject))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].applicantId").value(subject));
+    }
+
+    @Test
     void opsEndpoints_rejectUnknownStatus() throws Exception {
         mockMvc.perform(get("/api/v1/applications")
                         .param("status", "NOT_A_STATUS")
