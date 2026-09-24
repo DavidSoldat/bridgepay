@@ -120,6 +120,18 @@ describe('SalesPage', () => {
     expect(text).toContain('1,500.00');
   });
 
+  it('keeps the error, not an empty state, when the active filter is clicked after a failed load', () => {
+    const fixture = setup({ list: () => throwError(() => new Error('500')) });
+    const el = fixture.nativeElement as HTMLElement;
+
+    button(el, 'All').click();
+    fixture.detectChanges();
+
+    const text = el.textContent ?? '';
+    expect(text).toContain('Could not load your sales');
+    expect(text).not.toContain('No sales yet');
+  });
+
   it('still shows the summary tiles when the sales list fails', () => {
     const el = setup({ list: () => throwError(() => new Error('403')) }).nativeElement as HTMLElement;
     const text = el.textContent ?? '';

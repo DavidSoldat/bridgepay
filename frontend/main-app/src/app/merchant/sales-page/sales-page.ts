@@ -47,14 +47,16 @@ export class SalesPage {
 
   private readonly result = toSignal(
     toObservable(this.query).pipe(
-      switchMap(({ status, page }) =>
-        this.sales.list(this.merchantId, status, page).pipe(
+      // Reset the error only when a fetch actually starts - re-clicking the active filter fetches nothing.
+      switchMap(({ status, page }) => {
+        this.listError.set(false);
+        return this.sales.list(this.merchantId, status, page).pipe(
           catchError(() => {
             this.listError.set(true);
             return of(null);
           }),
-        ),
-      ),
+        );
+      }),
     ),
     { initialValue: null },
   );
@@ -63,7 +65,6 @@ export class SalesPage {
   protected readonly totalPages = computed(() => this.result()?.totalPages ?? 0);
 
   protected selectFilter(status: SaleFilter): void {
-    this.listError.set(false);
     this.filter.set(status);
     this.page.set(0);
   }
