@@ -1,0 +1,116 @@
+<h1 class="text-xl font-medium mb-4">Sales</h1>
+
+@if (summaryError()) {
+  <p class="mb-6 text-sm text-status-declined">Could not load your sales summary. Try refreshing.</p>
+} @else {
+  @if (summary(); as s) {
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
+      <div class="border border-hairline rounded p-4" data-tile="approved-volume">
+        <div class="text-xs text-ink-muted mb-1">Approved volume</div>
+        <div class="font-mono text-lg">{{ s.approvedVolume | number: '1.2-2' }}</div>
+      </div>
+      <div class="border border-hairline rounded p-4" data-tile="approval-rate">
+        <div class="text-xs text-ink-muted mb-1">Approval rate</div>
+        <div class="font-mono text-lg">{{ s.approvalRate === null ? '—' : (s.approvalRate | percent: '1.0-0') }}</div>
+      </div>
+      <div class="border border-hairline rounded p-4" data-tile="fees-paid">
+        <div class="text-xs text-ink-muted mb-1">Fees paid</div>
+        <div class="font-mono text-lg">{{ s.feesPaid | number: '1.2-2' }}</div>
+      </div>
+      <div class="border border-hairline rounded p-4" data-tile="net-paid-out">
+        <div class="text-xs text-ink-muted mb-1">Net paid out</div>
+        <div class="font-mono text-lg">{{ s.netPaidOut | number: '1.2-2' }}</div>
+      </div>
+    </div>
+    <p class="mb-6 text-xs text-ink-muted font-mono">
+      {{ s.approvedCount }} approved · {{ s.inReviewCount }} in review · {{ s.declinedCount }} declined
+      of {{ s.totalCheckouts }} checkouts
+    </p>
+  }
+}
+
+<div class="flex gap-2 mb-4">
+  @for (status of saleFilters; track status) {
+    <button
+      type="button"
+      (click)="selectFilter(status)"
+      class="px-3 py-1 text-sm border rounded"
+      [class.border-accent]="filter() === status"
+      [class.text-accent]="filter() === status"
+      [class.border-hairline]="filter() !== status"
+      [class.text-ink-muted]="filter() !== status"
+    >
+      {{ saleFilterLabels[status] }}
+    </button>
+  }
+</div>
+
+<table class="w-full text-sm">
+  <thead>
+    <tr class="border-b border-hairline text-left text-ink-muted">
+      <th class="py-2 font-normal">Date</th>
+      <th class="py-2 font-normal text-right">Amount</th>
+      <th class="py-2 font-normal">Plan</th>
+      <th class="py-2 font-normal">Status</th>
+      <th class="py-2 font-normal">Decided</th>
+    </tr>
+  </thead>
+  <tbody>
+    @if (listError()) {
+      <tr>
+        <td colspan="5" class="py-6 text-center text-status-declined">
+          Could not load your sales. Try refreshing.
+        </td>
+      </tr>
+    } @else {
+      @for (row of rows(); track row.id) {
+        <tr class="border-b border-hairline">
+          <td class="py-2 font-mono">{{ row.createdAt | date: 'MMM d, y' }}</td>
+          <td class="py-2 font-mono text-right">{{ row.amount | number: '1.2-2' }}</td>
+          <td class="py-2 font-mono">
+            {{ row.installmentCount ? row.installmentCount + ' × ' + (row.installmentAmount | number: '1.2-2') : '—' }}
+          </td>
+          <td class="py-2">
+            @switch (row.status) {
+              @case ('APPROVED') {
+                <span class="inline-block w-1.5 h-1.5 rounded-full bg-accent mr-1.5"></span>approved
+              }
+              @case ('MANUAL_REVIEW') {
+                <span class="inline-block w-1.5 h-1.5 rounded-full bg-status-review mr-1.5"></span>in review
+              }
+              @case ('DECLINED') {
+                <span class="inline-block w-1.5 h-1.5 rounded-full bg-status-declined mr-1.5"></span>declined
+              }
+              @default {
+                {{ row.status.toLowerCase() }}
+              }
+            }
+          </td>
+          <td class="py-2 font-mono">{{ row.decisionAt ? (row.decisionAt | date: 'MMM d, y') : '—' }}</td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="5" class="py-6 text-center text-ink-muted">No sales yet.</td>
+        </tr>
+      }
+    }
+  </tbody>
+</table>
+
+@if (!listError()) {
+  <div class="flex items-center justify-between mt-4 text-sm">
+    <button
+      type="button"
+      (click)="prevPage()"
+      [disabled]="page() === 0"
+      class="px-3 py-1 border border-hairline rounded disabled:opacity-40"
+    >Prev</button>
+    <span class="text-ink-muted font-mono">Page {{ page() + 1 }} of {{ totalPages() || 1 }}</span>
+    <button
+      type="button"
+      (click)="nextPage()"
+      [disabled]="page() + 1 >= totalPages()"
+      class="px-3 py-1 border border-hairline rounded disabled:opacity-40"
+    >Next</button>
+  </div>
+}
