@@ -28,13 +28,18 @@ describe('App', () => {
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Review Queue');
     expect(text).not.toContain('Payouts');
+    expect(text).not.toContain('Sales');
   });
 
-  it('shows the Payouts link for a merchant role', () => {
+  it('shows the Sales and Payouts links for a merchant role', () => {
     const fixture = setup(['merchant']);
     fixture.detectChanges();
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('Payouts');
-    expect(text).not.toContain('Review Queue');
+    const el = fixture.nativeElement as HTMLElement;
+    const links = Array.from(el.querySelectorAll('aside a')).map((a) => [a.textContent?.trim(), a.getAttribute('href')]);
+    expect(links).toEqual([
+      ['Sales', '/merchant'],
+      ['Payouts', '/merchant/payouts'],
+    ]);
+    expect(el.textContent).not.toContain('Review Queue');
   });
 });

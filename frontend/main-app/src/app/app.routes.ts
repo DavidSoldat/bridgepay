@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { ReviewQueue } from './ops/review-queue/review-queue';
 import { ReviewDetail } from './ops/review-detail/review-detail';
 import { PayoutLedger } from './merchant/payout-ledger/payout-ledger';
+import { SalesPage } from './merchant/sales-page/sales-page';
 import { NoAccess } from './no-access/no-access';
 import { opsGuard } from './core/ops-guard';
 import { merchantGuard } from './core/merchant-guard';
@@ -11,6 +12,7 @@ export const routes: Routes = [
   { path: '', pathMatch: 'full', canActivate: [rootRedirectGuard], children: [] },
   { path: 'ops', component: ReviewQueue, canActivate: [opsGuard] },
   { path: 'ops/:id', component: ReviewDetail, canActivate: [opsGuard] },
-  { path: 'merchant', component: PayoutLedger, canActivate: [merchantGuard] },
+  { path: 'merchant', component: SalesPage, canActivate: [merchantGuard] },
+  { path: 'merchant/payouts', component: PayoutLedger, canActivate: [merchantGuard] },
   { path: 'no-access', component: NoAccess },
 ];

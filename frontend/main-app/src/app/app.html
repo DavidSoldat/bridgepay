@@ -12,6 +12,12 @@
       <a
         routerLink="/merchant"
         routerLinkActive="text-accent font-medium"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="px-2 py-1.5 rounded-sm hover:bg-hairline/40"
+      >Sales</a>
+      <a
+        routerLink="/merchant/payouts"
+        routerLinkActive="text-accent font-medium"
         class="px-2 py-1.5 rounded-sm hover:bg-hairline/40"
       >Payouts</a>
     }
