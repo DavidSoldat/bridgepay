@@ -15,5 +15,5 @@ public interface CreditApplicationRepository extends JpaRepository<CreditApplica
 
     Optional<CreditApplication> findByIdAndApplicantId(UUID id, UUID applicantId);
 
-    Page<CreditApplication> findByApplicantId(UUID applicantId, Pageable pageable);
+    Page<CreditApplication> findByApplicantIdOrderByCreatedAtDesc(UUID applicantId, Pageable pageable);
 }

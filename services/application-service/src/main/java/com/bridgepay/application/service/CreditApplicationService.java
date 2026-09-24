@@ -129,7 +129,7 @@ public class CreditApplicationService {
 
     @Transactional(readOnly = true)
     public Page<ApplicationResponse> listForApplicant(UUID applicantId, Pageable pageable) {
-        return applicationRepository.findByApplicantId(applicantId, pageable).map(this::toResponse);
+        return applicationRepository.findByApplicantIdOrderByCreatedAtDesc(applicantId, pageable).map(this::toResponse);
     }
 
     @Transactional(readOnly = true)

@@ -183,7 +183,7 @@ class CreditApplicationServiceTest {
         Pageable pageable = PageRequest.of(0, 20);
         CreditApplication mine = new CreditApplication(applicantId, merchant, new BigDecimal("100.00"));
         mine.applyDecision(ApplicationStatus.APPROVED, 0.1, "[]", 4, new BigDecimal("25.00"));
-        when(applicationRepository.findByApplicantId(applicantId, pageable))
+        when(applicationRepository.findByApplicantIdOrderByCreatedAtDesc(applicantId, pageable))
                 .thenReturn(new PageImpl<>(List.of(mine)));
 
         Page<ApplicationResponse> result = service.listForApplicant(applicantId, pageable);
