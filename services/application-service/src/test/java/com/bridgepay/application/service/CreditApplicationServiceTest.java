@@ -15,6 +15,9 @@ import com.bridgepay.application.repository.IdempotencyKeyRepository;
 import com.bridgepay.application.repository.MerchantPayoutRepository;
 import com.bridgepay.application.repository.MerchantRepository;
 import com.bridgepay.application.repository.OutboxEventRepository;
+import com.bridgepay.application.repository.MerchantStatusTotals;
+import com.bridgepay.application.repository.MerchantPayoutTotals;
+import com.bridgepay.application.dto.MerchantSummaryResponse;
 import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.cfg.DateTimeFeature;
 import tools.jackson.databind.json.JsonMapper;
@@ -190,5 +193,41 @@ class CreditApplicationServiceTest {
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).applicantId()).isEqualTo(applicantId);
+    }
+
+    @Test
+    void summaryForMerchant_computesApprovalRateFromDecidedApplicationsOnly() {
+        when(applicationRepository.totalsByStatusForMerchant(merchantId)).thenReturn(List.of(
+                new MerchantStatusTotals(ApplicationStatus.APPROVED, 3L, new BigDecimal("450.00")),
+                new MerchantStatusTotals(ApplicationStatus.DECLINED, 1L, new BigDecimal("1200.00")),
+                new MerchantStatusTotals(ApplicationStatus.MANUAL_REVIEW, 5L, new BigDecimal("3000.00"))));
+        when(merchantPayoutRepository.totalsForMerchant(merchantId))
+                .thenReturn(new MerchantPayoutTotals(new BigDecimal("450.00"), new BigDecimal("15.75")));
+
+        MerchantSummaryResponse summary = service.summaryForMerchant(merchantId);
+
+        assertThat(summary.totalCheckouts()).isEqualTo(9);
+        assertThat(summary.approvedCount()).isEqualTo(3);
+        assertThat(summary.inReviewCount()).isEqualTo(5);
+        assertThat(summary.declinedCount()).isEqualTo(1);
+        assertThat(summary.approvalRate()).isEqualTo(0.75);
+        assertThat(summary.approvedVolume()).isEqualByComparingTo("450.00");
+        assertThat(summary.feesPaid()).isEqualByComparingTo("15.75");
+        assertThat(summary.netPaidOut()).isEqualByComparingTo("434.25");
+    }
+
+    @Test
+    void summaryForMerchant_hasNullApprovalRateAndZeroMoney_whenNothingIsDecidedOrPaid() {
+        when(applicationRepository.totalsByStatusForMerchant(merchantId)).thenReturn(List.of(
+                new MerchantStatusTotals(ApplicationStatus.MANUAL_REVIEW, 2L, new BigDecimal("900.00"))));
+        when(merchantPayoutRepository.totalsForMerchant(merchantId)).thenReturn(new MerchantPayoutTotals(null, null));
+
+        MerchantSummaryResponse summary = service.summaryForMerchant(merchantId);
+
+        assertThat(summary.totalCheckouts()).isEqualTo(2);
+        assertThat(summary.approvalRate()).isNull();
+        assertThat(summary.approvedVolume()).isEqualByComparingTo("0");
+        assertThat(summary.feesPaid()).isEqualByComparingTo("0");
+        assertThat(summary.netPaidOut()).isEqualByComparingTo("0");
     }
 }

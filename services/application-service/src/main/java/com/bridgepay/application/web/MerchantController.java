@@ -2,6 +2,7 @@ package com.bridgepay.application.web;
 
 import com.bridgepay.application.dto.MerchantPayoutResponse;
 import com.bridgepay.application.dto.MerchantSaleResponse;
+import com.bridgepay.application.dto.MerchantSummaryResponse;
 import com.bridgepay.application.service.CreditApplicationService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,6 +41,13 @@ public class MerchantController {
                                             @RequestParam(defaultValue = "ALL") String status, Pageable pageable) {
         requireOwnMerchant(jwt, id);
         return applicationService.listSalesForMerchant(id, status, pageable);
+    }
+
+    @GetMapping("/{id}/summary")
+    @PreAuthorize("hasRole('MERCHANT')")
+    public MerchantSummaryResponse summary(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        requireOwnMerchant(jwt, id);
+        return applicationService.summaryForMerchant(id);
     }
 
     private void requireOwnMerchant(Jwt jwt, UUID id) {

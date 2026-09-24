@@ -14,12 +14,15 @@ import com.bridgepay.application.dto.ApplicationResponse;
 import com.bridgepay.application.dto.CheckoutRequest;
 import com.bridgepay.application.dto.MerchantPayoutResponse;
 import com.bridgepay.application.dto.MerchantSaleResponse;
+import com.bridgepay.application.dto.MerchantSummaryResponse;
 import com.bridgepay.application.dto.ReviewDecisionRequest;
 import com.bridgepay.application.event.ApplicationEvents;
 import com.bridgepay.application.event.EventEnvelope;
 import com.bridgepay.application.repository.CreditApplicationRepository;
 import com.bridgepay.application.repository.IdempotencyKeyRepository;
 import com.bridgepay.application.repository.MerchantPayoutRepository;
+import com.bridgepay.application.repository.MerchantPayoutTotals;
+import com.bridgepay.application.repository.MerchantStatusTotals;
 import com.bridgepay.application.repository.MerchantRepository;
 import com.bridgepay.application.repository.OutboxEventRepository;
 import tools.jackson.databind.ObjectMapper;
@@ -161,6 +164,37 @@ public class CreditApplicationService {
                 application.getInstallmentAmount(),
                 application.getDecisionAt()
         ));
+    }
+
+    @Transactional(readOnly = true)
+    public MerchantSummaryResponse summaryForMerchant(UUID merchantId) {
+        long total = 0;
+        long approved = 0;
+        long inReview = 0;
+        long declined = 0;
+        BigDecimal approvedVolume = BigDecimal.ZERO;
+        for (MerchantStatusTotals totals : applicationRepository.totalsByStatusForMerchant(merchantId)) {
+            total += totals.count();
+            switch (totals.status()) {
+                case APPROVED -> {
+                    approved = totals.count();
+                    approvedVolume = totals.volume();
+                }
+                case MANUAL_REVIEW -> inReview = totals.count();
+                case DECLINED -> declined = totals.count();
+                // ponytail: COMPLETED/DEFAULTED are never set by this service today, so they only count toward
+                // the total; fold them into approved count/volume once repayment status flows back here.
+                default -> { }
+            }
+        }
+        Double approvalRate = approved + declined == 0 ? null : (double) approved / (approved + declined);
+
+        MerchantPayoutTotals payouts = merchantPayoutRepository.totalsForMerchant(merchantId);
+        BigDecimal gross = payouts.gross() != null ? payouts.gross() : BigDecimal.ZERO;
+        BigDecimal fees = payouts.fees() != null ? payouts.fees() : BigDecimal.ZERO;
+
+        return new MerchantSummaryResponse(total, approved, inReview, declined, approvalRate,
+                approvedVolume, fees, gross.subtract(fees));
     }
 
     /**

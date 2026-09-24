@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.hamcrest.Matchers.closeTo;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -186,6 +187,52 @@ class MerchantControllerIntegrationTest {
         Merchant merchantB = merchantRepository.save(new Merchant("Merchant B", new BigDecimal("3.50")));
 
         mockMvc.perform(get("/api/v1/merchants/{id}/sales", merchantB.getId())
+                        .with(merchantJwt(merchantA.getId())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void summaryTotalsMatchTheMerchantsCheckoutsAndPayouts() throws Exception {
+        Merchant merchant = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("3.50")));
+        Merchant other = merchantRepository.save(new Merchant("Merchant B", new BigDecimal("3.50")));
+        checkout(merchant.getId(), "100.00");   // approved, fee 3.50
+        checkout(merchant.getId(), "200.00");   // approved, fee 7.00
+        checkout(merchant.getId(), "600.00");   // manual review
+        checkout(merchant.getId(), "1500.00");  // declined
+        checkout(other.getId(), "300.00");      // someone else's, must not count
+
+        mockMvc.perform(get("/api/v1/merchants/{id}/summary", merchant.getId())
+                        .with(merchantJwt(merchant.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalCheckouts").value(4))
+                .andExpect(jsonPath("$.approvedCount").value(2))
+                .andExpect(jsonPath("$.inReviewCount").value(1))
+                .andExpect(jsonPath("$.declinedCount").value(1))
+                .andExpect(jsonPath("$.approvalRate", closeTo(0.6667, 0.001)))
+                .andExpect(jsonPath("$.approvedVolume").value(300.00))
+                .andExpect(jsonPath("$.feesPaid").value(10.50))
+                .andExpect(jsonPath("$.netPaidOut").value(289.50));
+    }
+
+    @Test
+    void summaryForAMerchantWithNoCheckoutsIsZeroedWithNoApprovalRate() throws Exception {
+        Merchant merchant = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("3.50")));
+
+        mockMvc.perform(get("/api/v1/merchants/{id}/summary", merchant.getId())
+                        .with(merchantJwt(merchant.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalCheckouts").value(0))
+                .andExpect(jsonPath("$.approvalRate").doesNotExist())
+                .andExpect(jsonPath("$.feesPaid").value(0))
+                .andExpect(jsonPath("$.netPaidOut").value(0));
+    }
+
+    @Test
+    void merchantIsBlockedFromAnotherMerchantsSummary() throws Exception {
+        Merchant merchantA = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("3.50")));
+        Merchant merchantB = merchantRepository.save(new Merchant("Merchant B", new BigDecimal("3.50")));
+
+        mockMvc.perform(get("/api/v1/merchants/{id}/summary", merchantB.getId())
                         .with(merchantJwt(merchantA.getId())))
                 .andExpect(status().isForbidden());
     }
