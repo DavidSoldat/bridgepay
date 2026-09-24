@@ -128,6 +128,11 @@ public class CreditApplicationService {
     }
 
     @Transactional(readOnly = true)
+    public Page<ApplicationResponse> listForApplicant(UUID applicantId, Pageable pageable) {
+        return applicationRepository.findByApplicantId(applicantId, pageable).map(this::toResponse);
+    }
+
+    @Transactional(readOnly = true)
     public Page<MerchantPayoutResponse> listPayoutsForMerchant(UUID merchantId, Pageable pageable) {
         return merchantPayoutRepository.findByMerchantId(merchantId, pageable)
                 .map(payout -> new MerchantPayoutResponse(
