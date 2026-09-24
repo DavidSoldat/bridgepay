@@ -4,7 +4,9 @@ import com.bridgepay.repayment.client.ApplicantClient;
 import com.bridgepay.repayment.client.ApplicantProfile;
 import com.bridgepay.repayment.client.PaddleClient;
 import com.bridgepay.repayment.client.PaddleTransactionResult;
+import com.bridgepay.repayment.domain.Installment;
 import com.bridgepay.repayment.domain.RepaymentPlan;
+import com.bridgepay.repayment.dto.RepaymentPlanResponse;
 import com.bridgepay.repayment.event.ApplicationEvents;
 import com.bridgepay.repayment.repository.InstallmentRepository;
 import com.bridgepay.repayment.repository.RepaymentPlanRepository;
@@ -13,12 +15,17 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -94,5 +101,46 @@ class RepaymentPlanServiceTest {
 
         verifyNoInteractions(applicantClient, paddleClient, installmentRepository);
         verify(repaymentPlanRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void getForApplicant_returnsThePlanWithItsInstallmentsInOrder() {
+        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient);
+        UUID applicationId = UUID.randomUUID();
+        UUID applicantId = UUID.randomUUID();
+        RepaymentPlan plan = new RepaymentPlan(applicationId, applicantId, "ctm_1", "txn_1",
+                new BigDecimal("200.00"), 4, new BigDecimal("50.00"));
+        Installment first = new Installment(plan, 1, LocalDate.of(2026, 1, 1), new BigDecimal("50.00"));
+        when(repaymentPlanRepository.findByApplicationId(applicationId)).thenReturn(Optional.of(plan));
+        when(installmentRepository.findByRepaymentPlanOrderBySequenceNumberAsc(plan)).thenReturn(List.of(first));
+
+        RepaymentPlanResponse response = service.getForApplicant(applicationId, applicantId);
+
+        assertThat(response.applicationId()).isEqualTo(applicationId);
+        assertThat(response.status()).isEqualTo("ACTIVE");
+        assertThat(response.installments()).hasSize(1);
+        assertThat(response.installments().get(0).sequenceNumber()).isEqualTo(1);
+    }
+
+    @Test
+    void getForApplicant_throwsNoSuchElement_whenNoPlanExistsForThisApplication() {
+        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient);
+        UUID applicationId = UUID.randomUUID();
+        when(repaymentPlanRepository.findByApplicationId(applicationId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getForApplicant(applicationId, UUID.randomUUID()))
+                .isInstanceOf(NoSuchElementException.class);
+    }
+
+    @Test
+    void getForApplicant_throwsAccessDenied_whenThePlanBelongsToAnotherApplicant() {
+        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient);
+        UUID applicationId = UUID.randomUUID();
+        RepaymentPlan plan = new RepaymentPlan(applicationId, UUID.randomUUID(), "ctm_1", "txn_1",
+                new BigDecimal("200.00"), 4, new BigDecimal("50.00"));
+        when(repaymentPlanRepository.findByApplicationId(applicationId)).thenReturn(Optional.of(plan));
+
+        assertThatThrownBy(() -> service.getForApplicant(applicationId, UUID.randomUUID()))
+                .isInstanceOf(AccessDeniedException.class);
     }
 }
