@@ -20,14 +20,15 @@ export class InstallmentSchedule {
 
   protected readonly plan = toSignal(
     toObservable(this.applicationId).pipe(
-      switchMap((id) =>
-        this.repaymentPlans.getPlan(id).pipe(
+      switchMap((id) => {
+        this.loadError.set(false);
+        return this.repaymentPlans.getPlan(id).pipe(
           catchError(() => {
             this.loadError.set(true);
             return of(null);
           }),
-        ),
-      ),
+        );
+      }),
     ),
     { initialValue: null as RepaymentPlanResponse | null },
   );
