@@ -1485,10 +1485,10 @@ Expected: PASS — `shop.spec.ts` covers what `app.spec.ts` used to, and the new
 
 ```bash
 git add frontend/storefront/src/app/app.routes.ts frontend/storefront/src/app/app.config.ts frontend/storefront/src/app/shop frontend/storefront/src/app/app.ts frontend/storefront/src/app/app.html frontend/storefront/src/app/app.spec.ts
-git rm frontend/storefront/src/app/app.css
-git add frontend/storefront/src/app/app.css
 git commit -m "storefront: add Angular Router, extract Shop from the App shell"
 ```
+
+(`app.css` itself is untouched — it stays the same empty file, still referenced by the new shell's `styleUrl` — so it needs no `git add`.)
 
 ---
 
