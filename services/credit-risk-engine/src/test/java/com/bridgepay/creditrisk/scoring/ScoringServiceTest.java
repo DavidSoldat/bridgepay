@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -117,5 +118,44 @@ class ScoringServiceTest {
 
         Map<String, Double> expected = FeatureVector.from(profile, history, request);
         verify(modelScorer).score(expected);
+    }
+
+    @Test
+    void score_priorDefaultForcesDecline_evenWhenTheModelWouldApprove() {
+        when(bureauClient.fetchProfile(any())).thenReturn(sampleProfile());
+        when(repaymentHistoryClient.fetchHistory(any())).thenReturn(new RepaymentHistory(0, 1, 0, 1.0));
+        when(modelScorer.score(any())).thenReturn(new ScoreOutcome(0.001, List.of(new ScoreFactor("age", -0.1))));
+
+        ScoreResponse response = scoringService().score(sampleRequest());
+
+        assertThat(response.decision()).isEqualTo(ScoreDecision.DECLINE);
+        assertThat(response.scoreFactors())
+                .containsExactly(new ScoreFactor("age", -0.1), new ScoreFactor("priorDefault", 3.0));
+    }
+
+    @Test
+    void score_overlayAdjustsTheRiskScoreAndBand() {
+        // model p = 0.2 (APPROVE); 2 late payments add +1.2 log-odds -> sigmoid(ln(0.25) + 1.2) ~= 0.4535
+        when(bureauClient.fetchProfile(any())).thenReturn(sampleProfile());
+        when(repaymentHistoryClient.fetchHistory(any())).thenReturn(new RepaymentHistory(0, 0, 2, 0.5));
+        when(modelScorer.score(any())).thenReturn(new ScoreOutcome(0.2, List.of()));
+
+        ScoreResponse response = scoringService().score(sampleRequest());
+
+        assertThat(response.riskScore()).isCloseTo(0.4535, within(1e-3));
+        assertThat(response.decision()).isEqualTo(ScoreDecision.MANUAL_REVIEW);
+        assertThat(response.scoreFactors()).extracting(ScoreFactor::feature).containsExactly("latePayments");
+    }
+
+    @Test
+    void score_handlesAModelProbabilityOfExactlyOne_withoutProducingNaN() {
+        when(bureauClient.fetchProfile(any())).thenReturn(sampleProfile());
+        when(repaymentHistoryClient.fetchHistory(any())).thenReturn(new RepaymentHistory(3, 0, 0, 1.0));
+        when(modelScorer.score(any())).thenReturn(new ScoreOutcome(1.0, List.of()));
+
+        ScoreResponse response = scoringService().score(sampleRequest());
+
+        assertThat(response.riskScore()).isBetween(0.99, 1.0);
+        assertThat(response.decision()).isEqualTo(ScoreDecision.DECLINE);
     }
 }

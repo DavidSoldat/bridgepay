@@ -10,10 +10,14 @@ import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Assembles what's needed and scores it - the Credit Risk Engine owns its own
+ * Assembles what's needed and scores it, then applies PolicyOverlay's
+ * rule-based log-odds adjustments (on-platform repayment history,
+ * amount-to-income) - the Credit Risk Engine owns its own
  * calls to the Mock Bureau and Repayment History rather than Application
  * Service pre-fetching them (spec section 11's orchestration decision).
  * <p>
@@ -47,7 +51,9 @@ public class ScoringService {
             RepaymentHistory history = repaymentHistoryClient.fetchHistory(request.applicantId());
             Map<String, Double> features = FeatureVector.from(profile, history, request);
             ScoreOutcome outcome = modelScorer.score(features);
-            return toResponse(outcome);
+            PolicyOverlay.Result overlay = PolicyOverlay.apply(
+                    logit(outcome.probability()), history, profile.monthlyIncome(), request.amount());
+            return toResponse(outcome, overlay);
         } catch (Exception ex) {
             log.warn("Scoring failed for applicant {}, defaulting to MANUAL_REVIEW: {}",
                     request.applicantId(), ex.getMessage());
@@ -55,8 +61,22 @@ public class ScoringService {
         }
     }
 
-    private ScoreResponse toResponse(ScoreOutcome outcome) {
-        return new ScoreResponse(outcome.probability(), decisionFor(outcome.probability()), outcome.factors());
+    private ScoreResponse toResponse(ScoreOutcome outcome, PolicyOverlay.Result overlay) {
+        // No rule fired -> return the model's probability untouched, avoiding logit/sigmoid round-trip drift.
+        double probability = overlay.factors().isEmpty() ? outcome.probability() : sigmoid(overlay.logit());
+        ScoreDecision decision = overlay.forceDecline() ? ScoreDecision.DECLINE : decisionFor(probability);
+        List<ScoreFactor> factors = new ArrayList<>(outcome.factors());
+        factors.addAll(overlay.factors());
+        return new ScoreResponse(probability, decision, List.copyOf(factors));
+    }
+
+    private static double logit(double probability) {
+        double p = Math.clamp(probability, 1e-9, 1 - 1e-9);
+        return Math.log(p / (1 - p));
+    }
+
+    private static double sigmoid(double logit) {
+        return 1 / (1 + Math.exp(-logit));
     }
 
     private ScoreDecision decisionFor(double probability) {
