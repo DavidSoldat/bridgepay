@@ -96,6 +96,16 @@ class RoutingIntegrationTest {
     }
 
     @Test
+    void routesOpsPaths_toRepaymentReconciliationService() throws Exception {
+        wireMock.stubFor(WireMock.post(urlPathEqualTo("/api/v1/ops/failed-events/e-1/retry"))
+                .willReturn(okJson("{\"status\":\"RESOLVED\"}")));
+
+        mockMvc.perform(post("/api/v1/ops/failed-events/e-1/retry"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"status\":\"RESOLVED\"}"));
+    }
+
+    @Test
     void unmatchedPath_returnsApiErrorShaped404() throws Exception {
         mockMvc.perform(get("/api/v1/nonexistent"))
                 .andExpect(status().isNotFound())
