@@ -18,6 +18,7 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.UUID;
 
@@ -84,6 +85,33 @@ class LocalProfileSecurityIntegrationTest {
         mockMvc.perform(get("/api/v1/repayment-plans/" + applicationId)
                         .header("Authorization", "Bearer " + unsignedTestToken(UUID.randomUUID().toString())))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void opsEndpoints_rejectRequestsWithNoToken() throws Exception {
+        mockMvc.perform(get("/api/v1/ops/failed-events"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void opsEndpoints_rejectARealBearerTokenWithoutTheOpsRole() throws Exception {
+        mockMvc.perform(get("/api/v1/ops/failed-events")
+                        .header("Authorization", "Bearer " + tokenWithRoles(UUID.randomUUID().toString(), "shopper")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void opsEndpoints_allowARealBearerTokenCarryingTheOpsRole() throws Exception {
+        mockMvc.perform(get("/api/v1/ops/failed-events")
+                        .header("Authorization", "Bearer " + tokenWithRoles(UUID.randomUUID().toString(), "ops")))
+                .andExpect(status().isOk());
+    }
+
+    private static String tokenWithRoles(String subject, String... roles) {
+        String roleList = String.join(",", Arrays.stream(roles).map(r -> "\"" + r + "\"").toList());
+        String header = base64Url("{\"alg\":\"none\"}");
+        String payload = base64Url("{\"sub\":\"" + subject + "\",\"realm_access\":{\"roles\":[" + roleList + "]}}");
+        return header + "." + payload + ".";
     }
 
     private static String unsignedTestToken(String subject) {
