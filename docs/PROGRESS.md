@@ -112,7 +112,7 @@ r` loads the real model at startup ("`Loaded credit risk model from classpath:mo
   - **Not verified**: no browser click-through of the new factor labels in the ops review screen — component test only.
 
 ## Next, in order
-Agreed order (2026-09-24): finish the remaining two expansion sub-projects — **risk/ML** next, then **platform/ops** — and only then the k3s manifests below.
+Agreed order (2026-09-24): finish the remaining expansion sub-project — **platform/ops** (risk/ML done 2026-09-25) — and only then the k3s manifests below.
 
 - [ ] k3s manifests, referencing the GHCR image tags the CI/CD pipeline above now produces. The 9 published GHCR packages are all **private** (confirmed via `gh api user/packages?package_type=container`), so the manifests will need a GHCR `imagePullSecret` (a PAT with `read:packages`, stored as a Kubernetes Secret) to actually pull these images — or the packages need to be made public first.
 
