@@ -49,6 +49,11 @@ public class FailedEventService {
         if (!APPROVED_TOPIC.equals(event.getTopic())) {
             throw new IllegalStateException("No retry handler for topic " + event.getTopic());
         }
+        // ponytail: a crash mid-replay leaves the row RETRYING forever; add a stale-claim timeout if that ever happens.
+        if (failedEventRepository.claimForRetry(id) == 0) {
+            throw new IllegalStateException("Failed event " + id + " is already being retried");
+        }
+        event = failedEventRepository.findById(id).orElseThrow();
         try {
             applicationEventConsumer.onApproved(event.getPayload());
             event.markResolved();

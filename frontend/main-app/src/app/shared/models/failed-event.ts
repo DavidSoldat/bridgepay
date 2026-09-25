@@ -3,7 +3,7 @@ export interface FailedEvent {
   topic: string;
   messageKey: string | null;
   errorMessage: string;
-  status: 'FAILED' | 'RESOLVED';
+  status: 'FAILED' | 'RETRYING' | 'RESOLVED';
   attempts: number;
   createdAt: string;
   updatedAt: string;

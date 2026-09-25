@@ -88,6 +88,7 @@ public class FailedEvent {
     }
 
     public void recordFailedRetry(String errorMessage) {
+        this.status = FailedEventStatus.FAILED;
         this.attempts++;
         this.errorMessage = errorMessage;
     }

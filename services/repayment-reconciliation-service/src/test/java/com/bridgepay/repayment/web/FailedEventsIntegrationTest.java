@@ -30,6 +30,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.kafka.KafkaContainer;
@@ -41,6 +42,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -121,6 +127,9 @@ class FailedEventsIntegrationTest {
     static class SwitchablePaddleClient implements PaddleClient {
         final AtomicBoolean failing = new AtomicBoolean(false);
         final AtomicInteger sequence = new AtomicInteger();
+        /** When set, the first transaction call parks here so a test can overlap a second request. */
+        volatile CountDownLatch entered;
+        volatile CountDownLatch release;
 
         @Override
         public String findOrCreateCustomer(String email, String name) {
@@ -133,6 +142,15 @@ class FailedEventsIntegrationTest {
                 throw new PaddleUnavailableException("paddle down", null);
             }
             String id = "txn_fake_" + sequence.incrementAndGet();
+            CountDownLatch gate = release;
+            if (gate != null && entered.getCount() > 0) {
+                entered.countDown();
+                try {
+                    gate.await(10, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
             return new PaddleTransactionResult(id, "https://sandbox.paddle.com/checkout/" + id);
         }
 
@@ -153,6 +171,8 @@ class FailedEventsIntegrationTest {
     @BeforeEach
     void resetPaddle() {
         PADDLE.failing.set(false);
+        PADDLE.entered = null;
+        PADDLE.release = null;
     }
 
     void publish(String key, String value) {
@@ -256,6 +276,37 @@ class FailedEventsIntegrationTest {
                 .andExpect(jsonPath("$.status").value("FAILED"))
                 .andExpect(jsonPath("$.attempts").value(2))
                 .andExpect(jsonPath("$.errorMessage").value("paddle down"));
+    }
+
+    @Test
+    void retry_whileAnotherRetryOfTheSameRowIsInFlight_isAConflictAndCallsPaddleOnce() throws Exception {
+        UUID applicationId = UuidCreator.getTimeOrderedEpoch();
+        FailedEvent row = failedEventFor(applicationId, approvedEnvelope(applicationId));
+        PADDLE.failing.set(false);
+        PADDLE.entered = new CountDownLatch(1);
+        PADDLE.release = new CountDownLatch(1);
+        int transactionsBefore = PADDLE.sequence.get();
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
+            Future<MvcResult> first = executor.submit(() -> mockMvc
+                    .perform(post("/api/v1/ops/failed-events/" + row.getId() + "/retry").with(ops()))
+                    .andReturn());
+            assertThat(PADDLE.entered.await(10, TimeUnit.SECONDS)).isTrue();
+
+            mockMvc.perform(post("/api/v1/ops/failed-events/" + row.getId() + "/retry").with(ops()))
+                    .andExpect(status().isConflict());
+
+            PADDLE.release.countDown();
+            assertThat(first.get(15, TimeUnit.SECONDS).getResponse().getStatus()).isEqualTo(200);
+        } finally {
+            PADDLE.release.countDown();
+            executor.shutdownNow();
+        }
+
+        assertThat(PADDLE.sequence.get() - transactionsBefore).isEqualTo(1);
+        assertThat(failedEventRepository.findById(row.getId()).orElseThrow().getStatus())
+                .isEqualTo(FailedEventStatus.RESOLVED);
     }
 
     @Test
