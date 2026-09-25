@@ -6,7 +6,8 @@ import { switchMap } from 'rxjs';
 import { Applications } from '../applications';
 
 // The model's 10 bureau-shaped feature keys (services/credit-risk-engine's
-// coefficients.json) - unknown keys fall back to the raw name as-is.
+// coefficients.json) plus PolicyOverlay's rule keys - unknown keys fall back
+// to the raw name as-is.
 const FEATURE_LABELS: Record<string, string> = {
   revolvingUtilization: 'Revolving utilization',
   age: 'Age',
@@ -18,6 +19,10 @@ const FEATURE_LABELS: Record<string, string> = {
   numberRealEstateLoansOrLines: 'Real estate loans/lines',
   numberOfTime60to89DaysPastDueNotWorse: '60-89 days past due',
   numberOfDependents: 'Dependents',
+  priorDefault: 'Prior BridgePay default',
+  latePayments: 'Late BridgePay payments',
+  completedPlans: 'Completed BridgePay plans',
+  amountToIncome: 'Amount vs. monthly income',
 };
 
 @Component({

@@ -118,4 +118,34 @@ describe('ReviewDetail', () => {
 
     expect(decisionCalls).toEqual([['app-1', 'DECLINE']]);
   });
+
+  it('labels policy-overlay factors', () => {
+    const app: ApplicationResponse = {
+      ...baseApp,
+      scoreFactors: [
+        { feature: 'priorDefault', contribution: 3 },
+        { feature: 'latePayments', contribution: 1.2 },
+        { feature: 'completedPlans', contribution: -0.4 },
+        { feature: 'amountToIncome', contribution: 1 },
+      ],
+    };
+
+    TestBed.configureTestingModule({
+      imports: [ReviewDetail],
+      providers: [
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: app.applicationId })) } },
+        { provide: Applications, useValue: { getApplication: () => of(app), reviewDecision: () => of(app) } },
+      ],
+    });
+
+    const fixture = TestBed.createComponent(ReviewDetail);
+    fixture.detectChanges();
+
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+    expect(text).toContain('Prior BridgePay default');
+    expect(text).toContain('Late BridgePay payments');
+    expect(text).toContain('Completed BridgePay plans');
+    expect(text).toContain('Amount vs. monthly income');
+  });
 });
