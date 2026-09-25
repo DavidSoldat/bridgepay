@@ -1,0 +1,67 @@
+<h1 class="text-xl font-medium mb-4">Failed events</h1>
+<div class="flex gap-2 mb-4">
+  @for (status of filters; track status) {
+    <button
+      type="button"
+      (click)="selectFilter(status)"
+      class="px-3 py-1 text-sm border rounded"
+      [class.border-accent]="filter() === status"
+      [class.text-accent]="filter() === status"
+      [class.border-hairline]="filter() !== status"
+      [class.text-ink-muted]="filter() !== status"
+    >{{ filterLabels[status] }}</button>
+  }
+</div>
+@if (retryMessage()) {
+  <p class="mb-4 text-sm text-status-declined">{{ retryMessage() }}</p>
+}
+<table class="w-full text-sm">
+  <thead>
+    <tr class="border-b border-hairline text-left text-ink-muted">
+      <th class="py-2 font-normal">Failed at</th>
+      <th class="py-2 font-normal">Topic</th>
+      <th class="py-2 font-normal">Application</th>
+      <th class="py-2 font-normal">Error</th>
+      <th class="py-2 font-normal text-right">Attempts</th>
+      <th class="py-2 font-normal">Status</th>
+      <th class="py-2"></th>
+    </tr>
+  </thead>
+  <tbody>
+    @if (listError()) {
+      <tr>
+        <td colspan="7" class="py-6 text-center text-status-declined">Could not load failed events. Try refreshing.</td>
+      </tr>
+    } @else {
+      @for (row of rows(); track row.id) {
+        <tr class="border-b border-hairline align-top">
+          <td class="py-2 font-mono">{{ row.createdAt | date: 'MMM d, y HH:mm' }}</td>
+          <td class="py-2 font-mono">{{ row.topic }}</td>
+          <td class="py-2 font-mono">{{ row.messageKey ?? '—' }}</td>
+          <td class="py-2 max-w-md break-words">{{ row.errorMessage }}</td>
+          <td class="py-2 font-mono text-right">{{ row.attempts }}</td>
+          <td class="py-2 font-mono">{{ row.status }}</td>
+          <td class="py-2 text-right">
+            @if (row.status === 'FAILED') {
+              <button
+                type="button"
+                (click)="retry(row)"
+                [disabled]="retrying() !== null"
+                class="text-accent hover:underline disabled:opacity-50"
+              >Retry</button>
+            }
+          </td>
+        </tr>
+      } @empty {
+        <tr>
+          <td colspan="7" class="py-6 text-center text-ink-muted">No failed events.</td>
+        </tr>
+      }
+    }
+  </tbody>
+</table>
+<div class="flex items-center gap-3 mt-4 text-sm">
+  <button type="button" (click)="prevPage()" [disabled]="page() === 0" class="px-3 py-1 border border-hairline rounded disabled:opacity-40">Prev</button>
+  <span class="text-ink-muted font-mono">Page {{ page() + 1 }} of {{ totalPages() || 1 }}</span>
+  <button type="button" (click)="nextPage()" [disabled]="page() + 1 >= totalPages()" class="px-3 py-1 border border-hairline rounded disabled:opacity-40">Next</button>
+</div>

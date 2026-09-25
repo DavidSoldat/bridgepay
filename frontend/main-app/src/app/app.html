@@ -7,6 +7,11 @@
         routerLinkActive="text-accent font-medium"
         class="px-2 py-1.5 rounded-sm hover:bg-hairline/40"
       >Review Queue</a>
+      <a
+        routerLink="/ops/failed-events"
+        routerLinkActive="text-accent font-medium"
+        class="px-2 py-1.5 rounded-sm hover:bg-hairline/40"
+      >Failed Events</a>
     }
     @if (auth.hasRole('merchant')) {
       <a
