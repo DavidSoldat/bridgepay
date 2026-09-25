@@ -26,9 +26,11 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
@@ -44,6 +46,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * Real Postgres + Kafka via Testcontainers. PaddleClient is a switchable fake
@@ -189,5 +196,79 @@ class FailedEventsIntegrationTest {
         assertThat(row.getErrorMessage()).contains("paddle down");
         assertThat(row.getPayload()).isEqualTo(json);
         assertThat(repaymentPlanRepository.findByApplicationId(applicationId)).isEmpty();
+    }
+
+    static RequestPostProcessor ops() {
+        return jwt().authorities(new SimpleGrantedAuthority("ROLE_OPS"));
+    }
+
+    @Test
+    void list_returnsFailedEventsWithoutThePayload_forOps() throws Exception {
+        UUID applicationId = UuidCreator.getTimeOrderedEpoch();
+        failedEventFor(applicationId, approvedEnvelope(applicationId));
+
+        mockMvc.perform(get("/api/v1/ops/failed-events").param("size", "100").with(ops()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalPages").exists())
+                .andExpect(jsonPath("$.content[?(@.messageKey == '" + applicationId + "')].status").value("FAILED"))
+                .andExpect(jsonPath("$.content[0].payload").doesNotExist());
+    }
+
+    @Test
+    void list_rejectsAnUnknownStatus() throws Exception {
+        mockMvc.perform(get("/api/v1/ops/failed-events").param("status", "BOGUS").with(ops()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void endpoints_forbidNonOps() throws Exception {
+        mockMvc.perform(get("/api/v1/ops/failed-events").with(jwt()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/ops/failed-events/" + UUID.randomUUID() + "/retry").with(jwt()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void retry_resolvesTheRowAndCreatesThePlan_oncePaddleRecovers() throws Exception {
+        UUID applicationId = UuidCreator.getTimeOrderedEpoch();
+        FailedEvent row = failedEventFor(applicationId, approvedEnvelope(applicationId));
+        PADDLE.failing.set(false);
+
+        mockMvc.perform(post("/api/v1/ops/failed-events/" + row.getId() + "/retry").with(ops()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("RESOLVED"));
+
+        assertThat(repaymentPlanRepository.findByApplicationId(applicationId)).isPresent();
+
+        mockMvc.perform(post("/api/v1/ops/failed-events/" + row.getId() + "/retry").with(ops()))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void retry_thatFailsAgain_keepsTheRowFailedAndCountsTheAttempt() throws Exception {
+        UUID applicationId = UuidCreator.getTimeOrderedEpoch();
+        FailedEvent row = failedEventFor(applicationId, approvedEnvelope(applicationId));
+        // PADDLE still failing
+
+        mockMvc.perform(post("/api/v1/ops/failed-events/" + row.getId() + "/retry").with(ops()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("FAILED"))
+                .andExpect(jsonPath("$.attempts").value(2))
+                .andExpect(jsonPath("$.errorMessage").value("paddle down"));
+    }
+
+    @Test
+    void retry_ofAnOtherTopic_isAConflict() throws Exception {
+        FailedEvent other = failedEventRepository.save(new FailedEvent("some.other-topic", "k", "{}", "boom"));
+
+        mockMvc.perform(post("/api/v1/ops/failed-events/" + other.getId() + "/retry").with(ops()))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void retry_ofAnUnknownId_isNotFound() throws Exception {
+        mockMvc.perform(post("/api/v1/ops/failed-events/" + UUID.randomUUID() + "/retry").with(ops()))
+                .andExpect(status().isNotFound());
     }
 }
