@@ -7,7 +7,6 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
 
 /**
  * Internal-only: network isolation (plain ClusterIP, no Ingress) is the
@@ -27,14 +26,14 @@ public class InternalApplicantController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<InternalApplicantResponse> getById(@PathVariable UUID id) {
-        return ResponseEntity.ok(applicantService.getById(id));
+    public ResponseEntity<InternalApplicantResponse> getById(@PathVariable("id") String subject) {
+        return ResponseEntity.ok(applicantService.getInternalBySubject(subject));
     }
 
     @PatchMapping("/{id}/paddle-customer")
-    public ResponseEntity<Void> setPaddleCustomer(@PathVariable UUID id,
+    public ResponseEntity<Void> setPaddleCustomer(@PathVariable("id") String subject,
                                                     @Valid @RequestBody SetPaddleCustomerRequest request) {
-        applicantService.setPaddleCustomerId(id, request.paddleCustomerId());
+        applicantService.setPaddleCustomerId(subject, request.paddleCustomerId());
         return ResponseEntity.noContent().build();
     }
 }

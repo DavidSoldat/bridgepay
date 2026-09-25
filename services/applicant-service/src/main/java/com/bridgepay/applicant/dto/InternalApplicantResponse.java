@@ -1,9 +1,12 @@
 package com.bridgepay.applicant.dto;
 
-import java.util.UUID;
-
+/**
+ * {@code id} is the Keycloak subject - the platform-wide applicantId - not
+ * this service's own primary key, so callers can pass it straight back to
+ * the other internal endpoints.
+ */
 public record InternalApplicantResponse(
-        UUID id,
+        String id,
         String firstName,
         String lastName,
         String email,

@@ -82,36 +82,36 @@ class ApplicantServiceTest {
     }
 
     @Test
-    void getById_returnsApplicant_whenFound() {
+    void getInternalBySubject_returnsApplicantKeyedByItsSubject_whenFound() {
         applicantService = new ApplicantService(applicantRepository);
         Applicant applicant = new Applicant("kc-123", "Ana", "Doe",
                 LocalDate.of(1995, 4, 12), "ana@example.com", "+38765123456");
-        when(applicantRepository.findById(applicant.getId())).thenReturn(Optional.of(applicant));
+        when(applicantRepository.findByKeycloakSubjectId("kc-123")).thenReturn(Optional.of(applicant));
 
-        var response = applicantService.getById(applicant.getId());
+        var response = applicantService.getInternalBySubject("kc-123");
 
+        assertThat(response.id()).isEqualTo("kc-123");
         assertThat(response.email()).isEqualTo("ana@example.com");
         assertThat(response.paddleCustomerId()).isNull();
     }
 
     @Test
-    void getById_throws_whenNotFound() {
+    void getInternalBySubject_throws_whenNotFound() {
         applicantService = new ApplicantService(applicantRepository);
-        UUID missingId = UUID.randomUUID();
-        when(applicantRepository.findById(missingId)).thenReturn(Optional.empty());
+        when(applicantRepository.findByKeycloakSubjectId("kc-missing")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> applicantService.getById(missingId))
+        assertThatThrownBy(() -> applicantService.getInternalBySubject("kc-missing"))
                 .isInstanceOf(NoSuchElementException.class);
     }
 
     @Test
-    void setPaddleCustomerId_updatesTheManagedEntity() {
+    void setPaddleCustomerId_updatesTheManagedEntity_lookedUpBySubject() {
         applicantService = new ApplicantService(applicantRepository);
         Applicant applicant = new Applicant("kc-123", "Ana", "Doe",
                 LocalDate.of(1995, 4, 12), "ana@example.com", "+38765123456");
-        when(applicantRepository.findById(applicant.getId())).thenReturn(Optional.of(applicant));
+        when(applicantRepository.findByKeycloakSubjectId("kc-123")).thenReturn(Optional.of(applicant));
 
-        applicantService.setPaddleCustomerId(applicant.getId(), "ctm_01abc");
+        applicantService.setPaddleCustomerId("kc-123", "ctm_01abc");
 
         assertThat(applicant.getPaddleCustomerId()).isEqualTo("ctm_01abc");
     }

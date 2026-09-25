@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.NoSuchElementException;
-import java.util.UUID;
 
 @Service
 public class ApplicantService {
@@ -49,19 +48,26 @@ public class ApplicantService {
         return toResponse(applicant);
     }
 
+    /**
+     * Internal lookups are keyed by the Keycloak subject, not this service's
+     * own primary key: the subject is the "applicantId" every other service
+     * uses (Application Service stores jwt.getSubject() as it).
+     */
     @Transactional(readOnly = true)
-    public InternalApplicantResponse getById(UUID id) {
-        Applicant applicant = applicantRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("No applicant found with id " + id));
-        return new InternalApplicantResponse(applicant.getId(), applicant.getFirstName(), applicant.getLastName(),
-                applicant.getEmail(), applicant.getPaddleCustomerId());
+    public InternalApplicantResponse getInternalBySubject(String keycloakSubjectId) {
+        Applicant applicant = findBySubjectOrThrow(keycloakSubjectId);
+        return new InternalApplicantResponse(applicant.getKeycloakSubjectId(), applicant.getFirstName(),
+                applicant.getLastName(), applicant.getEmail(), applicant.getPaddleCustomerId());
     }
 
     @Transactional
-    public void setPaddleCustomerId(UUID id, String paddleCustomerId) {
-        Applicant applicant = applicantRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("No applicant found with id " + id));
-        applicant.setPaddleCustomerId(paddleCustomerId);
+    public void setPaddleCustomerId(String keycloakSubjectId, String paddleCustomerId) {
+        findBySubjectOrThrow(keycloakSubjectId).setPaddleCustomerId(paddleCustomerId);
+    }
+
+    private Applicant findBySubjectOrThrow(String keycloakSubjectId) {
+        return applicantRepository.findByKeycloakSubjectId(keycloakSubjectId)
+                .orElseThrow(() -> new NoSuchElementException("No applicant found with id " + keycloakSubjectId));
     }
 
     private ApplicantResponse toResponse(Applicant applicant) {

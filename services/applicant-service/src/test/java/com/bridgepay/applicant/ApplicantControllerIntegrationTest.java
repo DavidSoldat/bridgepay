@@ -127,33 +127,52 @@ class ApplicantControllerIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * The internal endpoints are keyed by the Keycloak subject - the
+     * "applicantId" every other service uses (Application Service stores
+     * jwt.getSubject() as it; Repayment Reconciliation calls these with it).
+     */
     @Test
-    void internalEndpoints_areReachableWithoutAJwt() throws Exception {
-        String body = mockMvc.perform(post("/api/v1/applicants")
-                        .with(jwt().jwt(j -> j.subject("kc-internal")))
+    void internalEndpoints_areKeyedByTheKeycloakSubject_andReachableWithoutAJwt() throws Exception {
+        String subject = UUID.randomUUID().toString();
+        mockMvc.perform(post("/api/v1/applicants")
+                        .with(jwt().jwt(j -> j.subject(subject)))
                         .contentType("application/json")
                         .content(signupPayload("internal@example.com")))
-                .andExpect(status().isCreated())
-                .andReturn().getResponse().getContentAsString();
-        String id = objectMapper.readTree(body).get("id").asText();
+                .andExpect(status().isCreated());
 
-        mockMvc.perform(get("/internal/applicants/{id}", id))
+        mockMvc.perform(get("/internal/applicants/{id}", subject))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(subject))
                 .andExpect(jsonPath("$.email").value("internal@example.com"))
                 .andExpect(jsonPath("$.paddleCustomerId").doesNotExist());
 
-        mockMvc.perform(patch("/internal/applicants/{id}/paddle-customer", id)
+        mockMvc.perform(patch("/internal/applicants/{id}/paddle-customer", subject)
                         .contentType("application/json")
                         .content(objectMapper.writeValueAsString(Map.of("paddleCustomerId", "ctm_01abc"))))
                 .andExpect(status().isNoContent());
 
-        mockMvc.perform(get("/internal/applicants/{id}", id))
+        mockMvc.perform(get("/internal/applicants/{id}", subject))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.paddleCustomerId").value("ctm_01abc"));
     }
 
     @Test
-    void internalGetById_returnsNotFound_whenApplicantDoesNotExist() throws Exception {
+    void internalGet_doesNotResolveApplicantServicesOwnDatabaseId() throws Exception {
+        String body = mockMvc.perform(post("/api/v1/applicants")
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString())))
+                        .contentType("application/json")
+                        .content(signupPayload("dbid@example.com")))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String databaseId = objectMapper.readTree(body).get("id").asText();
+
+        mockMvc.perform(get("/internal/applicants/{id}", databaseId))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void internalGet_returnsNotFound_whenNoApplicantHasThatSubject() throws Exception {
         mockMvc.perform(get("/internal/applicants/{id}", UUID.randomUUID()))
                 .andExpect(status().isNotFound());
     }
