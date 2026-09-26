@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { catchError, map, of } from 'rxjs';
 import { Auth } from '../core/auth';
 import { Applications } from '../checkout/applications';
@@ -9,7 +10,7 @@ import { InstallmentSchedule } from './installment-schedule/installment-schedule
 
 @Component({
   selector: 'app-account',
-  imports: [DecimalPipe, InstallmentSchedule],
+  imports: [DecimalPipe, RouterLink, InstallmentSchedule],
   templateUrl: './account.html',
   styleUrl: './account.css',
 })

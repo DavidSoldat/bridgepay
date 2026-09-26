@@ -5,16 +5,17 @@ import { ProductCatalog } from '../catalog/product-catalog/product-catalog';
 import { SignupForm } from '../signup/signup-form/signup-form';
 import { CheckoutConfirm } from '../checkout/checkout-confirm/checkout-confirm';
 import { CheckoutResult } from '../checkout/checkout-result/checkout-result';
+import { DeliveryForm, DeliveryAddress } from '../checkout/delivery-form/delivery-form';
 import { PRODUCTS, Product } from '../catalog/products';
 import { ApplicationResponse } from '../shared/models/application';
 
-type Step = 'catalog' | 'signup' | 'confirm' | 'result';
+type Step = 'catalog' | 'signup' | 'delivery' | 'confirm' | 'result';
 
 const PENDING_PRODUCT_KEY = 'storefront.pendingProductId';
 
 @Component({
   selector: 'app-shop',
-  imports: [ProductCatalog, SignupForm, CheckoutConfirm, CheckoutResult],
+  imports: [ProductCatalog, SignupForm, DeliveryForm, CheckoutConfirm, CheckoutResult],
   templateUrl: './shop.html',
   styleUrl: './shop.css',
 })
@@ -24,6 +25,7 @@ export class Shop {
 
   protected readonly step = signal<Step>('catalog');
   protected readonly selectedProduct = signal<Product | null>(null);
+  protected readonly address = signal<DeliveryAddress | null>(null);
   protected readonly result = signal<ApplicationResponse | null>(null);
 
   constructor() {
@@ -41,7 +43,7 @@ export class Shop {
 
   private resumeAfterLogin(): void {
     this.applicants.getMyProfile().subscribe({
-      next: () => this.step.set('confirm'),
+      next: () => this.step.set('delivery'),
       error: () => this.step.set('signup'),
     });
   }
@@ -59,7 +61,16 @@ export class Shop {
   }
 
   protected onSignedUp(): void {
+    this.step.set('delivery');
+  }
+
+  protected onDeliverySubmitted(address: DeliveryAddress): void {
+    this.address.set(address);
     this.step.set('confirm');
+  }
+
+  protected onEditAddress(): void {
+    this.step.set('delivery');
   }
 
   protected onDecided(response: ApplicationResponse): void {
@@ -72,6 +83,7 @@ export class Shop {
     sessionStorage.removeItem(PENDING_PRODUCT_KEY);
     this.step.set('catalog');
     this.selectedProduct.set(null);
+    this.address.set(null);
     this.result.set(null);
   }
 

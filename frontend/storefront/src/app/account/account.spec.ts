@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { Account } from './account';
 import { Auth } from '../core/auth';
@@ -11,6 +12,7 @@ describe('Account', () => {
     TestBed.configureTestingModule({
       imports: [Account],
       providers: [
+        provideRouter([]),
         { provide: Auth, useValue: { authenticated: () => authenticated, login } },
         { provide: Applications, useValue: { listMine } },
       ],
@@ -23,6 +25,14 @@ describe('Account', () => {
     setup(false, () => of({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 }), () => (loginCalled = true));
 
     expect(loginCalled).toBe(true);
+  });
+
+  it('links back to the shop', () => {
+    const fixture = setup(true, () => of({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 }));
+    fixture.detectChanges();
+
+    const link = (fixture.nativeElement as HTMLElement).querySelector('a[href="/"]');
+    expect(link?.textContent).toContain('Back to shop');
   });
 
   it('shows an empty-state message when there are no applications', () => {

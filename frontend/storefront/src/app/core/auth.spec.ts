@@ -30,4 +30,14 @@ describe('Auth', () => {
     expect(auth.authenticated()).toBe(false);
     expect(auth.username()).toBeNull();
   });
+
+  it('exposes the full name from the token', () => {
+    const auth = setup(true, { name: 'Sam Shopper' });
+    expect(auth.fullName()).toBe('Sam Shopper');
+  });
+
+  it('has no full name when the token carries none', () => {
+    const auth = setup(true, { preferred_username: 'shopper1' });
+    expect(auth.fullName()).toBe('');
+  });
 });

@@ -1,22 +1,29 @@
-@if (loadError()) {
-  <p class="text-sm text-red-600 mt-2">Could not load the payment schedule.</p>
-} @else if (plan(); as p) {
-  <table class="w-full text-sm mt-3">
-    <thead>
-      <tr class="text-left text-ink-muted">
-        <th>Due</th>
-        <th>Amount</th>
-        <th>Status</th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (installment of p.installments; track installment.sequenceNumber) {
-        <tr>
-          <td>{{ installment.dueDate | date: 'mediumDate' }}</td>
-          <td>${{ installment.amount | number: '1.2-2' }}</td>
-          <td>{{ installment.status }}</td>
+@switch (state().kind) {
+  @case ('error') {
+    <p class="text-sm text-red-600 mt-2">Could not load the payment schedule.</p>
+  }
+  @case ('loading') {}
+  @default {
+    @if (state().kind === 'projected') {
+      <p class="text-sm text-ink-muted mt-3">Your payment plan is being set up. Here's when each payment will be due.</p>
+    }
+    <table class="w-full text-sm mt-3">
+      <thead>
+        <tr class="text-left text-ink-muted">
+          <th>Due</th>
+          <th>Amount</th>
+          <th>Status</th>
         </tr>
-      }
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        @for (installment of installments(); track installment.sequenceNumber) {
+          <tr>
+            <td>{{ installment.dueDate | date: 'mediumDate' }}</td>
+            <td>${{ installment.amount | number: '1.2-2' }}</td>
+            <td>{{ installment.status }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
 }

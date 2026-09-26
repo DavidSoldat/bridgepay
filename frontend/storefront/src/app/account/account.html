@@ -1,4 +1,7 @@
 <div class="min-h-screen p-6 sm:p-10 max-w-3xl mx-auto">
+  <div class="mb-6 text-sm">
+    <a routerLink="/" class="text-widget-accent underline">← Back to shop</a>
+  </div>
   <h1 class="text-lg font-semibold mb-6">My Account</h1>
 
   @if (loadError()) {
@@ -19,7 +22,7 @@
             }
           </div>
           @if (expandedId() === app.applicationId) {
-            <app-installment-schedule [applicationId]="app.applicationId" />
+            <app-installment-schedule [application]="app" />
           }
         </li>
       }

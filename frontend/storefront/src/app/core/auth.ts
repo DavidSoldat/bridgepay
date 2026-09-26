@@ -17,6 +17,11 @@ export class Auth {
     return (this.keycloak.tokenParsed?.['preferred_username'] as string | undefined) ?? null;
   });
 
+  readonly fullName = computed<string>(() => {
+    this.keycloakEvent();
+    return (this.keycloak.tokenParsed?.['name'] as string | undefined) ?? '';
+  });
+
   login(redirectUri: string): void {
     this.keycloak.login({ redirectUri });
   }

@@ -5,6 +5,16 @@
     </div>
   }
 
+  @if (step() === 'delivery' || step() === 'confirm') {
+    <ol class="flex gap-3 text-sm mb-6" aria-label="Checkout steps">
+      <li [attr.aria-current]="step() === 'delivery' ? 'step' : null"
+          [class]="step() === 'delivery' ? 'font-semibold text-widget-accent' : 'text-ink-muted'">Delivery</li>
+      <li class="text-ink-muted" aria-hidden="true">·</li>
+      <li [attr.aria-current]="step() === 'confirm' ? 'step' : null"
+          [class]="step() === 'confirm' ? 'font-semibold text-widget-accent' : 'text-ink-muted'">Review &amp; pay</li>
+    </ol>
+  }
+
   @switch (step()) {
     @case ('catalog') {
       <app-product-catalog (payInFour)="onPayInFour($event)" />
@@ -12,9 +22,19 @@
     @case ('signup') {
       <app-signup-form (signedUp)="onSignedUp()" />
     }
+    @case ('delivery') {
+      <app-delivery-form [address]="address()" (submitted)="onDeliverySubmitted($event)" />
+    }
     @case ('confirm') {
       @if (selectedProduct(); as product) {
-        <app-checkout-confirm [product]="product" (decided)="onDecided($event)" />
+        @if (address(); as shipTo) {
+          <app-checkout-confirm
+            [product]="product"
+            [address]="shipTo"
+            (decided)="onDecided($event)"
+            (editAddress)="onEditAddress()"
+          />
+        }
       }
     }
     @case ('result') {

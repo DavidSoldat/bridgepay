@@ -32,4 +32,12 @@ describe('App', () => {
     expect(text).toContain('My Account');
     expect(text).toContain('Sign out');
   });
+
+  it('offers a way back to the shop from anywhere', () => {
+    const fixture = setup(true);
+    fixture.detectChanges();
+
+    const link = (fixture.nativeElement as HTMLElement).querySelector('a[href="/"]');
+    expect(link?.textContent?.trim()).toBe('Shop');
+  });
 });
