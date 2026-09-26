@@ -60,6 +60,9 @@ class HttpPaddleClientWireMockTest {
                 .withRequestBody(matchingJsonPath("$.collection_mode", equalTo("automatic")))
                 .withRequestBody(matchingJsonPath("$.items[0].price.billing_cycle.interval", equalTo("week")))
                 .withRequestBody(matchingJsonPath("$.items[0].price.unit_price.amount", equalTo("5000")))
+                // A non-catalog price must carry a product_id or an inline product (real sandbox 400 otherwise).
+                .withRequestBody(matchingJsonPath("$.items[0].price.product.name", equalTo("BridgePay installment plan")))
+                .withRequestBody(matchingJsonPath("$.items[0].price.product.tax_category", equalTo("standard")))
                 .willReturn(okJson("""
                         { "data": { "id": "txn_1", "subscription_id": null,
                           "checkout": { "url": "https://sandbox.paddle.com/checkout/txn_1" } } }

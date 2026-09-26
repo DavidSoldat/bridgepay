@@ -81,7 +81,8 @@ public class HttpPaddleClient implements PaddleClient {
                             "BridgePay installment plan",
                             new BillingCycle("week", 1),
                             "account_setting",
-                            new UnitPrice(toMinorUnits(installmentAmount), CURRENCY_CODE)))));
+                            new UnitPrice(toMinorUnits(installmentAmount), CURRENCY_CODE),
+                            new InlineProduct("BridgePay installment plan", "standard")))));
 
             TransactionEnvelope response = restClient.post()
                     .uri("/transactions")
@@ -140,7 +141,13 @@ public class HttpPaddleClient implements PaddleClient {
     private record TransactionPrice(String description,
                                      @JsonProperty("billing_cycle") BillingCycle billingCycle,
                                      @JsonProperty("tax_mode") String taxMode,
-                                     @JsonProperty("unit_price") UnitPrice unitPrice) {
+                                     @JsonProperty("unit_price") UnitPrice unitPrice,
+                                     InlineProduct product) {
+    }
+
+    // Paddle rejects a non-catalog price unless it names a catalog product_id or carries an inline
+    // product; inline keeps the sandbox free of manual catalog setup.
+    private record InlineProduct(String name, @JsonProperty("tax_category") String taxCategory) {
     }
 
     private record BillingCycle(String interval, int frequency) {
