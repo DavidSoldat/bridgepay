@@ -1,0 +1,35 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+images:
+  - { name: ghcr.io/davidsoldat/bridgepay-applicant-service, newName: bridgepay-applicant-service, newTag: local }
+  - { name: ghcr.io/davidsoldat/bridgepay-application-service, newName: bridgepay-application-service, newTag: local }
+  - { name: ghcr.io/davidsoldat/bridgepay-credit-risk-engine, newName: bridgepay-credit-risk-engine, newTag: local }
+  - { name: ghcr.io/davidsoldat/bridgepay-mock-credit-bureau, newName: bridgepay-mock-credit-bureau, newTag: local }
+  - { name: ghcr.io/davidsoldat/bridgepay-repayment-reconciliation-service, newName: bridgepay-repayment-reconciliation-service, newTag: local }
+  - { name: ghcr.io/davidsoldat/bridgepay-notifications-service, newName: bridgepay-notifications-service, newTag: local }
+  - { name: ghcr.io/davidsoldat/bridgepay-api-gateway, newName: bridgepay-api-gateway, newTag: local }
+  - { name: ghcr.io/davidsoldat/bridgepay-main-app, newName: bridgepay-main-app, newTag: local }
+  - { name: ghcr.io/davidsoldat/bridgepay-storefront, newName: bridgepay-storefront, newTag: local }
+generatorOptions:
+  disableNameSuffixHash: true
+secretGenerator:
+  # Dev-only values, identical to docker-compose. Real ones are created by hand on the VM.
+  - name: platform-credentials
+    namespace: platform
+    literals:
+      - POSTGRES_USER=bridgepay
+      - POSTGRES_PASSWORD=bridgepay
+      - KC_BOOTSTRAP_ADMIN_USERNAME=admin
+      - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
+#  - name: bridgepay-credentials
+#    namespace: bridgepay
+#    literals:
+#      - DB_USERNAME=bridgepay
+#      - DB_PASSWORD=bridgepay
+#  - name: paddle-credentials
+#    namespace: bridgepay
+#    literals:
+#      - PADDLE_API_KEY=changeme
+#      - PADDLE_WEBHOOK_SECRET=changeme

@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.7.4
+          args: ["start", "--import-realm"]
+          ports:
+            - containerPort: 8080
+            - containerPort: 9000
+          env:
+            - { name: KC_DB, value: postgres }
+            - { name: KC_DB_URL_HOST, value: postgres }
+            - { name: KC_DB_URL_DATABASE, value: bridgepay }
+            - { name: KC_DB_SCHEMA, value: keycloak }
+            - name: KC_DB_USERNAME
+              valueFrom:
+                secretKeyRef: { name: platform-credentials, key: POSTGRES_USER }
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: platform-credentials, key: POSTGRES_PASSWORD }
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef: { name: platform-credentials, key: KC_BOOTSTRAP_ADMIN_USERNAME }
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: platform-credentials, key: KC_BOOTSTRAP_ADMIN_PASSWORD }
+            - { name: KC_HOSTNAME, value: "http://auth.localtest.me" }
+            - { name: KC_HTTP_ENABLED, value: "true" }
+            - { name: KC_PROXY_HEADERS, value: xforwarded }
+            - { name: KC_HEALTH_ENABLED, value: "true" }
+          volumeMounts:
+            - name: realm
+              mountPath: /opt/keycloak/data/import
+            - name: theme
+              mountPath: /opt/keycloak/themes/bridgepay/login
+          startupProbe:
+            httpGet: { path: /health/started, port: 9000 }
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet: { path: /health/ready, port: 9000 }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health/live, port: 9000 }
+            periodSeconds: 10
+          # Spec section 13 budgeted 384Mi/512Mi; production-mode `start` OOMKilled during its
+          # auto-build step at 512Mi (Keycloak sizes heap at 70% of the limit).
+          resources:
+            requests: { memory: 512Mi }
+            limits: { memory: 768Mi }
+      volumes:
+        - name: realm
+          configMap:
+            name: keycloak-realm
+        - name: theme
+          configMap:
+            name: keycloak-theme
+            items:
+              - { key: theme.properties, path: theme.properties }
+              - { key: bridgepay.css, path: resources/css/bridgepay.css }
+              - { key: bridgepay-logo.svg, path: resources/img/bridgepay-logo.svg }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - port: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: keycloak
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: auth.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: keycloak
+                port:
+                  number: 8080
