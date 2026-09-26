@@ -122,6 +122,8 @@ r` loads the real model at startup ("`Loaded credit risk model from classpath:mo
   - Verified live on an isolated full compose stack with real Keycloak tokens: `shopper1` signup → checkout → `ops1` approve → the failed-events row now fails on Paddle's own `403` at "find-or-create customer for shopper1@example.com" (placeholder key) instead of "No applicant found" — i.e. the applicant lookup succeeds and the flow goes as far as it can without a real Paddle key.
   - **Gap that let this ship**: no cross-service contract test — Repayment Reconciliation's tests use a fake `ApplicantClient`, Applicant Service's tests never call with an id from another service. Worth a contract test (or one compose-level smoke test in CI) if cross-service calls grow.
 
+- [x] Browser verification of the expansion features (2026-09-26) — a real human on the full `docker compose up --build` stack: `shopper1` storefront checkout → `ops1` saw the policy-overlay factor labels in review detail and approved → a `FAILED` row appeared on `/ops/failed-events` (Paddle `403`, past the now-fixed applicant lookup), Retry bumped `attempts` → `merchant1` Sales page (tiles/filters/pagination) and Payouts. Resolves the "no browser click-through" notes on the merchant sales view, risk policy overlay, and failed events recovery entries above.
+
 ## Next, in order
 Agreed order (2026-09-24): all four expansion sub-projects are done (platform/ops 2026-09-25) and the applicant-ID mismatch they surfaced is fixed — the k3s manifests are next.
 
