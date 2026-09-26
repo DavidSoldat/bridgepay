@@ -10,6 +10,9 @@ resources:
   - repayment-reconciliation-service.yaml
   - notifications-service.yaml
   - api-gateway.yaml
+  - main-app.yaml
+  - storefront.yaml
+  - ingress.yaml
 configMapGenerator:
   # Shared by every service via envFrom. Services ignore the keys they don't use.
   - name: bridgepay-env
@@ -21,3 +24,6 @@ configMapGenerator:
       - KEYCLOAK_ISSUER_URI=http://auth.localtest.me/realms/bridgepay
       # Keys fetched in-cluster; auth.localtest.me resolves to the pod itself.
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI=http://keycloak.platform:8080/realms/bridgepay/protocol/openid-connect/certs
+  - name: frontend-config
+    literals:
+      - 'config.json={"keycloakUrl": "http://auth.localtest.me"}'
