@@ -23,13 +23,13 @@ secretGenerator:
       - POSTGRES_PASSWORD=bridgepay
       - KC_BOOTSTRAP_ADMIN_USERNAME=admin
       - KC_BOOTSTRAP_ADMIN_PASSWORD=admin
-#  - name: bridgepay-credentials
-#    namespace: bridgepay
-#    literals:
-#      - DB_USERNAME=bridgepay
-#      - DB_PASSWORD=bridgepay
-#  - name: paddle-credentials
-#    namespace: bridgepay
-#    literals:
-#      - PADDLE_API_KEY=changeme
-#      - PADDLE_WEBHOOK_SECRET=changeme
+  - name: bridgepay-credentials
+    namespace: bridgepay
+    literals:
+      - DB_USERNAME=bridgepay
+      - DB_PASSWORD=bridgepay
+  - name: paddle-credentials
+    namespace: bridgepay
+    literals:
+      - PADDLE_API_KEY=changeme
+      - PADDLE_WEBHOOK_SECRET=changeme

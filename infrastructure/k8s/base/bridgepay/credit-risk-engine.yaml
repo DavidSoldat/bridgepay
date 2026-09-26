@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: credit-risk-engine
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: credit-risk-engine
+  template:
+    metadata:
+      labels:
+        app: credit-risk-engine
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: credit-risk-engine
+          image: ghcr.io/davidsoldat/bridgepay-credit-risk-engine:latest
+          ports:
+            - containerPort: 8082
+          envFrom:
+            - configMapRef: { name: bridgepay-env }
+          env:
+            - { name: REDIS_HOST, value: "redis.platform" }
+            - { name: REDIS_PORT, value: "6379" }
+            - { name: MOCK_CREDIT_BUREAU_URL, value: "http://mock-credit-bureau:8083" }
+            - { name: REPAYMENT_RECONCILIATION_URL, value: "http://repayment-reconciliation-service:8084" }
+          startupProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8082 }
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8082 }
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: 8082 }
+            periodSeconds: 5
+          resources:
+            requests: { memory: 256Mi }
+            limits: { memory: 384Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: credit-risk-engine
+spec:
+  selector:
+    app: credit-risk-engine
+  ports:
+    - port: 8082

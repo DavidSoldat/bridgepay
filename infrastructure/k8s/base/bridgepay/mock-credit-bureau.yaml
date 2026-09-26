@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mock-credit-bureau
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mock-credit-bureau
+  template:
+    metadata:
+      labels:
+        app: mock-credit-bureau
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: mock-credit-bureau
+          image: ghcr.io/davidsoldat/bridgepay-mock-credit-bureau:latest
+          ports:
+            - containerPort: 8083
+          envFrom:
+            - configMapRef: { name: bridgepay-env }
+          startupProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8083 }
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8083 }
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: 8083 }
+            periodSeconds: 5
+          resources:
+            requests: { memory: 256Mi }
+            limits: { memory: 384Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mock-credit-bureau
+spec:
+  selector:
+    app: mock-credit-bureau
+  ports:
+    - port: 8083

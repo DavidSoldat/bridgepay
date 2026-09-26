@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: applicant-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: applicant-service
+  template:
+    metadata:
+      labels:
+        app: applicant-service
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: applicant-service
+          image: ghcr.io/davidsoldat/bridgepay-applicant-service:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef: { name: bridgepay-env }
+            - secretRef: { name: bridgepay-credentials }
+          startupProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8080 }
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8080 }
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: 8080 }
+            periodSeconds: 5
+          resources:
+            requests: { memory: 256Mi }
+            limits: { memory: 384Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: applicant-service
+spec:
+  selector:
+    app: applicant-service
+  ports:
+    - port: 8080

@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: repayment-reconciliation-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: repayment-reconciliation-service
+  template:
+    metadata:
+      labels:
+        app: repayment-reconciliation-service
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: repayment-reconciliation-service
+          image: ghcr.io/davidsoldat/bridgepay-repayment-reconciliation-service:latest
+          ports:
+            - containerPort: 8084
+          envFrom:
+            - configMapRef: { name: bridgepay-env }
+            - secretRef: { name: bridgepay-credentials }
+            - secretRef: { name: paddle-credentials }
+          env:
+            - { name: APPLICANT_SERVICE_URL, value: "http://applicant-service:8080" }
+            - { name: PADDLE_BASE_URL, value: "https://sandbox-api.paddle.com" }
+          startupProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8084 }
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8084 }
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: 8084 }
+            periodSeconds: 5
+          resources:
+            requests: { memory: 256Mi }
+            limits: { memory: 384Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: repayment-reconciliation-service
+spec:
+  selector:
+    app: repayment-reconciliation-service
+  ports:
+    - port: 8084

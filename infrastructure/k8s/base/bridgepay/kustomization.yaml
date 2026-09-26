@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: bridgepay
+resources:
+  - namespace.yaml
+  - applicant-service.yaml
+  - application-service.yaml
+  - credit-risk-engine.yaml
+  - mock-credit-bureau.yaml
+  - repayment-reconciliation-service.yaml
+  - notifications-service.yaml
+  - api-gateway.yaml
+configMapGenerator:
+  # Shared by every service via envFrom. Services ignore the keys they don't use.
+  - name: bridgepay-env
+    literals:
+      - DB_HOST=postgres.platform
+      - DB_PORT=5432
+      - DB_NAME=bridgepay
+      - KAFKA_BOOTSTRAP_SERVERS=kafka.platform:9092
+      - KEYCLOAK_ISSUER_URI=http://auth.localtest.me/realms/bridgepay
+      # Keys fetched in-cluster; auth.localtest.me resolves to the pod itself.
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI=http://keycloak.platform:8080/realms/bridgepay/protocol/openid-connect/certs

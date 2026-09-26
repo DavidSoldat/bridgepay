@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: application-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: application-service
+  template:
+    metadata:
+      labels:
+        app: application-service
+    spec:
+      enableServiceLinks: false
+      containers:
+        - name: application-service
+          image: ghcr.io/davidsoldat/bridgepay-application-service:latest
+          ports:
+            - containerPort: 8081
+          envFrom:
+            - configMapRef: { name: bridgepay-env }
+            - secretRef: { name: bridgepay-credentials }
+          env:
+            - { name: CREDIT_RISK_ENGINE_URL, value: "http://credit-risk-engine:8082" }
+          startupProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8081 }
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8081 }
+            periodSeconds: 10
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: 8081 }
+            periodSeconds: 5
+          resources:
+            requests: { memory: 256Mi }
+            limits: { memory: 384Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: application-service
+spec:
+  selector:
+    app: application-service
+  ports:
+    - port: 8081
