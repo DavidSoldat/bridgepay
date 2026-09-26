@@ -39,7 +39,7 @@ spec:
             - name: KC_BOOTSTRAP_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef: { name: platform-credentials, key: KC_BOOTSTRAP_ADMIN_PASSWORD }
-            - { name: KC_HOSTNAME, value: "http://auth.localtest.me" }
+            - { name: KC_HOSTNAME, value: "http://auth.localhost" }
             - { name: KC_HTTP_ENABLED, value: "true" }
             - { name: KC_PROXY_HEADERS, value: xforwarded }
             - { name: KC_HEALTH_ENABLED, value: "true" }
@@ -92,7 +92,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: auth.localtest.me
+    - host: auth.localhost
       http:
         paths:
           - path: /

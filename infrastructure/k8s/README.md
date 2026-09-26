@@ -42,21 +42,25 @@ restart until Postgres and Kafka are up.
 
 | URL | What |
 |---|---|
-| http://shop.localtest.me | Storefront |
-| http://app.localtest.me | Main app |
-| http://auth.localtest.me | Keycloak (admin: `admin` / `admin`) |
+| http://shop.localhost | Storefront |
+| http://app.localhost | Main app |
+| http://auth.localhost | Keycloak (admin: `admin` / `admin`) |
 
 Demo users: `shopper1`, `ops1`, `merchant1` (password = username).
 
-`*.localtest.me` resolves to 127.0.0.1 via public DNS. If it doesn't on your
-network, add this to your hosts file:
-`127.0.0.1 app.localtest.me shop.localtest.me auth.localtest.me`
+Why `*.localhost`: browsers resolve it to loopback on their own, and treat it
+as a secure context even over plain HTTP. Keycloak's JS adapter needs that,
+because PKCE uses `crypto.subtle`, which browsers only expose to secure
+contexts. A plain-HTTP hostname like `app.localtest.me` fails with "Web Crypto
+API is not available". The production overlay uses real HTTPS instead. For
+non-browser tools that don't resolve `*.localhost` themselves, add this to
+your hosts file: `127.0.0.1 app.localhost shop.localhost auth.localhost`
 
 Tear down: `k3d cluster delete bridgepay`.
 
 ## How auth works in the cluster
 
-Browsers log in at `auth.localtest.me`, so tokens carry that issuer. Inside a
+Browsers log in at `auth.localhost`, so tokens carry that issuer. Inside a
 pod that hostname points at the pod itself, so services check the issuer
 against the public URL (`KEYCLOAK_ISSUER_URI`) but fetch signing keys from the
 in-cluster Service (`SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI`).

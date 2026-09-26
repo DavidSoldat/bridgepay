@@ -7,7 +7,7 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - host: app.localtest.me
+    - host: app.localhost
       http:
         paths:
           - path: /
@@ -17,7 +17,7 @@ spec:
                 name: main-app
                 port:
                   number: 80
-    - host: shop.localtest.me
+    - host: shop.localhost
       http:
         paths:
           - path: /

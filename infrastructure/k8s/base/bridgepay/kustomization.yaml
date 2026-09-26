@@ -21,9 +21,9 @@ configMapGenerator:
       - DB_PORT=5432
       - DB_NAME=bridgepay
       - KAFKA_BOOTSTRAP_SERVERS=kafka.platform:9092
-      - KEYCLOAK_ISSUER_URI=http://auth.localtest.me/realms/bridgepay
-      # Keys fetched in-cluster; auth.localtest.me resolves to the pod itself.
+      - KEYCLOAK_ISSUER_URI=http://auth.localhost/realms/bridgepay
+      # Keys fetched in-cluster; auth.localhost resolves to the pod itself.
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI=http://keycloak.platform:8080/realms/bridgepay/protocol/openid-connect/certs
   - name: frontend-config
     literals:
-      - 'config.json={"keycloakUrl": "http://auth.localtest.me"}'
+      - 'config.json={"keycloakUrl": "http://auth.localhost"}'
