@@ -253,7 +253,7 @@ Body: { "merchantId": "uuid", "amount": 199.99 }
 | Each Spring Boot service (×7) | 256Mi | 384Mi |
 | Angular apps (nginx, static) (×2) | 32Mi | 64Mi |
 
-Roughly 5GB at limits total. Keycloak was raised from 384Mi/512Mi after production-mode startup (which runs a build step) was OOMKilled at 512Mi on k3d. Measured on k3d after an end-to-end run: the busiest Spring services (Application, Repayment Reconciliation) sit around 360Mi of their 384Mi limit, so those two are the first candidates for a bump if they OOM under real load. JVM services use `-XX:MaxRAMPercentage=75.0` rather than a hardcoded `-Xmx` — JDK 17+ reads the container's cgroup limit automatically, so heap sizing tracks the pod's memory limit if it ever changes.
+Roughly 5GB at limits total. Keycloak was raised from 384Mi/512Mi after production-mode startup (which runs a build step) was OOMKilled at 512Mi on k3d. Application, Repayment Reconciliation and Notifications (the Kafka + Hibernate services) run at 384Mi/512Mi instead: measured ~360Mi at idle on k3d, and the Dockerfiles' `MaxRAMPercentage=75` leaves too little non-heap room inside 384Mi. JVM services use `-XX:MaxRAMPercentage=75.0` rather than a hardcoded `-Xmx` — JDK 17+ reads the container's cgroup limit automatically, so heap sizing tracks the pod's memory limit if it ever changes.
 
 **Probes:** Spring Boot Actuator's liveness/readiness health groups wired into every Deployment, plus a `startupProbe` so a still-booting JVM isn't mistaken for a dead one.
 

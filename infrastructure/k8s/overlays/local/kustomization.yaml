@@ -14,6 +14,12 @@ images:
   - { name: ghcr.io/davidsoldat/bridgepay-storefront, newName: bridgepay-storefront, newTag: local }
 generatorOptions:
   disableNameSuffixHash: true
+configMapGenerator:
+  # Dev realm: demo users shopper1/ops1/merchant1 with password = username.
+  - name: keycloak-realm
+    namespace: platform
+    files:
+      - ../../../keycloak/bridgepay-realm.json
 secretGenerator:
   # Dev-only values, identical to docker-compose. Real ones are created by hand on the VM.
   - name: platform-credentials

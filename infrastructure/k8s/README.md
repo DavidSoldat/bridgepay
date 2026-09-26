@@ -69,3 +69,8 @@ which a ConfigMap overrides.
 A production overlay for the OCI instance (real hostnames, TLS via
 cert-manager, a GHCR pull secret, real Secrets, the public Paddle webhook
 route) and the CI deploy step. They wait until that host exists.
+
+The Keycloak realm ConfigMap (`keycloak-realm`) is supplied by each overlay,
+not by `base/`, because the dev realm has demo users with known passwords.
+A production overlay must provide its own realm before Keycloak's first boot:
+Keycloak skips importing a realm that already exists.

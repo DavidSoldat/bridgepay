@@ -9,13 +9,13 @@ resources:
   - keycloak.yaml
 # These files live outside this folder (shared with docker-compose), so render
 # with --load-restrictor LoadRestrictionsNone.
+# The Keycloak realm (ConfigMap keycloak-realm) is deliberately NOT here: the
+# dev realm carries demo users with known passwords, so each overlay supplies
+# its own. Keycloak imports it once (IGNORE_EXISTING), so the first boot counts.
 configMapGenerator:
   - name: postgres-init
     files:
       - ../../../postgres-init/01-create-keycloak-schema.sql
-  - name: keycloak-realm
-    files:
-      - ../../../keycloak/bridgepay-realm.json
   - name: keycloak-theme
     files:
       - ../../../keycloak/themes/bridgepay/login/theme.properties

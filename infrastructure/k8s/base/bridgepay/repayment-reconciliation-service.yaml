@@ -35,9 +35,11 @@ spec:
           readinessProbe:
             httpGet: { path: /actuator/health/readiness, port: 8084 }
             periodSeconds: 5
+          # Above spec section 13's 256Mi/384Mi: measured ~360Mi at idle on k3d, and the
+          # Dockerfile's MaxRAMPercentage=75 leaves too little non-heap room at 384Mi.
           resources:
-            requests: { memory: 256Mi }
-            limits: { memory: 384Mi }
+            requests: { memory: 384Mi }
+            limits: { memory: 512Mi }
 ---
 apiVersion: v1
 kind: Service
