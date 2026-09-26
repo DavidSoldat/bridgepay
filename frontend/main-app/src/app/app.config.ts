@@ -16,25 +16,27 @@ const gatewayUrlCondition = createInterceptorCondition<IncludeBearerTokenConditi
   bearerPrefix: 'Bearer',
 });
 
-export const appConfig: ApplicationConfig = {
-  providers: [
-    provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
-    provideKeycloak({
-      config: {
-        url: 'http://localhost:8180',
-        realm: 'bridgepay',
-        clientId: 'main-app',
+export function appConfig(keycloakUrl: string): ApplicationConfig {
+  return {
+    providers: [
+      provideBrowserGlobalErrorListeners(),
+      provideRouter(routes),
+      provideKeycloak({
+        config: {
+          url: keycloakUrl,
+          realm: 'bridgepay',
+          clientId: 'main-app',
+        },
+        initOptions: {
+          onLoad: 'login-required',
+          pkceMethod: 'S256',
+        },
+      }),
+      {
+        provide: INCLUDE_BEARER_TOKEN_INTERCEPTOR_CONFIG,
+        useValue: [gatewayUrlCondition],
       },
-      initOptions: {
-        onLoad: 'login-required',
-        pkceMethod: 'S256',
-      },
-    }),
-    {
-      provide: INCLUDE_BEARER_TOKEN_INTERCEPTOR_CONFIG,
-      useValue: [gatewayUrlCondition],
-    },
-    provideHttpClient(withInterceptors([includeBearerTokenInterceptor])),
-  ],
-};
+      provideHttpClient(withInterceptors([includeBearerTokenInterceptor])),
+    ],
+  };
+}

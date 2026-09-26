@@ -15,26 +15,28 @@ const gatewayUrlCondition = createInterceptorCondition<IncludeBearerTokenConditi
   bearerPrefix: 'Bearer',
 });
 
-export const appConfig: ApplicationConfig = {
-  providers: [
-    provideBrowserGlobalErrorListeners(),
-    provideRouter(routes),
-    provideKeycloak({
-      config: {
-        url: 'http://localhost:8180',
-        realm: 'bridgepay',
-        clientId: 'storefront',
+export function appConfig(keycloakUrl: string): ApplicationConfig {
+  return {
+    providers: [
+      provideBrowserGlobalErrorListeners(),
+      provideRouter(routes),
+      provideKeycloak({
+        config: {
+          url: keycloakUrl,
+          realm: 'bridgepay',
+          clientId: 'storefront',
+        },
+        initOptions: {
+          onLoad: 'check-sso',
+          silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
+          pkceMethod: 'S256',
+        },
+      }),
+      {
+        provide: INCLUDE_BEARER_TOKEN_INTERCEPTOR_CONFIG,
+        useValue: [gatewayUrlCondition],
       },
-      initOptions: {
-        onLoad: 'check-sso',
-        silentCheckSsoRedirectUri: `${window.location.origin}/silent-check-sso.html`,
-        pkceMethod: 'S256',
-      },
-    }),
-    {
-      provide: INCLUDE_BEARER_TOKEN_INTERCEPTOR_CONFIG,
-      useValue: [gatewayUrlCondition],
-    },
-    provideHttpClient(withInterceptors([includeBearerTokenInterceptor])),
-  ],
-};
+      provideHttpClient(withInterceptors([includeBearerTokenInterceptor])),
+    ],
+  };
+}
