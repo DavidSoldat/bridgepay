@@ -9,7 +9,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres-init:/docker-entrypoint-initdb.d
+      - ./infrastructure/postgres-init:/docker-entrypoint-initdb.d
 
   kafka:
     image: apache/kafka:latest
@@ -50,8 +50,8 @@ services:
     ports:
       - "8180:8080"
     volumes:
-      - ./keycloak:/opt/keycloak/data/import
-      - ./keycloak/themes:/opt/keycloak/themes
+      - ./infrastructure/keycloak:/opt/keycloak/data/import
+      - ./infrastructure/keycloak/themes:/opt/keycloak/themes
 
   applicant-service:
     build: ./services/applicant-service

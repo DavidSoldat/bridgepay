@@ -36,3 +36,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### AI assistant working files (kept locally, not published) ###
+CLAUDE.md
+.claude/
+.superpowers/
+docs/superpowers/
+docs/PROGRESS.md

@@ -6,9 +6,6 @@ topics from spec section 10 (`applications.approved`/`manual-review`/`declined`,
 persists one idempotency-guarding row per event to `notification_log`, and (v1)
 logs what it would have sent instead of delivering real email/SMS.
 
-See `docs/superpowers/specs/2026-09-16-notifications-service-design.md` for
-the full design.
-
 ## Run locally
 
 ```bash

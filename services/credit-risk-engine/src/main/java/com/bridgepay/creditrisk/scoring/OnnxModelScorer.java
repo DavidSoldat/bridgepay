@@ -25,8 +25,7 @@ import java.util.Map;
  * LogisticRegression, see spec section 12) and the accompanying
  * coefficients.json at startup, then serves scoring calls against it.
  * <p>
- * The trained model doesn't exist yet (§12 "Train the actual model" is a
- * later PROGRESS.md task) - if the configured model/coefficients resources
+ * If the configured model/coefficients resources
  * aren't present, this component logs a warning and marks itself
  * unavailable rather than failing startup, so the service can be deployed
  * ahead of the model and every request fail-safes to MANUAL_REVIEW until the

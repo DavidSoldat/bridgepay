@@ -13,10 +13,9 @@ import java.util.function.Supplier;
 
 /**
  * Wraps the call to the Mock Credit Bureau's bureau-profile lookup in a
- * Resilience4j core (framework-agnostic) circuit breaker - see
- * .claude/rules/spring-boot-4-migration.md for why the annotation-based
- * integration module isn't used, and HttpCreditRiskClient in
- * application-service for the pattern this mirrors.
+ * Resilience4j core (framework-agnostic) circuit breaker - no
+ * Boot 4-compatible annotation integration module exists yet. See
+ * HttpCreditRiskClient in application-service for the pattern this mirrors.
  */
 @Component
 public class HttpBureauClient implements BureauClient {

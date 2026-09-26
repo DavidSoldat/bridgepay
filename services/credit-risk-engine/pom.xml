@@ -79,8 +79,7 @@
 		<dependency>
 			<!--
 			Multi-platform jar (win/linux/osx, x64 + aarch64 natives bundled) -
-			needs verification once this service is actually containerized for
-			the target ARM64 host, see PROGRESS.md known risks.
+			aarch64 natives not yet verified on the target ARM64 host.
 			-->
 			<groupId>com.microsoft.onnxruntime</groupId>
 			<artifactId>onnxruntime</artifactId>

@@ -33,10 +33,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Full HTTP-path test against a real Redis (Testcontainers) and the real
  * ONNX Runtime, using the toy fixture from
- * src/test/resources/fixtures/generate_fixture.py in place of the not-yet-
- * trained real model (see PROGRESS.md). BureauClient/RepaymentHistoryClient
- * are stubbed since neither the Mock Credit Bureau nor Repayment
- * Reconciliation exist as running services yet.
+ * src/test/resources/fixtures/generate_fixture.py in place of the real
+ * model. BureauClient/RepaymentHistoryClient are stubbed so the test doesn't
+ * depend on the Mock Credit Bureau or Repayment Reconciliation running.
  */
 @Testcontainers
 @SpringBootTest

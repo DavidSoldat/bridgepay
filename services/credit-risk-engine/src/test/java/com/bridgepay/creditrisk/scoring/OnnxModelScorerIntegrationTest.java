@@ -13,10 +13,9 @@ import static org.assertj.core.api.Assertions.within;
 
 /**
  * Runs real ONNX Runtime inference against a toy fixture (see
- * src/test/resources/fixtures/generate_fixture.py) - the real trained model
- * doesn't exist yet (spec section 12, PROGRESS.md), so this is the only way
- * to verify the tensor I/O and output-parsing logic actually works against
- * onnxruntime's real output shape rather than a guess.
+ * src/test/resources/fixtures/generate_fixture.py) - a small, stable model
+ * that verifies the tensor I/O and output-parsing logic against onnxruntime's
+ * real output shape, independent of the production model's weights.
  */
 class OnnxModelScorerIntegrationTest {
 

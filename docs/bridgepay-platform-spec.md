@@ -1,6 +1,6 @@
 # BridgePay — Instant Credit / BNPL Underwriting Platform
 
-Inspired by a microservices fintech fraud-detection reference project (see `fraud-detection-platform-spec.md`), reworked around a different problem: real-time credit underwriting instead of payment fraud.
+Inspired by a microservices fintech fraud-detection reference project, reworked around a different problem: real-time credit underwriting instead of payment fraud.
 
 ## 1. Overview
 A Buy-Now-Pay-Later platform, similar in shape to Klarna/Affirm/Afterpay: shoppers split a purchase into installments at checkout, the platform decides in real time whether to extend credit, pays the merchant in full immediately, and collects the installments from the shopper afterward — carrying the default risk itself.
@@ -266,4 +266,4 @@ Roughly 5GB at limits total. JVM services use `-XX:MaxRAMPercentage=75.0` rather
 **Deploy mechanism:** consistent with the "no Helm" decision — GitHub Actions builds and pushes images to GHCR, then SSHs into the box and runs `kubectl apply -f k8s/` using a kubeconfig stored as a repo secret.
 
 ## 14. Status
-Planning complete. Project name: **BridgePay**. Next step: begin implementation, starting with the Applicant Service — simplest service, establishes the project skeleton, Docker/CI setup, and k3s deployment path before tackling anything harder.
+This is the original planning document. All seven backend services, both Angular apps, the Keycloak realm, the trained model and the CI pipeline are built; see the root `README.md` for current status. Kubernetes deployment (§13) is in progress.

@@ -14,19 +14,17 @@ docker-compose up --build
 ```
 
 Uses the `local` Spring profile (JWT auth disabled) and starts a Redis
-container for the score cache. **The trained model doesn't exist yet** (§12
-training is a later PROGRESS.md task) — `src/main/resources/model/` is empty
-on purpose, so `OnnxModelScorer` logs a warning at startup and every
-`/internal/score` call fail-safes to `MANUAL_REVIEW`. Same story for the Mock
-Credit Bureau and Repayment Reconciliation Service: neither is built yet, so
-those calls fail over via their circuit breakers — also correct behavior
-right now, not a bug.
+container for the score cache. The trained model (`model.onnx` +
+`coefficients.json`, produced by `scripts/train_model.py`) ships in
+`src/main/resources/model/`. Run standalone like this, the Mock Credit Bureau
+and Repayment Reconciliation calls fail over via their circuit breakers and
+every `/internal/score` call fail-safes to `MANUAL_REVIEW` — correct
+behavior, not a bug. Run the root `docker-compose.yml` for real scores.
 
-Drop a real `model.onnx` + `coefficients.json` into `src/main/resources/model/`
-(or point `CREDIT_RISK_MODEL_PATH`/`CREDIT_RISK_COEFFICIENTS_PATH` at a
-filesystem path) and restart to start scoring for real — no code changes
-needed, since the feature set/order is driven entirely by `coefficients.json`
-at runtime.
+To swap in a different model, point `CREDIT_RISK_MODEL_PATH`/
+`CREDIT_RISK_COEFFICIENTS_PATH` at a filesystem path and restart — no code
+changes needed, since the feature set/order is driven entirely by
+`coefficients.json` at runtime.
 
 ## Run tests
 

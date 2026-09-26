@@ -8,10 +8,8 @@ non-catalog-price transaction, and reacts to Paddle's real webhooks
 `subscription.canceled`) to drive installment/plan status and publish the 4
 `repayments.*` topics Notifications Service already consumes.
 
-See `docs/superpowers/specs/2026-09-17-repayment-reconciliation-design.md`
-for the full design, including the Paddle API mechanics (confirmed against
-Paddle's own developer docs, not guessed) and why a real checkout can't be
-completed automatically until the Angular frontend exists.
+The Paddle API mechanics were confirmed against Paddle's own developer docs,
+not guessed.
 
 ## Run locally
 

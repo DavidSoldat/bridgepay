@@ -12,7 +12,7 @@ import java.util.List;
  * the ops review chart next to the bureau factors. Exists because the
  * trained model only knows the 10 bureau features; on-platform repayment
  * history (spec section 6's one genuinely real input) can't be trained on
- * from the Kaggle data. See docs/superpowers/specs/2026-09-25-risk-policy-overlay-design.md.
+ * from the Kaggle data.
  * <p>
  * A rule that doesn't fire emits no factor.
  */

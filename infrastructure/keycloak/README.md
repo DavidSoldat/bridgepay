@@ -1,8 +1,8 @@
 # BridgePay — Keycloak realm
 
 `bridgepay-realm.json` is a real Keycloak export (via `kc.sh export`), not
-hand-authored — see `docs/superpowers/specs/2026-09-17-keycloak-realm-design.md`
-for the full design and how it was built/verified.
+hand-authored: configured against a running Keycloak via `kcadm.sh`, then
+exported and verified to round-trip from a clean import.
 
 ## Run locally
 
@@ -49,7 +49,7 @@ re-export:
 docker-compose stop keycloak
 docker-compose run --name kc-export --entrypoint "" keycloak \
   /opt/keycloak/bin/kc.sh export --dir /tmp/export --realm bridgepay --users realm_file
-docker cp kc-export:/tmp/export/bridgepay-realm.json ./keycloak/bridgepay-realm.json
+docker cp kc-export:/tmp/export/bridgepay-realm.json ./infrastructure/keycloak/bridgepay-realm.json
 docker rm kc-export
 ```
 

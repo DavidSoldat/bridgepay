@@ -11,7 +11,7 @@ import java.util.Map;
  * {@code features} is declared as a {@link Map} (deserialized as a
  * LinkedHashMap, preserving JSON key order) rather than a fixed set of named
  * fields, because the exact feature set/order is decided at training time
- * (section 12, not yet done - see PROGRESS.md). This same order also drives
+ * (spec section 12, scripts/train_model.py). This same order also drives
  * the ONNX input tensor's column order in OnnxModelScorer.
  */
 public record CoefficientSet(double intercept, Map<String, FeatureCoefficient> features) {
