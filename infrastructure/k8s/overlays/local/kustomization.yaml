@@ -34,8 +34,9 @@ secretGenerator:
     literals:
       - DB_USERNAME=bridgepay
       - DB_PASSWORD=bridgepay
+  # Real Paddle sandbox keys come from the repo-root .env (gitignored, same file
+  # docker-compose reads). Create it first: cp .env.example .env
   - name: paddle-credentials
     namespace: bridgepay
-    literals:
-      - PADDLE_API_KEY=changeme
-      - PADDLE_WEBHOOK_SECRET=changeme
+    envs:
+      - ../../../../.env

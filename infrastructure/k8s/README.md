@@ -31,6 +31,10 @@ docker build -t bridgepay-main-app:local frontend/main-app
 docker build -t bridgepay-storefront:local frontend/storefront
 k3d image import -c bridgepay $(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^bridgepay-.*:local$')
 
+# Paddle keys come from the repo-root .env (gitignored). Placeholders are fine;
+# real sandbox keys make repayment plans get created in Paddle.
+[ -f .env ] || cp .env.example .env
+
 # The Keycloak/Postgres ConfigMaps read files from infrastructure/keycloak and
 # infrastructure/postgres-init, outside this folder, hence the load restrictor flag.
 kubectl kustomize --load-restrictor LoadRestrictionsNone infrastructure/k8s/overlays/local | kubectl apply -f -
