@@ -88,6 +88,6 @@ The full design is in [`docs/bridgepay-platform-spec.md`](docs/bridgepay-platfor
 
 ## Status and limitations
 
-- **Deployment:** Kubernetes (k3s on an ARM64 OCI instance) is in progress. CI already builds and publishes arm64 images.
+- **Deployment:** Kubernetes manifests (Kustomize, k3s) are in [`infrastructure/k8s`](infrastructure/k8s) and run end to end on a local k3d cluster. The production overlay for the ARM64 OCI instance comes once that host exists. CI already builds and publishes arm64 images.
 - **Paddle** runs against the sandbox API shape. Without real sandbox keys, repayment-plan creation fails into the ops failed-events queue.
 - **The credit bureau is a simulation.** Making real credit decisions would need a real bureau integration, KYC, and lending compliance. That is a regulated undertaking, not an engineering task.

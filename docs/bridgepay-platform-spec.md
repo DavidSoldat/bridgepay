@@ -234,7 +234,7 @@ Body: { "merchantId": "uuid", "amount": 199.99 }
 **Deliberately out of scope for v1:** live retraining pipelines, a model registry, A/B testing between model versions. A versioned, manually-retrained `.onnx` file loaded at startup is enough — same "basic now, add later if it matters" pattern as Terraform and Grafana.
 
 ## 13. Kubernetes Layout
-**Namespaces:** two — `riskgate` (business services) and `platform` (Postgres, Kafka, Redis, Keycloak). Enough separation for sane `kubectl` filtering and narrower RBAC scoping, without a namespace-per-bounded-context scheme that only pays off with a team and multiple environments.
+**Namespaces:** two — `bridgepay` (business services) and `platform` (Postgres, Kafka, Redis, Keycloak). Enough separation for sane `kubectl` filtering and narrower RBAC scoping, without a namespace-per-bounded-context scheme that only pays off with a team and multiple environments.
 
 **Storage:** k3s's built-in `local-path` provisioner, used as-is. Normally "local path" on cloud infra is risky because it often means ephemeral instance storage — but this instance is block-storage-only, so the local path is itself durable OCI block storage. No separate CSI driver needed at this scale.
 
@@ -249,15 +249,15 @@ Body: { "merchantId": "uuid", "amount": 199.99 }
 | Postgres | 256Mi | 512Mi |
 | Kafka (KRaft, single broker) | 512Mi | 1Gi |
 | Redis | 64Mi | 128Mi |
-| Keycloak | 384Mi | 512Mi |
+| Keycloak | 512Mi | 768Mi |
 | Each Spring Boot service (×7) | 256Mi | 384Mi |
 | Angular apps (nginx, static) (×2) | 32Mi | 64Mi |
 
-Roughly 5GB at limits total. JVM services use `-XX:MaxRAMPercentage=75.0` rather than a hardcoded `-Xmx` — JDK 17+ reads the container's cgroup limit automatically, so heap sizing tracks the pod's memory limit if it ever changes.
+Roughly 5GB at limits total. Keycloak was raised from 384Mi/512Mi after production-mode startup (which runs a build step) was OOMKilled at 512Mi on k3d. Measured on k3d after an end-to-end run: the busiest Spring services (Application, Repayment Reconciliation) sit around 360Mi of their 384Mi limit, so those two are the first candidates for a bump if they OOM under real load. JVM services use `-XX:MaxRAMPercentage=75.0` rather than a hardcoded `-Xmx` — JDK 17+ reads the container's cgroup limit automatically, so heap sizing tracks the pod's memory limit if it ever changes.
 
 **Probes:** Spring Boot Actuator's liveness/readiness health groups wired into every Deployment, plus a `startupProbe` so a still-booting JVM isn't mistaken for a dead one.
 
-**Networking:** k3s's bundled Traefik ingress controller (no separate nginx-ingress install). One Ingress, path-based routing under a single domain (`/api/**` → gateway, `/` → main Angular app, `/storefront` → demo storefront), reusing the existing cert-manager + Let's Encrypt setup from TruckNest — one DNS entry, one certificate.
+**Networking:** k3s's bundled Traefik ingress controller (no separate nginx-ingress install). Subdomain routing: `app.<domain>` → main Angular app, `shop.<domain>` → demo storefront, `auth.<domain>` → Keycloak. Each frontend's nginx proxies `/api/` to the gateway, so the gateway has no Ingress rule of its own. Chosen over a single-domain path layout so neither Angular app needs a base-href and docker-compose runs unchanged; costs three certificates instead of one.
 
 **Secrets:** plain k3s Secret objects (DB passwords, Paddle keys, Keycloak admin credentials) — sufficient at this scale; Sealed Secrets/SOPS is the "real production" upgrade, deferred like Terraform and Grafana.
 
@@ -265,5 +265,7 @@ Roughly 5GB at limits total. JVM services use `-XX:MaxRAMPercentage=75.0` rather
 
 **Deploy mechanism:** consistent with the "no Helm" decision — GitHub Actions builds and pushes images to GHCR, then SSHs into the box and runs `kubectl apply -f k8s/` using a kubeconfig stored as a repo secret.
 
+**Layout:** `infrastructure/k8s/`, a Kustomize `base/` (production-shaped, GHCR images) plus overlays. `overlays/local` runs the stack on k3d with locally built images and dev Secrets; a production overlay follows once the OCI host exists.
+
 ## 14. Status
-This is the original planning document. All seven backend services, both Angular apps, the Keycloak realm, the trained model and the CI pipeline are built; see the root `README.md` for current status. Kubernetes deployment (§13) is in progress.
+This is the original planning document. All seven backend services, both Angular apps, the Keycloak realm, the trained model and the CI pipeline are built; see the root `README.md` for current status. Kubernetes manifests (§13) run end to end on a local k3d cluster; production deployment to the OCI host is next.
