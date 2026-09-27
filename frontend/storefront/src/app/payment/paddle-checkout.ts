@@ -56,7 +56,8 @@ export class PaddleCheckout {
     if (event.name === 'checkout.completed') {
       this.finish('completed');
       paddle.Checkout.close();
-    } else if (event.name === 'checkout.closed') {
+    } else if (event.name === 'checkout.closed' || event.name === 'checkout.error') {
+      // e.g. reopening a transaction already paid before its webhook landed: treat as not paid, never hang
       this.finish('closed');
     }
   }

@@ -77,6 +77,18 @@ describe('PaddleCheckout', () => {
     await expect(outcome).resolves.toBe('completed');
   });
 
+  it('resolves closed when Paddle reports a checkout error, so the shopper is never stuck', async () => {
+    const paddle = fakePaddle();
+    (window as { Paddle?: unknown }).Paddle = paddle;
+    const checkout = service('test_abc');
+
+    const outcome = checkout.open('txn_already_paid');
+    await vi.waitFor(() => expect(paddle.Checkout.open).toHaveBeenCalled());
+    paddle.emit('checkout.error');
+
+    await expect(outcome).resolves.toBe('closed');
+  });
+
   it('does not force sandbox for a live token', async () => {
     const paddle = fakePaddle();
     (window as { Paddle?: unknown }).Paddle = paddle;
