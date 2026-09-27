@@ -27,6 +27,8 @@ import com.bridgepay.application.repository.MerchantStatusTotals;
 import com.bridgepay.application.repository.MerchantRepository;
 import com.bridgepay.application.repository.OutboxEventRepository;
 import tools.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -37,10 +39,13 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
 public class CreditApplicationService {
+
+    private static final Logger log = LoggerFactory.getLogger(CreditApplicationService.class);
 
     private static final int INSTALLMENT_COUNT = 4;
 
@@ -198,6 +203,30 @@ public class CreditApplicationService {
 
         return new MerchantSummaryResponse(total, approved, inReview, declined, approvalRate,
                 approvedVolume, fees, orZero(paid.gross()).subtract(fees), pendingNet);
+    }
+
+    /** Installment 1 cleared, so the order is confirmed and the merchant is paid. Safe to call repeatedly. */
+    @Transactional
+    public void recordFirstPaymentCleared(UUID applicationId) {
+        if (applicationId == null) {
+            log.warn("installment-paid without applicationId (published before that field existed), skipping");
+            return;
+        }
+        merchantPayoutRepository.findByApplicationId(applicationId).ifPresentOrElse(MerchantPayout::markPaid,
+                () -> log.warn("No payout for application {} on installment-paid, skipping", applicationId));
+    }
+
+    /** The first installment was never paid: the order is off. A payout that was already paid is never reversed. */
+    @Transactional
+    public void cancelUnpaidApplication(UUID applicationId) {
+        Optional<MerchantPayout> payout = merchantPayoutRepository.findByApplicationId(applicationId);
+        if (payout.isPresent() && payout.get().getStatus() == PayoutStatus.PAID) {
+            log.warn("plan-cancelled for application {} whose payout is already paid, ignoring", applicationId);
+            return;
+        }
+        applicationRepository.findById(applicationId).ifPresentOrElse(CreditApplication::cancel,
+                () -> log.warn("No application {} on plan-cancelled, skipping", applicationId));
+        payout.ifPresent(MerchantPayout::cancel);
     }
 
     private static BigDecimal orZero(BigDecimal value) {
