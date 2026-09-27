@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.math.BigDecimal;
@@ -49,6 +50,8 @@ public class HttpPaddleClient implements PaddleClient {
                 .failureRateThreshold(50)
                 .waitDurationInOpenState(Duration.ofSeconds(30))
                 .slidingWindowSize(10)
+                // a 4xx is Paddle up and refusing (e.g. cancelling an already-paid transaction), not Paddle down
+                .ignoreExceptions(HttpClientErrorException.class)
                 .build();
         this.circuitBreaker = CircuitBreakerRegistry.of(config).circuitBreaker("paddle");
     }

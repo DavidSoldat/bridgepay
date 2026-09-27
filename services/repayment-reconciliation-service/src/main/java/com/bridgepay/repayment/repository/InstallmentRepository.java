@@ -2,6 +2,7 @@ package com.bridgepay.repayment.repository;
 
 import com.bridgepay.repayment.domain.Installment;
 import com.bridgepay.repayment.domain.InstallmentStatus;
+import com.bridgepay.repayment.domain.PlanStatus;
 import com.bridgepay.repayment.domain.RepaymentPlan;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -16,5 +17,6 @@ public interface InstallmentRepository extends JpaRepository<Installment, UUID> 
     Optional<Installment> findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
             RepaymentPlan repaymentPlan, List<InstallmentStatus> statuses);
 
-    long countByRepaymentPlanApplicantIdAndStatus(UUID applicantId, InstallmentStatus status);
+    long countByRepaymentPlanApplicantIdAndStatusAndRepaymentPlanStatusNot(UUID applicantId, InstallmentStatus status,
+                                                                         PlanStatus excludedPlanStatus);
 }

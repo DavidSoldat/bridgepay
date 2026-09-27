@@ -109,6 +109,8 @@ class FirstPaymentExpiryJobIntegrationTest {
     InstallmentRepository installmentRepository;
     @Autowired
     OutboxEventRepository outboxEventRepository;
+    @Autowired
+    RepaymentHistoryService repaymentHistoryService;
 
     private RepaymentPlan plan(String transactionId) {
         RepaymentPlan plan = repaymentPlanRepository.save(new RepaymentPlan(UUID.randomUUID(), UUID.randomUUID(),
@@ -172,5 +174,18 @@ class FirstPaymentExpiryJobIntegrationTest {
 
         assertThat(statusOf(refused)).isEqualTo(PlanStatus.ACTIVE);
         assertThat(statusOf(next)).isEqualTo(PlanStatus.CANCELLED);
+    }
+
+    @Test
+    void anExpiredOrder_doesNotCountAgainstTheShopperAsALatePayment() {
+        RepaymentPlan plan = plan("txn_declined_then_abandoned_1");
+        Installment first = installmentRepository.findByRepaymentPlanOrderBySequenceNumberAsc(plan).get(0);
+        first.markLate(); // card declined in Paddle checkout, then the shopper walked away
+        installmentRepository.save(first);
+
+        job.expireCreatedBefore(Instant.now().plusSeconds(1));
+
+        assertThat(statusOf(plan)).isEqualTo(PlanStatus.CANCELLED);
+        assertThat(repaymentHistoryService.getHistory(plan.getApplicantId()).latePaymentCount()).isZero();
     }
 }

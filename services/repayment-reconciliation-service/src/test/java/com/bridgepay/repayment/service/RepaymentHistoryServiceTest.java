@@ -42,9 +42,9 @@ class RepaymentHistoryServiceTest {
         UUID applicantId = UUID.randomUUID();
         when(repaymentPlanRepository.countByApplicantIdAndStatus(applicantId, PlanStatus.COMPLETED)).thenReturn(2L);
         when(repaymentPlanRepository.countByApplicantIdAndStatus(applicantId, PlanStatus.DEFAULTED)).thenReturn(1L);
-        when(installmentRepository.countByRepaymentPlanApplicantIdAndStatus(applicantId, InstallmentStatus.PAID)).thenReturn(6L);
-        when(installmentRepository.countByRepaymentPlanApplicantIdAndStatus(applicantId, InstallmentStatus.LATE)).thenReturn(1L);
-        when(installmentRepository.countByRepaymentPlanApplicantIdAndStatus(applicantId, InstallmentStatus.MISSED)).thenReturn(1L);
+        when(installmentRepository.countByRepaymentPlanApplicantIdAndStatusAndRepaymentPlanStatusNot(applicantId, InstallmentStatus.PAID, PlanStatus.CANCELLED)).thenReturn(6L);
+        when(installmentRepository.countByRepaymentPlanApplicantIdAndStatusAndRepaymentPlanStatusNot(applicantId, InstallmentStatus.LATE, PlanStatus.CANCELLED)).thenReturn(1L);
+        when(installmentRepository.countByRepaymentPlanApplicantIdAndStatusAndRepaymentPlanStatusNot(applicantId, InstallmentStatus.MISSED, PlanStatus.CANCELLED)).thenReturn(1L);
 
         RepaymentHistoryResponse response = service.getHistory(applicantId);
 
