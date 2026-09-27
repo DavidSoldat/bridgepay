@@ -1,9 +1,11 @@
 package com.bridgepay.repayment.web;
 
+import com.bridgepay.repayment.client.PaddleWebhookData;
 import com.bridgepay.repayment.domain.Installment;
 import com.bridgepay.repayment.domain.RepaymentPlan;
 import com.bridgepay.repayment.repository.InstallmentRepository;
 import com.bridgepay.repayment.repository.RepaymentPlanRepository;
+import com.bridgepay.repayment.service.PaddleWebhookService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -103,6 +105,62 @@ class RepaymentPlanControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/repayment-plans/" + applicationId)
                         .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString()))))
                 .andExpect(status().isForbidden());
+    }
+
+    @Autowired
+    private PaddleWebhookService paddleWebhookService;
+
+    private RepaymentPlan planWithFourInstallments(UUID applicationId, String subject, String transactionId) {
+        RepaymentPlan plan = repaymentPlanRepository.save(new RepaymentPlan(applicationId, UUID.fromString(subject),
+                "ctm_x", transactionId, new BigDecimal("200.00"), 4, new BigDecimal("50.00")));
+        for (int sequence = 1; sequence <= 4; sequence++) {
+            installmentRepository.save(new Installment(plan, sequence,
+                    LocalDate.of(2026, 1, 1).plusWeeks(sequence - 1L), new BigDecimal("50.00")));
+        }
+        return plan;
+    }
+
+    @Test
+    void checkoutTransactionId_isTheInitialTransaction_whileTheFirstInstallmentIsUnpaid() throws Exception {
+        UUID applicationId = UUID.randomUUID();
+        String subject = UUID.randomUUID().toString();
+        planWithFourInstallments(applicationId, subject, "txn_unpaid");
+
+        mockMvc.perform(get("/api/v1/repayment-plans/" + applicationId).with(jwt().jwt(j -> j.subject(subject))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.checkoutTransactionId").value("txn_unpaid"));
+    }
+
+    @Test
+    void checkoutTransactionId_survivesADeclinedFirstAttempt() throws Exception {
+        UUID applicationId = UUID.randomUUID();
+        String subject = UUID.randomUUID().toString();
+        planWithFourInstallments(applicationId, subject, "txn_declined");
+
+        paddleWebhookService.handle("transaction.payment_failed", new PaddleWebhookData("txn_declined", null));
+
+        mockMvc.perform(get("/api/v1/repayment-plans/" + applicationId).with(jwt().jwt(j -> j.subject(subject))))
+                .andExpect(jsonPath("$.installments[0].status").value("LATE"))
+                .andExpect(jsonPath("$.checkoutTransactionId").value("txn_declined"));
+    }
+
+    @Test
+    void firstPayment_adoptsTheSubscription_soALaterCancelDefaultsThePlan() throws Exception {
+        UUID applicationId = UUID.randomUUID();
+        String subject = UUID.randomUUID().toString();
+        planWithFourInstallments(applicationId, subject, "txn_first");
+
+        paddleWebhookService.handle("transaction.completed", new PaddleWebhookData("txn_first", "sub_first"));
+
+        mockMvc.perform(get("/api/v1/repayment-plans/" + applicationId).with(jwt().jwt(j -> j.subject(subject))))
+                .andExpect(jsonPath("$.installments[0].status").value("PAID"))
+                .andExpect(jsonPath("$.checkoutTransactionId").doesNotExist());
+
+        paddleWebhookService.handle("subscription.canceled", new PaddleWebhookData("sub_first", null));
+
+        mockMvc.perform(get("/api/v1/repayment-plans/" + applicationId).with(jwt().jwt(j -> j.subject(subject))))
+                .andExpect(jsonPath("$.status").value("DEFAULTED"))
+                .andExpect(jsonPath("$.checkoutTransactionId").doesNotExist());
     }
 
     @Test

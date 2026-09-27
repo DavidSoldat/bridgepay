@@ -5,6 +5,8 @@ import com.bridgepay.repayment.client.ApplicantProfile;
 import com.bridgepay.repayment.client.PaddleClient;
 import com.bridgepay.repayment.client.PaddleTransactionResult;
 import com.bridgepay.repayment.domain.Installment;
+import com.bridgepay.repayment.domain.InstallmentStatus;
+import com.bridgepay.repayment.domain.PlanStatus;
 import com.bridgepay.repayment.domain.RepaymentPlan;
 import com.bridgepay.repayment.dto.InstallmentResponse;
 import com.bridgepay.repayment.dto.RepaymentPlanResponse;
@@ -95,10 +97,15 @@ public class RepaymentPlanService {
             throw new AccessDeniedException("Repayment plan does not belong to this applicant");
         }
         List<Installment> installments = installmentRepository.findByRepaymentPlanOrderBySequenceNumberAsc(plan);
+        boolean firstInstallmentUnpaid = !installments.isEmpty()
+                && installments.get(0).getStatus() != InstallmentStatus.PAID;
+        String checkoutTransactionId = plan.getStatus() == PlanStatus.ACTIVE && firstInstallmentUnpaid
+                ? plan.getPaddleInitialTransactionId() : null;
         return new RepaymentPlanResponse(
                 plan.getId(), plan.getApplicationId(), plan.getStatus().name(),
                 plan.getTotalAmount(), plan.getInstallmentCount(), plan.getInstallmentAmount(),
-                installments.stream().map(this::toInstallmentResponse).toList());
+                installments.stream().map(this::toInstallmentResponse).toList(),
+                checkoutTransactionId);
     }
 
     private InstallmentResponse toInstallmentResponse(Installment installment) {

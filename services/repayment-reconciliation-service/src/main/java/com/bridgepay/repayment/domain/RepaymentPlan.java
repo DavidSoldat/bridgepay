@@ -36,6 +36,10 @@ public class RepaymentPlan {
     @Column(name = "paddle_subscription_id", length = 64)
     private String paddleSubscriptionId;
 
+    /** The transaction the shopper pays through Paddle checkout for installment 1; never overwritten. */
+    @Column(name = "paddle_initial_transaction_id", length = 64)
+    private String paddleInitialTransactionId;
+
     @Column(name = "total_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal totalAmount;
 
@@ -72,6 +76,7 @@ public class RepaymentPlan {
         this.applicantId = applicantId;
         this.paddleCustomerId = paddleCustomerId;
         this.paddleSubscriptionId = initialPaddleTransactionId;
+        this.paddleInitialTransactionId = initialPaddleTransactionId;
         this.totalAmount = totalAmount;
         this.installmentCount = installmentCount;
         this.installmentAmount = installmentAmount;
@@ -108,6 +113,10 @@ public class RepaymentPlan {
 
     public String getPaddleSubscriptionId() {
         return paddleSubscriptionId;
+    }
+
+    public String getPaddleInitialTransactionId() {
+        return paddleInitialTransactionId;
     }
 
     public BigDecimal getTotalAmount() {

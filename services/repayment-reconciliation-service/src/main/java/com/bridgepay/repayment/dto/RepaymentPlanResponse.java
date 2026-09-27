@@ -11,6 +11,7 @@ public record RepaymentPlanResponse(
         BigDecimal totalAmount,
         int installmentCount,
         BigDecimal installmentAmount,
-        List<InstallmentResponse> installments
+        List<InstallmentResponse> installments,
+        String checkoutTransactionId
 ) {
 }
