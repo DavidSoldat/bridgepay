@@ -72,11 +72,40 @@ Nothing runs under the `local` Spring profile here. Every service uses its
 real `SecurityConfig`. The frontends read the Keycloak URL from `/config.json`,
 which a ConfigMap overrides.
 
+## Paddle sandbox: first payment + webhooks
+
+Shoppers pay installment 1 through Paddle's overlay checkout (the storefront opens it after approval,
+or from "Action required" on `/account`); that saves the card, and the Paddle subscription charges the
+rest weekly. Paddle reports back via webhooks, which need a public URL.
+
+One-time, in the Paddle **sandbox** dashboard:
+1. Developer tools → Authentication → create a **client-side token** (`test_…`). Put it in
+   `frontend/storefront/public/config.json` and the `frontend-config` literal in
+   `base/bridgepay/kustomization.yaml` as `paddleClientToken`. It's public by design.
+2. Checkout → Checkout settings → **Default payment link**: `http://shop.localhost/account`.
+
+Each session (the quick-tunnel URL changes every run):
+```sh
+cloudflared tunnel --url http://localhost:80 --http-host-header app.localhost
+```
+3. Developer tools → Notifications → destination `https://<random>.trycloudflare.com/webhooks/paddle`,
+   events `transaction.completed`, `transaction.payment_failed`, `subscription.past_due`,
+   `subscription.canceled`. Put its secret key in the repo-root `.env` as `PADDLE_WEBHOOK_SECRET`, re-apply
+   the overlay (command above), and `kubectl -n bridgepay rollout restart deploy/repayment-reconciliation-service`.
+
+Check it's reachable (reached the service, bad signature rejected → `400`):
+```sh
+curl -s -o /dev/null -w "%{http_code}
+" -X POST https://<random>.trycloudflare.com/webhooks/paddle   -H "Paddle-Signature: ts=1;h1=bad" -d '{}'
+```
+Sandbox test card: `4242 4242 4242 4242`, any future expiry, CVC `100`.
+
 ## Not here yet
 
 A production overlay for the OCI instance (real hostnames, TLS via
-cert-manager, a GHCR pull secret, real Secrets, the public Paddle webhook
-route) and the CI deploy step. They wait until that host exists.
+cert-manager, a GHCR pull secret, real Secrets, the live Paddle client token;
+the `/webhooks/paddle` route is in `base/` and just follows the real app host)
+and the CI deploy step. They wait until that host exists.
 
 The Keycloak realm ConfigMap (`keycloak-realm`) is supplied by each overlay,
 not by `base/`, because the dev realm has demo users with known passwords.
