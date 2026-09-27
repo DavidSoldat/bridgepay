@@ -86,6 +86,27 @@ class HttpPaddleClientWireMockTest {
     }
 
     @Test
+    void cancelTransaction_patchesTheStatusToCanceled(WireMockRuntimeInfo wm) {
+        stubFor(patch(urlPathEqualTo("/transactions/txn_1"))
+                .withRequestBody(matchingJsonPath("$.status", equalTo("canceled")))
+                .willReturn(okJson("{ \"data\": { \"id\": \"txn_1\", \"status\": \"canceled\" } }")));
+
+        client(wm).cancelTransaction("txn_1");
+
+        verify(1, patchRequestedFor(urlPathEqualTo("/transactions/txn_1")));
+    }
+
+    @Test
+    void cancelTransaction_surfacesPaddlesRefusal(WireMockRuntimeInfo wm) {
+        stubFor(patch(urlPathEqualTo("/transactions/txn_done"))
+                .willReturn(aResponse().withStatus(400).withHeader("Content-Type", "application/json")
+                        .withBody("{ \"error\": { \"code\": \"transaction_immutable\" } }")));
+
+        assertThatThrownBy(() -> client(wm).cancelTransaction("txn_done"))
+                .isInstanceOf(PaddleUnavailableException.class);
+    }
+
+    @Test
     void wrapsAnyFailure_inPaddleUnavailableException(WireMockRuntimeInfo wm) {
         // no stub registered for this path -> WireMock's default 404, which the
         // circuit breaker's executeSupplier surfaces as a generic failure

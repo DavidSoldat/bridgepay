@@ -16,4 +16,7 @@ public interface PaddleClient {
 
     /** Cancels a subscription immediately - called once the final installment clears. */
     void cancelSubscription(String subscriptionId);
+
+    /** Cancels a not-yet-paid transaction (Paddle allows this for draft/ready only) - used when installment 1 expires. */
+    void cancelTransaction(String transactionId);
 }

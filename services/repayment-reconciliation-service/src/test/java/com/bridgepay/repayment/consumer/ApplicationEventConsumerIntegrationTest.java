@@ -118,6 +118,10 @@ class ApplicationEventConsumerIntegrationTest {
         public void cancelSubscription(String subscriptionId) {
             // no-op
         }
+
+        @Override
+        public void cancelTransaction(String transactionId) {
+        }
     }
 
     @Autowired

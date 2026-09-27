@@ -157,6 +157,10 @@ class FailedEventsIntegrationTest {
         @Override
         public void cancelSubscription(String subscriptionId) {
         }
+
+        @Override
+        public void cancelTransaction(String transactionId) {
+        }
     }
 
     @Autowired

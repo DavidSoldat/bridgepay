@@ -106,6 +106,18 @@ public class HttpPaddleClient implements PaddleClient {
         }, "cancel subscription " + subscriptionId);
     }
 
+    @Override
+    public void cancelTransaction(String transactionId) {
+        execute(() -> {
+            restClient.patch()
+                    .uri("/transactions/{id}", transactionId)
+                    .body(new UpdateTransactionStatusRequest("canceled"))
+                    .retrieve()
+                    .toBodilessEntity();
+            return null;
+        }, "cancel transaction " + transactionId);
+    }
+
     private <T> T execute(Supplier<T> call, String description) {
         try {
             return circuitBreaker.executeSupplier(call);
@@ -167,5 +179,8 @@ public class HttpPaddleClient implements PaddleClient {
     }
 
     private record CancelSubscriptionRequest(@JsonProperty("effective_from") String effectiveFrom) {
+    }
+
+    private record UpdateTransactionStatusRequest(String status) {
     }
 }
