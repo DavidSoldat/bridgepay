@@ -26,4 +26,4 @@ configMapGenerator:
       - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWKSETURI=http://keycloak.platform:8080/realms/bridgepay/protocol/openid-connect/certs
   - name: frontend-config
     literals:
-      - 'config.json={"keycloakUrl": "http://auth.localhost"}'
+      - 'config.json={"keycloakUrl": "http://auth.localhost", "paddleClientToken": ""}'

@@ -1,1 +1,1 @@
-{ "keycloakUrl": "http://localhost:8180" }
+{ "keycloakUrl": "http://localhost:8180", "paddleClientToken": "" }

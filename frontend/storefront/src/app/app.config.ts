@@ -9,13 +9,14 @@ import {
   IncludeBearerTokenCondition,
 } from 'keycloak-angular';
 import { routes } from './app.routes';
+import { PADDLE_CLIENT_TOKEN } from './payment/paddle-checkout';
 
 const gatewayUrlCondition = createInterceptorCondition<IncludeBearerTokenCondition>({
   urlPattern: /^\/api\/.*$/i,
   bearerPrefix: 'Bearer',
 });
 
-export function appConfig(keycloakUrl: string): ApplicationConfig {
+export function appConfig(keycloakUrl: string, paddleClientToken = ''): ApplicationConfig {
   return {
     providers: [
       provideBrowserGlobalErrorListeners(),
@@ -37,6 +38,7 @@ export function appConfig(keycloakUrl: string): ApplicationConfig {
         useValue: [gatewayUrlCondition],
       },
       provideHttpClient(withInterceptors([includeBearerTokenInterceptor])),
+      { provide: PADDLE_CLIENT_TOKEN, useValue: paddleClientToken },
     ],
   };
 }
