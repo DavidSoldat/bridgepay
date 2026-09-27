@@ -118,7 +118,8 @@ class MerchantControllerIntegrationTest {
                         .with(merchantJwt(merchant.getId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].amount").value(100.00))
-                .andExpect(jsonPath("$.content[0].status").value("PAID"));
+                .andExpect(jsonPath("$.content[0].status").value("PENDING"))
+                .andExpect(jsonPath("$.content[0].paidAt").doesNotExist());
     }
 
     @Test
@@ -210,8 +211,9 @@ class MerchantControllerIntegrationTest {
                 .andExpect(jsonPath("$.declinedCount").value(1))
                 .andExpect(jsonPath("$.approvalRate", closeTo(0.6667, 0.001)))
                 .andExpect(jsonPath("$.approvedVolume").value(300.00))
-                .andExpect(jsonPath("$.feesPaid").value(10.50))
-                .andExpect(jsonPath("$.netPaidOut").value(289.50));
+                .andExpect(jsonPath("$.feesPaid").value(0))
+                .andExpect(jsonPath("$.netPaidOut").value(0))
+                .andExpect(jsonPath("$.pendingPayout").value(289.50));
     }
 
     @Test
@@ -224,7 +226,8 @@ class MerchantControllerIntegrationTest {
                 .andExpect(jsonPath("$.totalCheckouts").value(0))
                 .andExpect(jsonPath("$.approvalRate").doesNotExist())
                 .andExpect(jsonPath("$.feesPaid").value(0))
-                .andExpect(jsonPath("$.netPaidOut").value(0));
+                .andExpect(jsonPath("$.netPaidOut").value(0))
+                .andExpect(jsonPath("$.pendingPayout").value(0));
     }
 
     @Test

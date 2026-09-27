@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
@@ -52,6 +53,10 @@ public class MerchantPayout {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private long version;
+
     protected MerchantPayout() {
         // required by JPA
     }
@@ -62,8 +67,22 @@ public class MerchantPayout {
         this.merchant = merchant;
         this.amount = amount;
         this.feeAmount = feeAmount;
-        this.status = PayoutStatus.PAID;
-        this.paidAt = Instant.now();
+        this.status = PayoutStatus.PENDING;
+    }
+
+    /** Installment 1 cleared: the merchant is paid. Idempotent; a cancelled payout stays cancelled. */
+    public void markPaid() {
+        if (status == PayoutStatus.PENDING) {
+            status = PayoutStatus.PAID;
+            paidAt = Instant.now();
+        }
+    }
+
+    /** The order expired unpaid. Never reverses a payout that was already paid. */
+    public void cancel() {
+        if (status == PayoutStatus.PENDING) {
+            status = PayoutStatus.CANCELLED;
+        }
     }
 
     public UUID getId() {

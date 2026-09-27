@@ -6,5 +6,6 @@ public enum ApplicationStatus {
     MANUAL_REVIEW,
     DECLINED,
     COMPLETED,
-    DEFAULTED
+    DEFAULTED,
+    CANCELLED
 }

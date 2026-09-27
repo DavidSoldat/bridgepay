@@ -9,6 +9,7 @@ import com.bridgepay.application.domain.CreditApplication;
 import com.bridgepay.application.domain.IdempotencyKey;
 import com.bridgepay.application.domain.Merchant;
 import com.bridgepay.application.domain.MerchantPayout;
+import com.bridgepay.application.domain.PayoutStatus;
 import com.bridgepay.application.domain.OutboxEvent;
 import com.bridgepay.application.dto.ApplicationResponse;
 import com.bridgepay.application.dto.CheckoutRequest;
@@ -182,19 +183,25 @@ public class CreditApplicationService {
                 }
                 case MANUAL_REVIEW -> inReview = totals.count();
                 case DECLINED -> declined = totals.count();
-                // ponytail: COMPLETED/DEFAULTED are never set by this service today, so they only count toward
-                // the total; fold them into approved count/volume once repayment status flows back here.
+                // COMPLETED/DEFAULTED/CANCELLED only count toward the total (CANCELLED = approved but the first
+                // payment was never made). ponytail: COMPLETED/DEFAULTED aren't set here yet; fold them into
+                // approved count/volume once repayment status flows back here.
                 default -> { }
             }
         }
         Double approvalRate = approved + declined == 0 ? null : (double) approved / (approved + declined);
 
-        MerchantPayoutTotals payouts = merchantPayoutRepository.totalsForMerchant(merchantId);
-        BigDecimal gross = payouts.gross() != null ? payouts.gross() : BigDecimal.ZERO;
-        BigDecimal fees = payouts.fees() != null ? payouts.fees() : BigDecimal.ZERO;
+        MerchantPayoutTotals paid = merchantPayoutRepository.totalsForMerchant(merchantId, PayoutStatus.PAID);
+        MerchantPayoutTotals pending = merchantPayoutRepository.totalsForMerchant(merchantId, PayoutStatus.PENDING);
+        BigDecimal fees = orZero(paid.fees());
+        BigDecimal pendingNet = orZero(pending.gross()).subtract(orZero(pending.fees()));
 
         return new MerchantSummaryResponse(total, approved, inReview, declined, approvalRate,
-                approvedVolume, fees, gross.subtract(fees));
+                approvedVolume, fees, orZero(paid.gross()).subtract(fees), pendingNet);
+    }
+
+    private static BigDecimal orZero(BigDecimal value) {
+        return value != null ? value : BigDecimal.ZERO;
     }
 
     /**

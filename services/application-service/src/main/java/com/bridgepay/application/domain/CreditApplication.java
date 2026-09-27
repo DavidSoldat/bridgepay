@@ -103,6 +103,13 @@ public class CreditApplication {
         this.decisionAt = Instant.now();
     }
 
+    /** An approved order whose first installment was never paid. */
+    public void cancel() {
+        if (status == ApplicationStatus.APPROVED) {
+            status = ApplicationStatus.CANCELLED;
+        }
+    }
+
     public void overrideDecision(ApplicationStatus decision) {
         this.status = decision;
         this.decisionAt = Instant.now();
