@@ -59,6 +59,34 @@ describe('SignupForm', () => {
 
     expect(text(fixture)).toContain('phone must be a valid phone number');
     expect(text(fixture)).not.toContain('Could not create your profile');
+    expect((fixture.nativeElement as HTMLElement).querySelector('[role="alert"]')?.textContent)
+      .toContain('phone must be a valid phone number');
+  });
+
+  it('treats a name of only spaces as missing', () => {
+    const fixture = setup(() => of({ id: 'a-1' }));
+    const firstName = fixture.componentInstance.form.controls.firstName;
+
+    firstName.setValue('   ');
+    firstName.markAsTouched();
+    fixture.detectChanges();
+
+    expect(firstName.invalid).toBe(true);
+    expect(text(fixture)).toContain('Enter your first name');
+  });
+
+  it('sends names without surrounding spaces', () => {
+    let sent: { firstName?: string; lastName?: string } = {};
+    const fixture = setup((request) => {
+      sent = request as { firstName?: string; lastName?: string };
+      return of({ id: 'a-1' });
+    });
+
+    fixture.componentInstance.form.setValue({ ...valid, firstName: ' Ana ', lastName: 'Doe  ' });
+    fixture.componentInstance.submit();
+
+    expect(sent.firstName).toBe('Ana');
+    expect(sent.lastName).toBe('Doe');
   });
 
   it('does not submit an invalid form, and shows every field problem at once', () => {

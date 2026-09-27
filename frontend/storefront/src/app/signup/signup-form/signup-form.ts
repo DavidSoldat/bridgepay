@@ -16,6 +16,11 @@ function phoneNumber(control: AbstractControl<string>): ValidationErrors | null 
   return !control.value || PHONE.test(normalizePhone(control.value)) ? null : { phone: true };
 }
 
+/** Matches the server's @NotBlank: a name of only spaces is missing. */
+function notBlank(control: AbstractControl<string>): ValidationErrors | null {
+  return !control.value || control.value.trim() ? null : { required: true };
+}
+
 function inThePast(control: AbstractControl<string>): ValidationErrors | null {
   return !control.value || control.value < today() ? null : { future: true };
 }
@@ -41,8 +46,8 @@ export class SignupForm {
   protected readonly today = today();
 
   readonly form = this.fb.nonNullable.group({
-    firstName: ['', Validators.required],
-    lastName: ['', Validators.required],
+    firstName: ['', [Validators.required, notBlank]],
+    lastName: ['', [Validators.required, notBlank]],
     dateOfBirth: ['', [Validators.required, inThePast]],
     email: ['', [Validators.required, Validators.pattern(EMAIL)]],
     phone: ['', [Validators.required, phoneNumber]],
@@ -62,7 +67,12 @@ export class SignupForm {
     this.submitting.set(true);
     this.error.set(null);
     const request = this.form.getRawValue();
-    this.applicants.signUp({ ...request, phone: normalizePhone(request.phone) }).subscribe({
+    this.applicants.signUp({
+      ...request,
+      firstName: request.firstName.trim(),
+      lastName: request.lastName.trim(),
+      phone: normalizePhone(request.phone),
+    }).subscribe({
       next: () => this.signedUp.emit(),
       error: (err: unknown) => {
         this.submitting.set(false);
