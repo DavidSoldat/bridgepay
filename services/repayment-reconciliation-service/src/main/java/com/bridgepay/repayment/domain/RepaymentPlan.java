@@ -91,6 +91,10 @@ public class RepaymentPlan {
         this.status = PlanStatus.COMPLETED;
     }
 
+    public void markCancelled() {
+        this.status = PlanStatus.CANCELLED;
+    }
+
     public void markDefaulted() {
         this.status = PlanStatus.DEFAULTED;
     }

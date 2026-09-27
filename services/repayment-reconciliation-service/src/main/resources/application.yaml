@@ -44,6 +44,9 @@ bridgepay:
   applicant-service:
     base-url: ${APPLICANT_SERVICE_URL:http://localhost:8080}
 
+repayment:
+  first-payment-expiry: ${FIRST_PAYMENT_EXPIRY:PT24H}
+
 paddle:
   base-url: ${PADDLE_BASE_URL:https://sandbox-api.paddle.com}
   api-key: ${PADDLE_API_KEY:changeme}
