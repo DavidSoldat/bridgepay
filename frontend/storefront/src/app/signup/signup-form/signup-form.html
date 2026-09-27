@@ -19,11 +19,11 @@
     </label>
     <label class="flex flex-col gap-1">
       <span class="text-sm text-ink-muted">Date of birth</span>
-      <input formControlName="dateOfBirth" type="date" [max]="today" autocomplete="bday"
+      <input formControlName="dateOfBirth" type="date" [max]="latestBirthDate" autocomplete="bday"
              class="border border-hairline px-3 py-2 rounded-lg" />
       @if (showError('dateOfBirth')) {
         <span class="text-sm text-red-700">
-          {{ form.controls.dateOfBirth.hasError('future') ? 'Date of birth must be in the past' : 'Enter your date of birth' }}
+          {{ form.controls.dateOfBirth.hasError('tooYoung') ? 'You must be at least 18 to use Pay in 4' : 'Enter your date of birth' }}
         </span>
       }
     </label>

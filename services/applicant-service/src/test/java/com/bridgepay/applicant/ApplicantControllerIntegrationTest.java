@@ -118,6 +118,41 @@ class ApplicantControllerIntegrationTest {
     }
 
     @Test
+    void signUp_rejectsAnApplicantYoungerThan18() throws Exception {
+        String body = objectMapper.writeValueAsString(Map.of(
+                "firstName", "Young",
+                "lastName", "Shopper",
+                "dateOfBirth", java.time.LocalDate.now().minusYears(18).plusDays(1).toString(),
+                "email", "young@example.com",
+                "phone", "+38765123456"
+        ));
+
+        mockMvc.perform(post("/api/v1/applicants")
+                        .with(jwt().jwt(j -> j.subject("kc-too-young")))
+                        .contentType("application/json")
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("at least 18")));
+    }
+
+    @Test
+    void signUp_acceptsAnApplicantTurning18Today() throws Exception {
+        String body = objectMapper.writeValueAsString(Map.of(
+                "firstName", "Birthday",
+                "lastName", "Shopper",
+                "dateOfBirth", java.time.LocalDate.now().minusYears(18).toString(),
+                "email", "birthday@example.com",
+                "phone", "+38765123456"
+        ));
+
+        mockMvc.perform(post("/api/v1/applicants")
+                        .with(jwt().jwt(j -> j.subject("kc-turning-18")))
+                        .contentType("application/json")
+                        .content(body))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
     void signUp_rejectsDuplicateSubject() throws Exception {
         mockMvc.perform(post("/api/v1/applicants")
                         .with(jwt().jwt(j -> j.subject("kc-789")))

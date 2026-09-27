@@ -25,4 +25,12 @@ public record SignupRequest(
         @Pattern(regexp = "^\\+?[0-9]{7,15}$", message = "phone must be a valid phone number")
         String phone
 ) {
+
+    /** Credit needs legal capacity to contract; the storefront enforces the same rule. */
+    public static final int MINIMUM_AGE = 18;
+
+    @AssertTrue(message = "applicant must be at least 18 years old")
+    public boolean isAdult() {
+        return dateOfBirth == null || !dateOfBirth.isAfter(LocalDate.now().minusYears(MINIMUM_AGE));
+    }
 }

@@ -21,13 +21,18 @@ function notBlank(control: AbstractControl<string>): ValidationErrors | null {
   return !control.value || control.value.trim() ? null : { required: true };
 }
 
-function inThePast(control: AbstractControl<string>): ValidationErrors | null {
-  return !control.value || control.value < today() ? null : { future: true };
+/** Credit needs legal capacity to contract; applicant-service enforces the same rule. */
+const MINIMUM_AGE = 18;
+
+function oldEnough(control: AbstractControl<string>): ValidationErrors | null {
+  return !control.value || control.value <= latestBirthDate() ? null : { tooYoung: true };
 }
 
-function today(): string {
-  const now = new Date();
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+/** The birth date of someone turning MINIMUM_AGE today, as yyyy-mm-dd in local time. */
+function latestBirthDate(): string {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - MINIMUM_AGE);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 @Component({
@@ -43,12 +48,12 @@ export class SignupForm {
   signedUp = output<void>();
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected readonly today = today();
+  protected readonly latestBirthDate = latestBirthDate();
 
   readonly form = this.fb.nonNullable.group({
     firstName: ['', [Validators.required, notBlank]],
     lastName: ['', [Validators.required, notBlank]],
-    dateOfBirth: ['', [Validators.required, inThePast]],
+    dateOfBirth: ['', [Validators.required, oldEnough]],
     email: ['', [Validators.required, Validators.pattern(EMAIL)]],
     phone: ['', [Validators.required, phoneNumber]],
   });

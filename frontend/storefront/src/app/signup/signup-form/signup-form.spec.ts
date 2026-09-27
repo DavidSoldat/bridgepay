@@ -125,17 +125,41 @@ describe('SignupForm', () => {
     expect(text(fixture)).toContain('Enter an email like name@example.com');
   });
 
-  it('rejects a date of birth in the future', () => {
+  function yearsAgo(years: number, plusDays = 0): string {
+    const d = new Date();
+    d.setFullYear(d.getFullYear() - years);
+    d.setDate(d.getDate() + plusDays);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  it('rejects anyone younger than 18, including a date a few days ago', () => {
     const fixture = setup(() => of({ id: 'a-1' }));
     const dateOfBirth = fixture.componentInstance.form.controls.dateOfBirth;
-    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
-    dateOfBirth.setValue(tomorrow);
-    dateOfBirth.markAsTouched();
-    fixture.detectChanges();
+    for (const tooYoung of [yearsAgo(0, -3), yearsAgo(18, 1)]) {
+      dateOfBirth.setValue(tooYoung);
+      dateOfBirth.markAsTouched();
+      fixture.detectChanges();
 
-    expect(dateOfBirth.invalid).toBe(true);
-    expect(text(fixture)).toContain('Date of birth must be in the past');
+      expect(dateOfBirth.invalid).toBe(true);
+      expect(text(fixture)).toContain('You must be at least 18 to use Pay in 4');
+    }
+  });
+
+  it('accepts someone turning 18 today', () => {
+    const fixture = setup(() => of({ id: 'a-1' }));
+    const dateOfBirth = fixture.componentInstance.form.controls.dateOfBirth;
+
+    dateOfBirth.setValue(yearsAgo(18));
+
+    expect(dateOfBirth.valid).toBe(true);
+  });
+
+  it('stops the date picker at the latest allowed birth date', () => {
+    const fixture = setup(() => of({ id: 'a-1' }));
+
+    const input = (fixture.nativeElement as HTMLElement).querySelector<HTMLInputElement>('input[type="date"]');
+    expect(input?.max).toBe(yearsAgo(18));
   });
 
   it('accepts a phone typed with spaces, dashes and brackets, and sends digits only', () => {
