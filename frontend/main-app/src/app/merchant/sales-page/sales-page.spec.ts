@@ -9,7 +9,7 @@ import { MerchantSummaryResponse } from '../../shared/models/merchant-summary';
 
 const summary: MerchantSummaryResponse = {
   totalCheckouts: 4, approvedCount: 2, inReviewCount: 1, declinedCount: 1,
-  approvalRate: 2 / 3, approvedVolume: 300, feesPaid: 10.5, netPaidOut: 289.5,
+  approvalRate: 2 / 3, approvedVolume: 300, feesPaid: 10.5, netPaidOut: 289.5, pendingPayout: 96.5,
 };
 
 function salesPage(totalPages: number, number = 0): Page<MerchantSaleResponse> {
@@ -62,6 +62,7 @@ describe('SalesPage', () => {
     expect(el.querySelector('[data-tile="approval-rate"]')?.textContent).toContain('67%');
     expect(el.querySelector('[data-tile="fees-paid"]')?.textContent).toContain('10.50');
     expect(el.querySelector('[data-tile="net-paid-out"]')?.textContent).toContain('289.50');
+    expect(el.querySelector('[data-tile="pending-payout"]')?.textContent).toContain('96.50');
     const text = el.textContent ?? '';
     expect(text).toContain('1,500.00');
     expect(text).toContain('declined');

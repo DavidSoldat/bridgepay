@@ -13,6 +13,7 @@
   @case ('due') {
     <div class="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">
       <p class="font-semibold">Action required — pay ${{ amount() | number: '1.2-2' }} to confirm your order</p>
+      <p class="text-ink-muted">Unpaid orders are cancelled after 24 hours.</p>
       <button (click)="pay()" class="mt-2 text-widget-accent underline">Pay now</button>
     </div>
   }

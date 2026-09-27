@@ -89,6 +89,7 @@ describe('FirstPayment', () => {
 
     expect(text(fixture)).toContain('Action required');
     expect(text(fixture)).toContain('$50.00');
+    expect(text(fixture)).toContain('cancelled after 24 hours');
     expect(open).not.toHaveBeenCalled();
   });
 

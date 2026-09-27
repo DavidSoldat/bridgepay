@@ -7,4 +7,5 @@ export interface MerchantSummaryResponse {
   approvedVolume: number;
   feesPaid: number;
   netPaidOut: number;
+  pendingPayout: number;
 }

@@ -4,7 +4,7 @@
   <p class="mb-6 text-sm text-status-declined">Could not load your sales summary. Try refreshing.</p>
 } @else {
   @if (summary(); as s) {
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-2">
+    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-2">
       <div class="border border-hairline rounded p-4" data-tile="approved-volume">
         <div class="text-xs text-ink-muted mb-1">Approved volume</div>
         <div class="font-mono text-lg">{{ s.approvedVolume | number: '1.2-2' }}</div>
@@ -20,6 +20,10 @@
       <div class="border border-hairline rounded p-4" data-tile="net-paid-out">
         <div class="text-xs text-ink-muted mb-1">Net paid out</div>
         <div class="font-mono text-lg">{{ s.netPaidOut | number: '1.2-2' }}</div>
+      </div>
+      <div class="border border-hairline rounded p-4" data-tile="pending-payout">
+        <div class="text-xs text-ink-muted mb-1">Pending payout</div>
+        <div class="font-mono text-lg">{{ s.pendingPayout | number: '1.2-2' }}</div>
       </div>
     </div>
     <p class="mb-6 text-xs text-ink-muted font-mono">

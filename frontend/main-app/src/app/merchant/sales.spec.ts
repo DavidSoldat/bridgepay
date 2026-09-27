@@ -41,7 +41,7 @@ describe('Sales', () => {
     expect(req.request.method).toBe('GET');
     const body: MerchantSummaryResponse = {
       totalCheckouts: 0, approvedCount: 0, inReviewCount: 0, declinedCount: 0,
-      approvalRate: null, approvedVolume: 0, feesPaid: 0, netPaidOut: 0,
+      approvalRate: null, approvedVolume: 0, feesPaid: 0, netPaidOut: 0, pendingPayout: 0,
     };
     req.flush(body);
 
