@@ -107,6 +107,17 @@ class ApplicantControllerIntegrationTest {
     }
 
     @Test
+    void signUp_rejectsAnEmailWithoutADotInTheDomain() throws Exception {
+        // Paddle rejects such addresses when creating the customer, so the approved order's plan could never be made
+        mockMvc.perform(post("/api/v1/applicants")
+                        .with(jwt().jwt(j -> j.subject("kc-no-tld")))
+                        .contentType("application/json")
+                        .content(signupPayload("ana@example")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("email")));
+    }
+
+    @Test
     void signUp_rejectsDuplicateSubject() throws Exception {
         mockMvc.perform(post("/api/v1/applicants")
                         .with(jwt().jwt(j -> j.subject("kc-789")))

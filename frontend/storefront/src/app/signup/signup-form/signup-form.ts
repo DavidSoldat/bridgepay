@@ -1,6 +1,29 @@
 import { Component, inject, output, signal } from '@angular/core';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Applicants } from '../applicants';
+
+/** Separators people type in phone numbers; stripped before validating and sending. */
+const PHONE_SEPARATORS = /[\s().-]/g;
+/** Same rule as applicant-service's SignupRequest, applied to the stripped number. */
+const PHONE = /^\+?[0-9]{7,15}$/;
+/** Needs a dot in the domain: Paddle rejects `name@example`, so the plan could never be created. */
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const normalizePhone = (value: string) => value.replace(PHONE_SEPARATORS, '');
+
+function phoneNumber(control: AbstractControl<string>): ValidationErrors | null {
+  return !control.value || PHONE.test(normalizePhone(control.value)) ? null : { phone: true };
+}
+
+function inThePast(control: AbstractControl<string>): ValidationErrors | null {
+  return !control.value || control.value < today() ? null : { future: true };
+}
+
+function today(): string {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+}
 
 @Component({
   selector: 'app-signup-form',
@@ -15,24 +38,37 @@ export class SignupForm {
   signedUp = output<void>();
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly today = today();
 
   readonly form = this.fb.nonNullable.group({
     firstName: ['', Validators.required],
     lastName: ['', Validators.required],
-    dateOfBirth: ['', Validators.required],
-    email: ['', [Validators.required, Validators.email]],
-    phone: ['', Validators.required],
+    dateOfBirth: ['', [Validators.required, inThePast]],
+    email: ['', [Validators.required, Validators.pattern(EMAIL)]],
+    phone: ['', [Validators.required, phoneNumber]],
   });
 
+  protected showError(name: keyof typeof this.form.controls): boolean {
+    const control = this.form.controls[name];
+    return control.invalid && control.touched;
+  }
+
   submit(): void {
-    if (this.form.invalid || this.submitting()) return;
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+    if (this.submitting()) return;
     this.submitting.set(true);
     this.error.set(null);
-    this.applicants.signUp(this.form.getRawValue()).subscribe({
+    const request = this.form.getRawValue();
+    this.applicants.signUp({ ...request, phone: normalizePhone(request.phone) }).subscribe({
       next: () => this.signedUp.emit(),
-      error: () => {
+      error: (err: unknown) => {
         this.submitting.set(false);
-        this.error.set('Could not create your profile. Check your details and try again.');
+        const serverMessage =
+          err instanceof HttpErrorResponse && err.status === 400 ? err.error?.message : null;
+        this.error.set(serverMessage || 'Could not create your profile. Check your details and try again.');
       },
     });
   }

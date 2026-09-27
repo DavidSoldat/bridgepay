@@ -2,26 +2,44 @@
   <h1 class="font-serif text-2xl mb-1">Tell us who you are</h1>
   <p class="text-ink-muted mb-6">Just once — we'll remember you next time.</p>
 
-  <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
+  <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="flex flex-col gap-4">
     <label class="flex flex-col gap-1">
       <span class="text-sm text-ink-muted">First name</span>
-      <input formControlName="firstName" class="border border-hairline px-3 py-2 rounded-lg" />
+      <input formControlName="firstName" autocomplete="given-name" class="border border-hairline px-3 py-2 rounded-lg" />
+      @if (showError('firstName')) {
+        <span class="text-sm text-red-700">Enter your first name</span>
+      }
     </label>
     <label class="flex flex-col gap-1">
       <span class="text-sm text-ink-muted">Last name</span>
-      <input formControlName="lastName" class="border border-hairline px-3 py-2 rounded-lg" />
+      <input formControlName="lastName" autocomplete="family-name" class="border border-hairline px-3 py-2 rounded-lg" />
+      @if (showError('lastName')) {
+        <span class="text-sm text-red-700">Enter your last name</span>
+      }
     </label>
     <label class="flex flex-col gap-1">
       <span class="text-sm text-ink-muted">Date of birth</span>
-      <input formControlName="dateOfBirth" type="date" class="border border-hairline px-3 py-2 rounded-lg" />
+      <input formControlName="dateOfBirth" type="date" [max]="today" autocomplete="bday"
+             class="border border-hairline px-3 py-2 rounded-lg" />
+      @if (showError('dateOfBirth')) {
+        <span class="text-sm text-red-700">
+          {{ form.controls.dateOfBirth.hasError('future') ? 'Date of birth must be in the past' : 'Enter your date of birth' }}
+        </span>
+      }
     </label>
     <label class="flex flex-col gap-1">
       <span class="text-sm text-ink-muted">Email</span>
-      <input formControlName="email" type="email" class="border border-hairline px-3 py-2 rounded-lg" />
+      <input formControlName="email" type="email" autocomplete="email" class="border border-hairline px-3 py-2 rounded-lg" />
+      @if (showError('email')) {
+        <span class="text-sm text-red-700">Enter an email like name&#64;example.com</span>
+      }
     </label>
     <label class="flex flex-col gap-1">
       <span class="text-sm text-ink-muted">Phone</span>
-      <input formControlName="phone" type="tel" class="border border-hairline px-3 py-2 rounded-lg" />
+      <input formControlName="phone" type="tel" autocomplete="tel" class="border border-hairline px-3 py-2 rounded-lg" />
+      @if (showError('phone')) {
+        <span class="text-sm text-red-700">Enter a phone number with 7–15 digits</span>
+      }
     </label>
 
     @if (error(); as message) {

@@ -17,7 +17,8 @@ public record SignupRequest(
         LocalDate dateOfBirth,
 
         @NotBlank(message = "email is required")
-        @Email(message = "email must be a valid email address")
+        // regexp: require a dot in the domain - Paddle rejects `name@example` when creating the customer
+        @Email(regexp = ".+@.+\\..+", message = "email must be a valid email address")
         String email,
 
         @NotBlank(message = "phone is required")
