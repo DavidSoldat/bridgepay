@@ -14,4 +14,6 @@ export interface RepaymentPlanResponse {
   installmentCount: number;
   installmentAmount: number;
   installments: Installment[];
+  /** Paddle transaction to pay installment 1 with; null once paid (or plan no longer active). */
+  checkoutTransactionId: string | null;
 }

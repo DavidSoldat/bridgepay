@@ -23,6 +23,7 @@ describe('RepaymentPlans', () => {
       planId: 'plan-1', applicationId: 'app-1', status: 'ACTIVE',
       totalAmount: 200, installmentCount: 4, installmentAmount: 50,
       installments: [],
+      checkoutTransactionId: null,
     };
 
     service.getPlan('app-1').subscribe();

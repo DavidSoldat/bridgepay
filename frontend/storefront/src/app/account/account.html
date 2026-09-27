@@ -21,6 +21,9 @@
               </button>
             }
           </div>
+          @if (app.status === 'APPROVED') {
+            <app-first-payment [applicationId]="app.applicationId" />
+          }
           @if (expandedId() === app.applicationId) {
             <app-installment-schedule [application]="app" />
           }

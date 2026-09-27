@@ -6,6 +6,8 @@ import { Auth } from '../core/auth';
 import { Applications } from '../checkout/applications';
 import { Page } from '../shared/models/page';
 import { ApplicationResponse } from '../shared/models/application';
+import { RepaymentPlans } from './repayment-plans';
+import { PaddleCheckout } from '../payment/paddle-checkout';
 
 describe('Account', () => {
   function setup(authenticated: boolean, listMine: () => any, login = () => {}) {
@@ -15,6 +17,8 @@ describe('Account', () => {
         provideRouter([]),
         { provide: Auth, useValue: { authenticated: () => authenticated, login } },
         { provide: Applications, useValue: { listMine } },
+        { provide: RepaymentPlans, useValue: { getPlan: () => of() } },
+        { provide: PaddleCheckout, useValue: { enabled: false } },
       ],
     });
     return TestBed.createComponent(Account);
@@ -95,5 +99,20 @@ describe('Account', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('app-installment-schedule')).toBeTruthy();
+  });
+
+  it('renders the first-payment step on every approved purchase without expanding it', () => {
+    const page: Page<ApplicationResponse> = {
+      content: [{
+        applicationId: 'app-1', applicantId: 'a-1', merchantId: 'm-1', amount: 200,
+        status: 'APPROVED', riskScore: 0.1, scoreFactors: [],
+        installmentCount: 4, installmentAmount: 50, decisionAt: '2026-09-12T12:00:00Z',
+      }],
+      totalElements: 1, totalPages: 1, number: 0, size: 20,
+    };
+    const fixture = setup(true, () => of(page));
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-first-payment')).not.toBeNull();
   });
 });

@@ -7,10 +7,11 @@ import { Auth } from '../core/auth';
 import { Applications } from '../checkout/applications';
 import { ApplicationResponse } from '../shared/models/application';
 import { InstallmentSchedule } from './installment-schedule/installment-schedule';
+import { FirstPayment } from '../payment/first-payment/first-payment';
 
 @Component({
   selector: 'app-account',
-  imports: [DecimalPipe, RouterLink, InstallmentSchedule],
+  imports: [DecimalPipe, RouterLink, InstallmentSchedule, FirstPayment],
   templateUrl: './account.html',
   styleUrl: './account.css',
 })

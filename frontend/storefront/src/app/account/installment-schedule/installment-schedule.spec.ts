@@ -35,6 +35,7 @@ describe('InstallmentSchedule', () => {
         { sequenceNumber: 1, dueDate: '2026-01-01', amount: 100, status: 'PAID', paidAt: '2026-01-01T00:00:00Z' },
         { sequenceNumber: 2, dueDate: '2026-01-08', amount: 100, status: 'SCHEDULED', paidAt: null },
       ],
+      checkoutTransactionId: null,
     };
     const fixture = setup(() => of(plan));
     fixture.componentRef.setInput('application', app('app-1'));
@@ -76,6 +77,7 @@ describe('InstallmentSchedule', () => {
       planId: 'plan-2', applicationId: 'app-2', status: 'ACTIVE',
       totalAmount: 400, installmentCount: 4, installmentAmount: 100,
       installments: [{ sequenceNumber: 1, dueDate: '2026-02-01', amount: 100, status: 'SCHEDULED', paidAt: null }],
+      checkoutTransactionId: null,
     };
     const fixture = setup((id) => (id === 'app-1' ? serverError() : of(successPlan)));
 
