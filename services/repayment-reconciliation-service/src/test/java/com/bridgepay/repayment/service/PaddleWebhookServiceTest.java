@@ -3,6 +3,7 @@ package com.bridgepay.repayment.service;
 import com.bridgepay.repayment.client.PaddleClient;
 import com.bridgepay.repayment.client.PaddleWebhookData;
 import com.bridgepay.repayment.domain.Installment;
+import com.bridgepay.repayment.domain.OutboxEvent;
 import com.bridgepay.repayment.domain.InstallmentStatus;
 import com.bridgepay.repayment.domain.PlanStatus;
 import com.bridgepay.repayment.domain.RepaymentPlan;
@@ -12,6 +13,7 @@ import com.bridgepay.repayment.repository.RepaymentPlanRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tools.jackson.databind.ObjectMapper;
@@ -73,6 +75,23 @@ class PaddleWebhookServiceTest {
         assertThat(plan.getStatus()).isEqualTo(PlanStatus.ACTIVE);
         verify(outboxEventRepository).save(argThat(e -> e.getTopic().equals("repayments.installment-paid")));
         verify(paddleClient, never()).cancelSubscription(any());
+    }
+
+    @Test
+    void transactionCompleted_installmentPaidEventCarriesTheApplicationId() {
+        RepaymentPlan plan = newPlan(4);
+        Installment first = newInstallment(plan, 1);
+        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_real")).thenReturn(Optional.empty());
+        when(repaymentPlanRepository.findByPaddleSubscriptionId("txn_placeholder")).thenReturn(Optional.of(plan));
+        when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
+                eq(plan), eq(List.of(InstallmentStatus.SCHEDULED, InstallmentStatus.LATE))))
+                .thenReturn(Optional.of(first));
+
+        service.handle("transaction.completed", new PaddleWebhookData("txn_placeholder", "sub_real"));
+
+        ArgumentCaptor<OutboxEvent> saved = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxEventRepository).save(saved.capture());
+        assertThat(saved.getValue().getPayload()).contains("\"applicationId\":\"" + plan.getApplicationId() + "\"");
     }
 
     @Test

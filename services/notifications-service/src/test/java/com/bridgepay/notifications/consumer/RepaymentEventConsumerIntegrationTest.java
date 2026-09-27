@@ -32,7 +32,7 @@ class RepaymentEventConsumerIntegrationTest extends AbstractKafkaIntegrationTest
         UUID applicantId = UuidCreator.getTimeOrderedEpoch();
         UUID planId = UuidCreator.getTimeOrderedEpoch();
         var envelope = new EventEnvelope<>(eventId, "repayment.installment-paid", Instant.now(), planId, 1,
-                new RepaymentEvents.InstallmentPaid(applicantId, UuidCreator.getTimeOrderedEpoch(), 1, new BigDecimal("50.00")));
+                new RepaymentEvents.InstallmentPaid(applicantId, UuidCreator.getTimeOrderedEpoch(), UuidCreator.getTimeOrderedEpoch(), 1, new BigDecimal("50.00")));
 
         publish("repayments.installment-paid", planId.toString(), objectMapper.writeValueAsString(envelope));
 

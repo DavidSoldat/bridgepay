@@ -80,7 +80,7 @@ public class PaddleWebhookService {
 
         installment.markPaid(data.id());
         writeOutbox("repayments.installment-paid", plan.getId(), "repayments.installment-paid", installment.getId(),
-                new RepaymentEvents.InstallmentPaid(plan.getApplicantId(), installment.getId(),
+                new RepaymentEvents.InstallmentPaid(plan.getApplicantId(), plan.getApplicationId(), installment.getId(),
                         installment.getSequenceNumber(), installment.getAmount()));
 
         if (installment.getSequenceNumber() == plan.getInstallmentCount()) {

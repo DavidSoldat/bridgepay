@@ -17,7 +17,8 @@ public final class RepaymentEvents {
     private RepaymentEvents() {
     }
 
-    public record InstallmentPaid(UUID applicantId, UUID installmentId, int sequenceNumber, BigDecimal amount) {
+    public record InstallmentPaid(UUID applicantId, UUID applicationId, UUID installmentId, int sequenceNumber,
+                                  BigDecimal amount) {
     }
 
     public record InstallmentMissed(UUID applicantId, UUID installmentId, int sequenceNumber, LocalDate dueDate) {
