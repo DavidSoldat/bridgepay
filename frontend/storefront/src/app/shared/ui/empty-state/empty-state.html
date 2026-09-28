@@ -1,0 +1,10 @@
+<div class="flex flex-col items-center gap-2 px-4 py-10 text-center">
+  <span class="mb-1 flex size-12 items-center justify-center rounded-full bg-blush text-2xl text-coral">
+    <app-icon [name]="icon()" />
+  </span>
+  <p class="font-display font-semibold text-ink">{{ heading() }}</p>
+  @if (text()) {
+    <p class="max-w-sm text-sm text-ink-muted">{{ text() }}</p>
+  }
+  <ng-content />
+</div>

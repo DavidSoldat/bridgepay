@@ -1,0 +1,6 @@
+<div data-testid="skeleton" role="status" class="flex flex-col gap-3 py-4">
+  <span class="sr-only">Loading…</span>
+  @for (width of bars(); track $index) {
+    <div data-bar class="h-4 rounded-full bg-hairline motion-safe:animate-pulse" [class]="width"></div>
+  }
+</div>
