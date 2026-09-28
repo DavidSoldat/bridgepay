@@ -49,6 +49,13 @@ describe('FailedEventsPage', () => {
     expect(text).toContain('applications.approved');
   });
 
+  it('labels a resolved row\'s error as the one that was fixed, not a live failure', () => {
+    const resolved: FailedEvent = { ...row, status: 'RESOLVED' };
+    const el = setup({ list: () => of(page([resolved])) }).nativeElement as HTMLElement;
+
+    expect(el.textContent).toContain('Resolved — was: paddle down');
+  });
+
   it('refetches when a different filter is clicked', () => {
     const calls: string[] = [];
     const fixture = setup({ list: (s) => (calls.push(s), of(page([]))) });

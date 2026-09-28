@@ -38,7 +38,11 @@
           <td class="py-2 font-mono">{{ row.createdAt | date: 'MMM d, y HH:mm' }}</td>
           <td class="py-2 font-mono">{{ row.topic }}</td>
           <td class="py-2 font-mono">{{ row.messageKey ?? '—' }}</td>
-          <td class="py-2 max-w-md break-words">{{ row.errorMessage }}</td>
+          @if (row.status === 'RESOLVED') {
+            <td class="py-2 max-w-md break-words text-ink-muted">Resolved — was: {{ row.errorMessage }}</td>
+          } @else {
+            <td class="py-2 max-w-md break-words">{{ row.errorMessage }}</td>
+          }
           <td class="py-2 font-mono text-right">{{ row.attempts }}</td>
           <td class="py-2 font-mono">{{ row.status }}</td>
           <td class="py-2 text-right">
