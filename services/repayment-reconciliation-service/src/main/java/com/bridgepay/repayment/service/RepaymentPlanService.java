@@ -91,11 +91,25 @@ public class RepaymentPlanService {
 
     @Transactional(readOnly = true)
     public RepaymentPlanResponse getForApplicant(UUID applicationId, UUID applicantId) {
-        RepaymentPlan plan = repaymentPlanRepository.findByApplicationId(applicationId)
-                .orElseThrow(() -> new NoSuchElementException("Repayment plan not found"));
+        RepaymentPlan plan = findPlan(applicationId);
         if (!plan.getApplicantId().equals(applicantId)) {
             throw new AccessDeniedException("Repayment plan does not belong to this applicant");
         }
+        return toResponse(plan);
+    }
+
+    /** Ops case file: any plan. Shoppers go through getForApplicant's owner check. */
+    @Transactional(readOnly = true)
+    public RepaymentPlanResponse getForOps(UUID applicationId) {
+        return toResponse(findPlan(applicationId));
+    }
+
+    private RepaymentPlan findPlan(UUID applicationId) {
+        return repaymentPlanRepository.findByApplicationId(applicationId)
+                .orElseThrow(() -> new NoSuchElementException("Repayment plan not found"));
+    }
+
+    private RepaymentPlanResponse toResponse(RepaymentPlan plan) {
         List<Installment> installments = installmentRepository.findByRepaymentPlanOrderBySequenceNumberAsc(plan);
         boolean firstInstallmentUnpaid = !installments.isEmpty()
                 && installments.get(0).getStatus() != InstallmentStatus.PAID;

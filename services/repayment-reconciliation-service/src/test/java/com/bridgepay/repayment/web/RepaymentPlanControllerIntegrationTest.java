@@ -14,6 +14,7 @@ import org.springframework.boot.testcontainers.service.connection.ServiceConnect
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.web.servlet.MockMvc;
@@ -168,5 +169,18 @@ class RepaymentPlanControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/repayment-plans/" + UUID.randomUUID())
                         .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString()))))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void get_letsOpsReadAnyShoppersPlan() throws Exception {
+        UUID applicationId = UUID.randomUUID();
+        repaymentPlanRepository.save(new RepaymentPlan(applicationId, UUID.randomUUID(),
+                "ctm_ops", "txn_ops", new BigDecimal("100.00"), 4, new BigDecimal("25.00")));
+
+        mockMvc.perform(get("/api/v1/repayment-plans/" + applicationId)
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString()))
+                                .authorities(new SimpleGrantedAuthority("ROLE_OPS"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.applicationId").value(applicationId.toString()));
     }
 }
