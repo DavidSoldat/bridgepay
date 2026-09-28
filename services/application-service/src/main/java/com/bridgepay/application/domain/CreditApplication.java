@@ -69,6 +69,16 @@ public class CreditApplication {
     @Column(name = "installment_amount", precision = 12, scale = 2)
     private BigDecimal installmentAmount;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "decision_source", length = 8)
+    private DecisionSource decisionSource;
+
+    @Column(name = "decided_by")
+    private String decidedBy;
+
+    @Column(name = "reviewer_note", length = 1000)
+    private String reviewerNote;
+
     @Version
     @Column(name = "version", nullable = false)
     private Long version;
@@ -113,6 +123,12 @@ public class CreditApplication {
     public void overrideDecision(ApplicationStatus decision) {
         this.status = decision;
         this.decisionAt = Instant.now();
+    }
+
+    public void recordDecisionMaker(DecisionSource source, String decidedBy, String reviewerNote) {
+        this.decisionSource = source;
+        this.decidedBy = decidedBy;
+        this.reviewerNote = reviewerNote;
     }
 
     public UUID getId() {
@@ -161,5 +177,17 @@ public class CreditApplication {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public DecisionSource getDecisionSource() {
+        return decisionSource;
+    }
+
+    public String getDecidedBy() {
+        return decidedBy;
+    }
+
+    public String getReviewerNote() {
+        return reviewerNote;
     }
 }

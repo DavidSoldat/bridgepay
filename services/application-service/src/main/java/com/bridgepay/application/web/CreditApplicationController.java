@@ -79,8 +79,11 @@ public class CreditApplicationController {
     @PostMapping("/{id}/review-decision")
     @PreAuthorize("hasRole('OPS')")
     public ResponseEntity<ApplicationResponse> reviewDecision(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable UUID id,
             @Valid @RequestBody ReviewDecisionRequest request) {
-        return ResponseEntity.ok(applicationService.reviewDecision(id, request));
+        String reviewer = jwt.getClaimAsString("preferred_username");
+        return ResponseEntity.ok(applicationService.reviewDecision(id, request,
+                reviewer != null ? reviewer : jwt.getSubject()));
     }
 }

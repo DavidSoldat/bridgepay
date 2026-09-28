@@ -6,6 +6,7 @@ import com.bridgepay.application.client.ScoreRequest;
 import com.bridgepay.application.client.ScoreResult;
 import com.bridgepay.application.domain.ApplicationStatus;
 import com.bridgepay.application.domain.CreditApplication;
+import com.bridgepay.application.domain.DecisionSource;
 import com.bridgepay.application.domain.IdempotencyKey;
 import com.bridgepay.application.domain.Merchant;
 import com.bridgepay.application.domain.MerchantPayout;
@@ -90,6 +91,10 @@ public class CreditApplicationService {
         applicationRepository.save(application);
 
         finalizeDecision(application, merchant, scoreResult);
+        if (application.getStatus() == ApplicationStatus.APPROVED
+                || application.getStatus() == ApplicationStatus.DECLINED) {
+            application.recordDecisionMaker(DecisionSource.MODEL, null, null);
+        }
 
         ApplicationResponse response = toResponse(application);
         idempotencyKeyRepository.save(new IdempotencyKey(idempotencyKey, applicantId, writeSnapshot(response)));
@@ -97,7 +102,7 @@ public class CreditApplicationService {
     }
 
     @Transactional
-    public ApplicationResponse reviewDecision(UUID applicationId, ReviewDecisionRequest request) {
+    public ApplicationResponse reviewDecision(UUID applicationId, ReviewDecisionRequest request, String reviewer) {
         CreditApplication application = applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new NoSuchElementException("Application not found"));
 
@@ -112,7 +117,12 @@ public class CreditApplicationService {
                 readScoreFactors(application.getScoreFactorsJson()));
 
         finalizeDecision(application, application.getMerchant(), carriedForwardScore);
+        application.recordDecisionMaker(DecisionSource.OPS, reviewer, blankToNull(request.reviewerNote()));
         return toResponse(application);
+    }
+
+    private static String blankToNull(String note) {
+        return note == null || note.isBlank() ? null : note.strip();
     }
 
     @Transactional(readOnly = true)

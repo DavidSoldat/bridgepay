@@ -5,6 +5,7 @@ import com.bridgepay.application.client.ScoreDecision;
 import com.bridgepay.application.client.ScoreResult;
 import com.bridgepay.application.domain.ApplicationStatus;
 import com.bridgepay.application.domain.CreditApplication;
+import com.bridgepay.application.domain.DecisionSource;
 import com.bridgepay.application.domain.IdempotencyKey;
 import com.bridgepay.application.domain.Merchant;
 import com.bridgepay.application.domain.PayoutStatus;
@@ -25,6 +26,7 @@ import tools.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
@@ -127,7 +129,7 @@ class CreditApplicationServiceTest {
         UUID id = approved.getId();
         when(applicationRepository.findById(id)).thenReturn(Optional.of(approved));
 
-        assertThatThrownBy(() -> service.reviewDecision(id, new ReviewDecisionRequest("APPROVE", "note")))
+        assertThatThrownBy(() -> service.reviewDecision(id, new ReviewDecisionRequest("APPROVE", "note"), "ops1"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("MANUAL_REVIEW");
     }
@@ -139,7 +141,7 @@ class CreditApplicationServiceTest {
         UUID id = pending.getId();
         when(applicationRepository.findById(id)).thenReturn(Optional.of(pending));
 
-        var response = service.reviewDecision(id, new ReviewDecisionRequest("APPROVE", "looks fine"));
+        var response = service.reviewDecision(id, new ReviewDecisionRequest("APPROVE", "looks fine"), "ops1");
 
         assertThat(response.status()).isEqualTo("APPROVED");
         assertThat(response.installmentAmount()).isEqualByComparingTo("25.00");
@@ -154,10 +156,63 @@ class CreditApplicationServiceTest {
         UUID id = pending.getId();
         when(applicationRepository.findById(id)).thenReturn(Optional.of(pending));
 
-        var response = service.reviewDecision(id, new ReviewDecisionRequest("DECLINE", null));
+        var response = service.reviewDecision(id, new ReviewDecisionRequest("DECLINE", null), "ops1");
 
         assertThat(response.status()).isEqualTo("DECLINED");
         assertThat(response.scoreFactors()).extracting(ScoreResult.ScoreFactor::feature).containsExactly("debtRatio", "age");
+    }
+
+    @Test
+    void reviewDecision_recordsWhoDecidedAndTheTrimmedNote() {
+        CreditApplication pending = new CreditApplication(applicantId, merchant, new BigDecimal("100.00"));
+        pending.applyDecision(ApplicationStatus.MANUAL_REVIEW, 0.5, "[]", null, null);
+        UUID id = pending.getId();
+        when(applicationRepository.findById(id)).thenReturn(Optional.of(pending));
+
+        service.reviewDecision(id, new ReviewDecisionRequest("APPROVE", "  income verified  "), "ops1");
+
+        assertThat(pending.getDecisionSource()).isEqualTo(DecisionSource.OPS);
+        assertThat(pending.getDecidedBy()).isEqualTo("ops1");
+        assertThat(pending.getReviewerNote()).isEqualTo("income verified");
+    }
+
+    @Test
+    void reviewDecision_storesNoNote_whenTheNoteIsBlank() {
+        CreditApplication pending = new CreditApplication(applicantId, merchant, new BigDecimal("100.00"));
+        pending.applyDecision(ApplicationStatus.MANUAL_REVIEW, 0.5, "[]", null, null);
+        UUID id = pending.getId();
+        when(applicationRepository.findById(id)).thenReturn(Optional.of(pending));
+
+        service.reviewDecision(id, new ReviewDecisionRequest("DECLINE", "   "), "ops1");
+
+        assertThat(pending.getReviewerNote()).isNull();
+    }
+
+    @Test
+    void checkout_recordsTheModelAsDecisionMaker_whenTheModelDecides() {
+        when(idempotencyKeyRepository.findByIdempotencyKey("key-model")).thenReturn(Optional.empty());
+        when(merchantRepository.findById(merchantId)).thenReturn(Optional.of(merchant));
+        when(creditRiskClient.score(any())).thenReturn(new ScoreResult(0.15, ScoreDecision.APPROVE, List.of()));
+
+        service.checkout(applicantId, "key-model", new CheckoutRequest(merchantId, new BigDecimal("200.00")));
+
+        ArgumentCaptor<CreditApplication> saved = ArgumentCaptor.forClass(CreditApplication.class);
+        verify(applicationRepository).save(saved.capture());
+        assertThat(saved.getValue().getDecisionSource()).isEqualTo(DecisionSource.MODEL);
+        assertThat(saved.getValue().getDecidedBy()).isNull();
+    }
+
+    @Test
+    void checkout_recordsNoDecisionMaker_whenTheModelSendsTheApplicationToReview() {
+        when(idempotencyKeyRepository.findByIdempotencyKey("key-review")).thenReturn(Optional.empty());
+        when(merchantRepository.findById(merchantId)).thenReturn(Optional.of(merchant));
+        when(creditRiskClient.score(any())).thenReturn(new ScoreResult(0.5, ScoreDecision.MANUAL_REVIEW, List.of()));
+
+        service.checkout(applicantId, "key-review", new CheckoutRequest(merchantId, new BigDecimal("200.00")));
+
+        ArgumentCaptor<CreditApplication> saved = ArgumentCaptor.forClass(CreditApplication.class);
+        verify(applicationRepository).save(saved.capture());
+        assertThat(saved.getValue().getDecisionSource()).isNull();
     }
 
     @Test
