@@ -106,6 +106,17 @@ class RoutingIntegrationTest {
     }
 
     @Test
+    void downstreamErrorStatusAndBody_passThroughUnchanged() throws Exception {
+        wireMock.stubFor(WireMock.post(urlPathEqualTo("/api/v1/ops/failed-events/e-1/retry"))
+                .willReturn(WireMock.status(409).withHeader("Content-Type", "application/json")
+                        .withBody("{\"error\":\"CONFLICT\"}")));
+
+        mockMvc.perform(post("/api/v1/ops/failed-events/e-1/retry"))
+                .andExpect(status().isConflict())
+                .andExpect(content().json("{\"error\":\"CONFLICT\"}"));
+    }
+
+    @Test
     void unmatchedPath_returnsApiErrorShaped404() throws Exception {
         mockMvc.perform(get("/api/v1/nonexistent"))
                 .andExpect(status().isNotFound())
