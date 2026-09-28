@@ -163,6 +163,29 @@ describe('ReviewQueue', () => {
     expect(el.textContent).not.toContain('No applications waiting for review');
   });
 
+  it('offers Review only for pending rows and View for decided ones', () => {
+    const base = {
+      applicantId: 'a-1', merchantId: 'm-1', amount: 200, riskScore: 0.5, scoreFactors: [],
+      installmentCount: null, installmentAmount: null, decisionAt: null,
+    };
+    const page: Page<ApplicationResponse> = {
+      content: [
+        { ...base, applicationId: 'app-1', status: 'MANUAL_REVIEW' },
+        { ...base, applicationId: 'app-2', status: 'APPROVED' },
+      ],
+      totalElements: 2, totalPages: 1, number: 0, size: 20,
+    };
+    TestBed.configureTestingModule({
+      imports: [ReviewQueue],
+      providers: [provideRouter([]), { provide: Applications, useValue: { list: () => of(page) } }],
+    });
+    const fixture = TestBed.createComponent(ReviewQueue);
+    fixture.detectChanges();
+
+    const links = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('tbody a')).map((a) => a.textContent?.trim());
+    expect(links).toEqual(['Review', 'View']);
+  });
+
   it('shows each status as a badge', () => {
     const page: Page<ApplicationResponse> = {
       content: [{

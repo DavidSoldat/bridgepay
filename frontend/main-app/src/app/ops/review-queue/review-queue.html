@@ -47,7 +47,7 @@
               <a
                 [routerLink]="['/ops', row.applicationId]"
                 class="inline-flex min-h-11 items-center gap-1 font-semibold text-coral hover:text-coral-hover"
-              >Review <app-icon name="arrow-right" /></a>
+              >{{ row.status === 'MANUAL_REVIEW' ? 'Review' : 'View' }} <app-icon name="arrow-right" /></a>
             </td>
           </tr>
         }

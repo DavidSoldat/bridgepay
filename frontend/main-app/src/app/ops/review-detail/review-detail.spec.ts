@@ -164,6 +164,17 @@ describe('ReviewDetail', () => {
     return fixture;
   }
 
+  it('offers no decision controls once an application is decided', () => {
+    const el = setupDetail(() => of({ ...baseApp, status: 'APPROVED', decisionAt: '2026-09-28T10:00:00Z' }))
+      .nativeElement as HTMLElement;
+    const labels = Array.from(el.querySelectorAll('button')).map((b) => b.textContent?.trim());
+
+    expect(labels).not.toContain('Approve');
+    expect(labels).not.toContain('Decline');
+    expect(el.querySelector('textarea')).toBeNull();
+    expect(el.textContent).toContain('Already decided');
+  });
+
   it('confirms an approval with a toast', () => {
     const fixture = setupDetail(() => of(baseApp));
     const buttons = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'));

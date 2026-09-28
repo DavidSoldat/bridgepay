@@ -57,29 +57,35 @@
       }
     </div>
 
-    <label class="mb-1 block text-sm font-medium" for="reviewer-note">Note (optional)</label>
-    <textarea
-      id="reviewer-note"
-      [value]="reviewerNote()"
-      (input)="reviewerNote.set($any($event.target).value)"
-      rows="2"
-      class="input mb-4"
-    ></textarea>
+    @if (app.status === 'MANUAL_REVIEW') {
+      <label class="mb-1 block text-sm font-medium" for="reviewer-note">Note (optional)</label>
+      <textarea
+        id="reviewer-note"
+        [value]="reviewerNote()"
+        (input)="reviewerNote.set($any($event.target).value)"
+        rows="2"
+        class="input mb-4"
+      ></textarea>
 
-    @if (decisionError(); as error) {
-      <p class="mb-3 text-sm text-declined">{{ error }}</p>
+      @if (decisionError(); as error) {
+        <p class="mb-3 text-sm text-declined">{{ error }}</p>
+      }
+      <div class="flex gap-3">
+        <button
+          type="button"
+          (click)="decide('DECLINE')"
+          [disabled]="submitting()"
+          class="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border-2 border-declined px-5 font-semibold text-declined hover:bg-declined-bg disabled:opacity-50"
+        ><app-icon name="x" />Decline</button>
+        <button type="button" (click)="decide('APPROVE')" [disabled]="submitting()" class="btn-primary">
+          <app-icon name="check" />Approve
+        </button>
+      </div>
+    } @else {
+      <p class="flex items-center gap-2 rounded-md bg-cream p-4 text-sm text-ink-muted">
+        <app-icon name="check" /> Already decided — nothing to review.
+      </p>
     }
-    <div class="flex gap-3">
-      <button
-        type="button"
-        (click)="decide('DECLINE')"
-        [disabled]="submitting()"
-        class="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border-2 border-declined px-5 font-semibold text-declined hover:bg-declined-bg disabled:opacity-50"
-      ><app-icon name="x" />Decline</button>
-      <button type="button" (click)="decide('APPROVE')" [disabled]="submitting()" class="btn-primary">
-        <app-icon name="check" />Approve
-      </button>
-    </div>
   </div>
 } @else {
   <div class="card mt-2 max-w-3xl px-6"><app-skeleton-rows [rows]="6" /></div>

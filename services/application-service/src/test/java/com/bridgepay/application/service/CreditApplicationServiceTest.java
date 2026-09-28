@@ -147,6 +147,20 @@ class CreditApplicationServiceTest {
     }
 
     @Test
+    void reviewDecision_keepsTheModelsScoreFactors_soTheDecisionStaysExplainable() {
+        CreditApplication pending = new CreditApplication(applicantId, merchant, new BigDecimal("100.00"));
+        pending.applyDecision(ApplicationStatus.MANUAL_REVIEW, 0.5,
+                "[{\"feature\":\"debtRatio\",\"contribution\":0.3},{\"feature\":\"age\",\"contribution\":-0.2}]", null, null);
+        UUID id = pending.getId();
+        when(applicationRepository.findById(id)).thenReturn(Optional.of(pending));
+
+        var response = service.reviewDecision(id, new ReviewDecisionRequest("DECLINE", null));
+
+        assertThat(response.status()).isEqualTo("DECLINED");
+        assertThat(response.scoreFactors()).extracting(ScoreResult.ScoreFactor::feature).containsExactly("debtRatio", "age");
+    }
+
+    @Test
     void listApplications_filtersByGivenStatus_whenStatusIsNotAll() {
         Pageable pageable = PageRequest.of(0, 20);
         CreditApplication declined = new CreditApplication(applicantId, merchant, new BigDecimal("100.00"));

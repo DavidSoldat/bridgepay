@@ -105,10 +105,11 @@ public class CreditApplicationService {
             throw new IllegalStateException("Only applications in MANUAL_REVIEW can be reviewed");
         }
 
+        // The model's score factors are the record of why this went to review; a human decision keeps them.
         ScoreResult carriedForwardScore = new ScoreResult(
                 application.getRiskScore() != null ? application.getRiskScore() : 0.0,
                 "APPROVE".equals(request.decision()) ? ScoreDecision.APPROVE : ScoreDecision.DECLINE,
-                List.of());
+                readScoreFactors(application.getScoreFactorsJson()));
 
         finalizeDecision(application, application.getMerchant(), carriedForwardScore);
         return toResponse(application);
