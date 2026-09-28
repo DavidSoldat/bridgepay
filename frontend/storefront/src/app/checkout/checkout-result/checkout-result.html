@@ -1,21 +1,37 @@
-<div class="max-w-md mx-auto p-6 rounded-2xl bg-blush font-sans text-center">
+<div class="card mx-auto flex max-w-lg flex-col items-center p-8 text-center">
   @switch (response().status) {
     @case ('APPROVED') {
-      <h2 class="text-lg font-semibold text-coral mb-2">You're approved</h2>
-      <p class="text-sm text-ink-muted">
-        ${{ response().installmentAmount | number: '1.2-2' }} today, then
-        {{ (response().installmentCount ?? 1) - 1 }} more weekly payments of the same amount.
-      </p>
+      <div data-outcome="approved" class="flex flex-col items-center">
+        <span class="mb-4 flex size-14 items-center justify-center rounded-full bg-approved-bg text-3xl text-approved">
+          <app-icon name="check" />
+        </span>
+        <h2 class="mb-2 font-display text-2xl font-bold text-approved">You're approved</h2>
+        <p class="text-sm text-ink-muted">
+          ${{ response().installmentAmount | number: '1.2-2' }} today, then
+          {{ (response().installmentCount ?? 1) - 1 }} more weekly payments of the same amount.
+        </p>
+      </div>
       <app-first-payment [applicationId]="response().applicationId" [awaitPlan]="true" />
     }
     @case ('MANUAL_REVIEW') {
-      <h2 class="text-lg font-semibold text-coral mb-2">Your order is under review</h2>
-      <p class="text-sm text-ink-muted">We're taking a closer look. We'll follow up by email — once approved, you'll make the first payment from your account.</p>
+      <div data-outcome="review" class="flex flex-col items-center">
+        <span class="mb-4 flex size-14 items-center justify-center rounded-full bg-review-bg text-3xl text-review">
+          <app-icon name="clock" />
+        </span>
+        <h2 class="mb-2 font-display text-2xl font-bold text-review">Your order is under review</h2>
+        <p class="text-sm text-ink-muted">We're taking a closer look. We'll follow up by email — once approved, you'll make the first payment from your account.</p>
+      </div>
     }
     @default {
-      <h2 class="text-lg font-semibold text-coral mb-2">This purchase couldn't be approved</h2>
-      <p class="text-sm text-ink-muted">Pay in 4 isn't available for this order. Try another payment method.</p>
+      <div data-outcome="declined" class="flex flex-col items-center">
+        <span class="mb-4 flex size-14 items-center justify-center rounded-full bg-declined-bg text-3xl text-declined">
+          <app-icon name="x" />
+        </span>
+        <h2 class="mb-2 font-display text-2xl font-bold text-declined">This purchase couldn't be approved</h2>
+        <p class="text-sm text-ink-muted">Pay in 4 isn't available for this order. Try another payment method.</p>
+      </div>
     }
   }
-  <button (click)="backToShop.emit()" class="mt-6 text-coral underline">Back to shop</button>
+  <p class="mt-6 flex items-center gap-1.5 text-xs text-ink-muted">Pay in 4 by <app-bridgepay-mark size="sm" /></p>
+  <button type="button" (click)="backToShop.emit()" class="btn-secondary mt-4">Back to shop</button>
 </div>

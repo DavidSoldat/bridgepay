@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 import { InstallmentSchedule } from './installment-schedule';
 import { RepaymentPlans } from '../repayment-plans';
 import { RepaymentPlanResponse } from '../repayment-plan.model';
@@ -41,7 +41,7 @@ describe('InstallmentSchedule', () => {
     fixture.componentRef.setInput('application', app('app-1'));
     fixture.detectChanges();
 
-    expect(text(fixture)).toContain('PAID');
+    expect(text(fixture)).toContain('Paid');
     expect(text(fixture)).not.toContain('being set up');
   });
 
@@ -89,5 +89,13 @@ describe('InstallmentSchedule', () => {
     fixture.detectChanges();
     expect(text(fixture)).not.toContain('Could not load the payment schedule');
     expect(text(fixture)).toContain('Feb 1, 2026');
+  });
+
+  it('shows a skeleton until the plan request settles', () => {
+    const fixture = setup(() => new Subject<RepaymentPlanResponse>());
+    fixture.componentRef.setInput('application', app('app-1'));
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="skeleton"]')).not.toBeNull();
   });
 });

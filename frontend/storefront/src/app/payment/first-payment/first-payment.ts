@@ -5,6 +5,7 @@ import { RouterLink } from '@angular/router';
 import { catchError, concatMap, first, of, take, timer } from 'rxjs';
 import { RepaymentPlans } from '../../account/repayment-plans';
 import { PaddleCheckout } from '../paddle-checkout';
+import { BridgepayMark } from '../../shared/ui/bridgepay-mark/bridgepay-mark';
 
 export const POLL_INTERVAL_MS = 1000;
 export const POLL_ATTEMPTS = 20;
@@ -17,7 +18,7 @@ type State = 'loading' | 'none' | 'timeout' | 'due' | 'paying' | 'closed' | 'fai
  */
 @Component({
   selector: 'app-first-payment',
-  imports: [DecimalPipe, RouterLink],
+  imports: [DecimalPipe, RouterLink, BridgepayMark],
   templateUrl: './first-payment.html',
 })
 export class FirstPayment implements OnInit {

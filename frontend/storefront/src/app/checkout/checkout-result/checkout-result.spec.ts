@@ -48,4 +48,15 @@ describe('CheckoutResult', () => {
     const fixture = setup('DECLINED');
     expect((fixture.nativeElement as HTMLElement).textContent).toContain("couldn't be approved");
   });
+
+  it.each([
+    ['APPROVED', 'approved'],
+    ['MANUAL_REVIEW', 'review'],
+    ['DECLINED', 'declined'],
+  ])('marks the %s outcome with its state colour and the BridgePay mark', (status, tone) => {
+    const el = setup(status).nativeElement as HTMLElement;
+
+    expect(el.querySelector('[data-outcome]')?.getAttribute('data-outcome')).toBe(tone);
+    expect(el.querySelector('app-bridgepay-mark')).not.toBeNull();
+  });
 });

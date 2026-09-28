@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { Account } from './account';
 import { Auth } from '../core/auth';
 import { Applications } from '../checkout/applications';
@@ -114,5 +114,14 @@ describe('Account', () => {
     fixture.detectChanges();
 
     expect((fixture.nativeElement as HTMLElement).querySelector('app-first-payment')).not.toBeNull();
+  });
+
+  it('shows a skeleton while purchases load, not the empty message', () => {
+    const fixture = setup(true, () => new Subject());
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('[data-testid="skeleton"]')).not.toBeNull();
+    expect(el.textContent).not.toContain('No purchases yet');
   });
 });

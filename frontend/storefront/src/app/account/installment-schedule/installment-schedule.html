@@ -1,26 +1,28 @@
 @switch (state().kind) {
   @case ('error') {
-    <p class="text-sm text-declined mt-2">Could not load the payment schedule.</p>
+    <p class="mt-3 text-sm text-declined">Could not load the payment schedule.</p>
   }
-  @case ('loading') {}
+  @case ('loading') {
+    <app-skeleton-rows [rows]="4" />
+  }
   @default {
     @if (state().kind === 'projected') {
-      <p class="text-sm text-ink-muted mt-3">Your payment plan is being set up. Here's when each payment will be due.</p>
+      <p class="mt-3 text-sm text-ink-muted">Your payment plan is being set up. Here's when each payment will be due.</p>
     }
-    <table class="w-full text-sm mt-3">
+    <table class="mt-3 w-full text-sm">
       <thead>
-        <tr class="text-left text-ink-muted">
-          <th>Due</th>
-          <th>Amount</th>
-          <th>Status</th>
+        <tr class="border-b border-hairline text-left text-ink-muted">
+          <th class="py-2 font-medium">Due</th>
+          <th class="py-2 font-medium">Amount</th>
+          <th class="py-2 font-medium">Status</th>
         </tr>
       </thead>
       <tbody>
         @for (installment of installments(); track installment.sequenceNumber) {
-          <tr>
-            <td>{{ installment.dueDate | date: 'mediumDate' }}</td>
-            <td>${{ installment.amount | number: '1.2-2' }}</td>
-            <td>{{ installment.status }}</td>
+          <tr class="border-b border-hairline last:border-0">
+            <td class="py-2">{{ installment.dueDate | date: 'mediumDate' }}</td>
+            <td class="py-2 font-mono">${{ installment.amount | number: '1.2-2' }}</td>
+            <td class="py-2"><app-status-badge [status]="installment.status" /></td>
           </tr>
         }
       </tbody>

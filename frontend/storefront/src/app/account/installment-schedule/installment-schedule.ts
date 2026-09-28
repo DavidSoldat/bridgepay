@@ -6,6 +6,8 @@ import { catchError, map, of, switchMap } from 'rxjs';
 import { RepaymentPlans } from '../repayment-plans';
 import { Installment } from '../repayment-plan.model';
 import { ApplicationResponse } from '../../shared/models/application';
+import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
+import { SkeletonRows } from '../../shared/ui/skeleton-rows/skeleton-rows';
 
 type ScheduleState =
   | { kind: 'loading' }
@@ -22,14 +24,14 @@ function projectInstallments(app: ApplicationResponse): Installment[] {
     sequenceNumber: i + 1,
     dueDate: new Date(start + i * WEEK_MS).toISOString(),
     amount: app.installmentAmount ?? 0,
-    status: 'Scheduled',
+    status: 'SCHEDULED',
     paidAt: null,
   }));
 }
 
 @Component({
   selector: 'app-installment-schedule',
-  imports: [DatePipe, DecimalPipe],
+  imports: [DatePipe, DecimalPipe, StatusBadge, SkeletonRows],
   templateUrl: './installment-schedule.html',
   styleUrl: './installment-schedule.css',
 })

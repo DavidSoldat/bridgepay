@@ -5,10 +5,11 @@ import { Product } from '../../catalog/products';
 import { orderTotals } from '../../catalog/pricing';
 import { DeliveryAddress } from '../delivery-form/delivery-form';
 import { ApplicationResponse } from '../../shared/models/application';
+import { BridgepayMark } from '../../shared/ui/bridgepay-mark/bridgepay-mark';
 
 @Component({
   selector: 'app-checkout-confirm',
-  imports: [DecimalPipe],
+  imports: [DecimalPipe, BridgepayMark],
   templateUrl: './checkout-confirm.html',
   styleUrl: './checkout-confirm.css',
 })
