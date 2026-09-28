@@ -35,6 +35,10 @@ spring:
               uri: ${bridgepay.repayment-reconciliation-service.base-url}
               predicates:
                 - Path=/api/v1/repayment-plans/**
+            - id: ops-applicants
+              uri: ${bridgepay.applicant-service.base-url}
+              predicates:
+                - Path=/api/v1/ops/applicants/**
             - id: ops
               uri: ${bridgepay.repayment-reconciliation-service.base-url}
               predicates:
