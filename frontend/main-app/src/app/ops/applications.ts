@@ -17,10 +17,6 @@ export class Applications {
     });
   }
 
-  getApplication(id: string): Observable<ApplicationResponse> {
-    return this.http.get<ApplicationResponse>(`${this.baseUrl}/${id}`);
-  }
-
   getCase(id: string): Observable<ApplicationCase> {
     return this.http.get<ApplicationCase>(`${this.baseUrl}/${id}/case`);
   }

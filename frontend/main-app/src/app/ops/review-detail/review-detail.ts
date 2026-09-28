@@ -2,12 +2,21 @@ import { Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { catchError, of, switchMap } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { Observable, catchError, filter, map, of, shareReplay, startWith, switchMap } from 'rxjs';
 import { Applications } from '../applications';
+import { OpsApplicants } from '../ops-applicants';
+import { RepaymentPlans } from '../repayment-plans';
+import { ApplicationCase } from '../../shared/models/application-case';
+import { Section } from '../../shared/models/section';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { SkeletonRows } from '../../shared/ui/skeleton-rows/skeleton-rows';
 import { Icon } from '../../shared/ui/icon/icon';
 import { ToastService } from '../../shared/ui/toast-service';
+import { DecisionCard } from '../case-file/decision-card/decision-card';
+import { ShopperCard } from '../case-file/shopper-card/shopper-card';
+import { MerchantPayoutCard } from '../case-file/merchant-payout-card/merchant-payout-card';
+import { RepaymentCard } from '../case-file/repayment-card/repayment-card';
 
 // The model's 10 bureau-shaped feature keys (services/credit-risk-engine's
 // coefficients.json) plus PolicyOverlay's rule keys - unknown keys fall back
@@ -29,31 +38,60 @@ const FEATURE_LABELS: Record<string, string> = {
   amountToIncome: 'Amount vs. monthly income',
 };
 
+/** One card's data: loading first, then its value, "none" on a 404, or an error - independent of the other cards. */
+function section<T>(request: Observable<T>): Observable<Section<T>> {
+  return request.pipe(
+    map((value): Section<T> => ({ state: 'ready', value })),
+    catchError((err) =>
+      of<Section<T>>(err instanceof HttpErrorResponse && err.status === 404 ? { state: 'none' } : { state: 'error' }),
+    ),
+    startWith<Section<T>>({ state: 'loading' }),
+  );
+}
+
+const isCase = (c: ApplicationCase | undefined): c is ApplicationCase => c !== undefined;
+
 @Component({
   selector: 'app-review-detail',
-  imports: [RouterLink, DatePipe, DecimalPipe, StatusBadge, SkeletonRows, Icon],
+  imports: [
+    RouterLink, DatePipe, DecimalPipe, StatusBadge, SkeletonRows, Icon,
+    DecisionCard, ShopperCard, MerchantPayoutCard, RepaymentCard,
+  ],
   templateUrl: './review-detail.html',
   styleUrl: './review-detail.css',
 })
 export class ReviewDetail {
   private readonly applications = inject(Applications);
+  private readonly opsApplicants = inject(OpsApplicants);
+  private readonly repaymentPlans = inject(RepaymentPlans);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly toasts = inject(ToastService);
 
   protected readonly loadError = signal(false);
 
-  protected readonly application = toSignal(
-    this.route.paramMap.pipe(
-      switchMap((params) =>
-        this.applications.getApplication(params.get('id')!).pipe(
-          catchError(() => {
-            this.loadError.set(true);
-            return of(undefined);
-          }),
-        ),
-      ),
-    ),
+  // One request per application id, shared by the page and its per-section loaders.
+  private readonly caseFile$ = this.route.paramMap.pipe(
+    switchMap((params) => {
+      this.loadError.set(false);
+      return this.applications.getCase(params.get('id')!).pipe(
+        catchError(() => {
+          this.loadError.set(true);
+          return of(undefined);
+        }),
+      );
+    }),
+    shareReplay({ bufferSize: 1, refCount: true }),
+  );
+
+  protected readonly application = toSignal(this.caseFile$);
+  protected readonly shopper = toSignal(
+    this.caseFile$.pipe(filter(isCase), switchMap((c) => section(this.opsApplicants.get(c.applicantId)))),
+    { initialValue: { state: 'loading' } as const },
+  );
+  protected readonly plan = toSignal(
+    this.caseFile$.pipe(filter(isCase), switchMap((c) => section(this.repaymentPlans.get(c.applicationId)))),
+    { initialValue: { state: 'loading' } as const },
   );
 
   protected readonly reviewerNote = signal('');

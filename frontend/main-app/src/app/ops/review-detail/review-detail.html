@@ -5,14 +5,13 @@
 @if (loadError()) {
   <p class="mt-4 text-declined">Could not load this application. Try refreshing.</p>
 } @else if (application(); as app) {
-  <div class="card mt-2 max-w-3xl p-6">
-    <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
+  <div class="mt-2 flex max-w-6xl flex-col gap-6">
+    <div class="card flex flex-wrap items-start justify-between gap-4 p-6">
       <div>
         <p class="text-sm text-ink-muted">Checkout amount</p>
         <h1 class="font-display text-3xl font-bold">{{ app.amount | number: '1.2-2' }}</h1>
         <p class="mt-1 text-sm text-ink-muted">
-          Merchant <span class="font-mono">{{ app.merchantId }}</span>
-          @if (app.decisionAt) { · decisioned <span class="font-mono">{{ app.decisionAt | date: 'MMM d, y' }}</span> }
+          {{ app.merchant.name }} · checkout <span class="font-mono">{{ app.createdAt | date: 'MMM d, y HH:mm' }}</span>
         </p>
       </div>
       <div class="flex flex-col items-end gap-2">
@@ -25,68 +24,82 @@
       </div>
     </div>
 
-    <h2 class="mb-1 font-display font-semibold">Score factors</h2>
-    <p class="mb-4 flex items-center gap-4 text-xs text-ink-muted">
-      <span class="flex items-center gap-1.5"><span class="inline-block size-2.5 rounded-full bg-coral"></span>raises risk</span>
-      <span class="flex items-center gap-1.5"><span class="inline-block size-2.5 rounded-full bg-approved"></span>lowers risk</span>
-    </p>
-    <div class="mb-8 space-y-2">
-      @for (factor of app.scoreFactors; track factor.feature) {
-        <div class="flex items-center gap-3 text-sm">
-          <div class="w-44 shrink-0 truncate" [title]="factor.feature">{{ featureLabel(factor.feature) }}</div>
-          <div class="relative h-4 flex-1 rounded-full bg-cream">
-            <div class="absolute inset-y-0 left-1/2 w-px bg-hairline"></div>
-            @if (factor.contribution >= 0) {
-              <div
-                data-testid="factor-bar"
-                class="absolute inset-y-0 left-1/2 rounded-r-full bg-coral"
-                [style.width.%]="(factor.contribution / maxContribution()) * 50"
-              ></div>
-            } @else {
-              <div
-                data-testid="factor-bar"
-                class="absolute inset-y-0 right-1/2 rounded-l-full bg-approved"
-                [style.width.%]="(-factor.contribution / maxContribution()) * 50"
-              ></div>
+    <div class="grid gap-6 lg:grid-cols-2">
+      <div class="flex flex-col gap-6">
+        @if (app.decision; as decision) {
+          <app-decision-card [decision]="decision" [status]="app.status" [decisionAt]="app.decisionAt" />
+        }
+        <app-shopper-card [section]="shopper()" />
+        <app-merchant-payout-card [merchant]="app.merchant" [payout]="app.payout" />
+      </div>
+      <div class="flex flex-col gap-6">
+        <app-repayment-card [section]="plan()" [applicationStatus]="app.status" />
+        <section class="card p-6" aria-labelledby="factors-heading">
+          <h2 id="factors-heading" class="mb-1 font-display text-lg font-bold">Score factors</h2>
+          <p class="mb-4 flex items-center gap-4 text-xs text-ink-muted">
+            <span class="flex items-center gap-1.5"><span class="inline-block size-2.5 rounded-full bg-coral"></span>raises risk</span>
+            <span class="flex items-center gap-1.5"><span class="inline-block size-2.5 rounded-full bg-approved"></span>lowers risk</span>
+          </p>
+          <div class="space-y-2">
+            @for (factor of app.scoreFactors; track factor.feature) {
+              <div class="flex items-center gap-3 text-sm">
+                <div class="w-44 shrink-0 truncate" [title]="factor.feature">{{ featureLabel(factor.feature) }}</div>
+                <div class="relative h-4 flex-1 rounded-full bg-cream">
+                  <div class="absolute inset-y-0 left-1/2 w-px bg-hairline"></div>
+                  @if (factor.contribution >= 0) {
+                    <div
+                      data-testid="factor-bar"
+                      class="absolute inset-y-0 left-1/2 rounded-r-full bg-coral"
+                      [style.width.%]="(factor.contribution / maxContribution()) * 50"
+                    ></div>
+                  } @else {
+                    <div
+                      data-testid="factor-bar"
+                      class="absolute inset-y-0 right-1/2 rounded-l-full bg-approved"
+                      [style.width.%]="(-factor.contribution / maxContribution()) * 50"
+                    ></div>
+                  }
+                </div>
+                <div class="w-16 shrink-0 text-right font-mono">{{ factor.contribution | number: '1.3-3' }}</div>
+              </div>
+            } @empty {
+              <p class="text-sm text-ink-muted">No score breakdown available for this application.</p>
             }
           </div>
-          <div class="w-16 shrink-0 text-right font-mono">{{ factor.contribution | number: '1.3-3' }}</div>
-        </div>
-      } @empty {
-        <p class="text-sm text-ink-muted">No score breakdown available for this application.</p>
-      }
+        </section>
+      </div>
     </div>
 
     @if (app.status === 'MANUAL_REVIEW') {
-      <label class="mb-1 block text-sm font-medium" for="reviewer-note">Note (optional)</label>
-      <textarea
-        id="reviewer-note"
-        [value]="reviewerNote()"
-        (input)="reviewerNote.set($any($event.target).value)"
-        rows="2"
-        class="input mb-4"
-      ></textarea>
+      <section class="card p-6" aria-labelledby="decide-heading">
+        <h2 id="decide-heading" class="mb-4 font-display text-lg font-bold">Your decision</h2>
+        <label class="mb-1 block text-sm font-medium" for="reviewer-note">Note (optional)</label>
+        <textarea
+          id="reviewer-note"
+          [value]="reviewerNote()"
+          (input)="reviewerNote.set($any($event.target).value)"
+          rows="2"
+          maxlength="1000"
+          class="input mb-4"
+        ></textarea>
 
-      @if (decisionError(); as error) {
-        <p class="mb-3 text-sm text-declined">{{ error }}</p>
-      }
-      <div class="flex gap-3">
-        <button
-          type="button"
-          (click)="decide('DECLINE')"
-          [disabled]="submitting()"
-          class="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border-2 border-declined px-5 font-semibold text-declined hover:bg-declined-bg disabled:opacity-50"
-        ><app-icon name="x" />Decline</button>
-        <button type="button" (click)="decide('APPROVE')" [disabled]="submitting()" class="btn-primary">
-          <app-icon name="check" />Approve
-        </button>
-      </div>
-    } @else {
-      <p class="flex items-center gap-2 rounded-md bg-cream p-4 text-sm text-ink-muted">
-        <app-icon name="check" /> Already decided — nothing to review.
-      </p>
+        @if (decisionError(); as error) {
+          <p class="mb-3 text-sm text-declined">{{ error }}</p>
+        }
+        <div class="flex gap-3">
+          <button
+            type="button"
+            (click)="decide('DECLINE')"
+            [disabled]="submitting()"
+            class="inline-flex min-h-11 items-center justify-center gap-2 rounded-sm border-2 border-declined px-5 font-semibold text-declined hover:bg-declined-bg disabled:opacity-50"
+          ><app-icon name="x" />Decline</button>
+          <button type="button" (click)="decide('APPROVE')" [disabled]="submitting()" class="btn-primary">
+            <app-icon name="check" />Approve
+          </button>
+        </div>
+      </section>
     }
   </div>
 } @else {
-  <div class="card mt-2 max-w-3xl px-6"><app-skeleton-rows [rows]="6" /></div>
+  <div class="card mt-2 max-w-6xl px-6"><app-skeleton-rows [rows]="6" /></div>
 }

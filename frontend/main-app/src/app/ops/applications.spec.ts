@@ -41,22 +41,6 @@ describe('Applications', () => {
     req.flush({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 });
   });
 
-  it('fetches a single application', () => {
-    let result: ApplicationResponse | undefined;
-    service.getApplication('app-1').subscribe((app) => (result = app));
-
-    const req = httpMock.expectOne((r) => r.url.endsWith('/api/v1/applications/app-1'));
-    expect(req.request.method).toBe('GET');
-    const fake: ApplicationResponse = {
-      applicationId: 'app-1', applicantId: 'a-1', merchantId: 'm-1', amount: 200,
-      status: 'MANUAL_REVIEW', riskScore: 0.5, scoreFactors: [],
-      installmentCount: null, installmentAmount: null, decisionAt: null,
-    };
-    req.flush(fake);
-
-    expect(result).toEqual(fake);
-  });
-
   it('submits a review decision', () => {
     service.reviewDecision('app-1', 'APPROVE', 'looks fine').subscribe();
 
