@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { ReviewQueue } from './review-queue';
 import { Applications } from '../applications';
 import { Page } from '../../shared/models/page';
@@ -122,5 +122,44 @@ describe('ReviewQueue', () => {
     fixture.detectChanges();
 
     expect(calls).toEqual(['MANUAL_REVIEW', 'ALL']);
+  });
+
+  it('shows a skeleton while loading and the empty state only once an empty page arrives', () => {
+    const response = new Subject<Page<ApplicationResponse>>();
+    TestBed.configureTestingModule({
+      imports: [ReviewQueue],
+      providers: [provideRouter([]), { provide: Applications, useValue: { list: () => response } }],
+    });
+    const fixture = TestBed.createComponent(ReviewQueue);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('[data-testid="skeleton"]')).not.toBeNull();
+    expect(el.textContent).not.toContain('No applications waiting for review');
+
+    response.next({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 20 });
+    response.complete();
+    fixture.detectChanges();
+    expect(el.querySelector('[data-testid="skeleton"]')).toBeNull();
+    expect(el.textContent).toContain('No applications waiting for review');
+  });
+
+  it('shows each status as a badge', () => {
+    const page: Page<ApplicationResponse> = {
+      content: [{
+        applicationId: 'app-1', applicantId: 'a-1', merchantId: 'm-1', amount: 200,
+        status: 'MANUAL_REVIEW', riskScore: 0.5, scoreFactors: [],
+        installmentCount: null, installmentAmount: null, decisionAt: null,
+      }],
+      totalElements: 1, totalPages: 1, number: 0, size: 20,
+    };
+    TestBed.configureTestingModule({
+      imports: [ReviewQueue],
+      providers: [provideRouter([]), { provide: Applications, useValue: { list: () => of(page) } }],
+    });
+    const fixture = TestBed.createComponent(ReviewQueue);
+    fixture.detectChanges();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('tbody [data-tone="review"]')?.textContent?.trim()).toBe('In review');
   });
 });

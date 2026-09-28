@@ -1,9 +1,10 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { Observable, of, throwError } from 'rxjs';
 import { ReviewDetail } from './review-detail';
 import { Applications } from '../applications';
 import { ApplicationResponse } from '../../shared/models/application';
+import { ToastService } from '../../shared/ui/toast-service';
 
 describe('ReviewDetail', () => {
   const baseApp: ApplicationResponse = {
@@ -147,5 +148,53 @@ describe('ReviewDetail', () => {
     expect(text).toContain('Late BridgePay payments');
     expect(text).toContain('Completed BridgePay plans');
     expect(text).toContain('Amount vs. monthly income');
+  });
+
+  function setupDetail(getApplication: () => Observable<ApplicationResponse>, reviewDecision = () => of(baseApp)) {
+    TestBed.configureTestingModule({
+      imports: [ReviewDetail],
+      providers: [
+        provideRouter([]),
+        { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ id: baseApp.applicationId })) } },
+        { provide: Applications, useValue: { getApplication, reviewDecision } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ReviewDetail);
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  it('confirms an approval with a toast', () => {
+    const fixture = setupDetail(() => of(baseApp));
+    const buttons = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button'));
+    (buttons.find((b) => b.textContent?.includes('Approve')) as HTMLButtonElement).click();
+
+    expect(TestBed.inject(ToastService).toasts().map((t) => [t.kind, t.text])).toEqual([
+      ['success', 'Application approved'],
+    ]);
+  });
+
+  it('shows an error instead of an endless skeleton when the application cannot be loaded', () => {
+    const fixture = setupDetail(() => throwError(() => new Error('404')));
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.textContent).toContain('Could not load this application');
+    expect(el.querySelector('[data-testid="skeleton"]')).toBeNull();
+  });
+
+  it('draws risk-raising factors in coral and risk-lowering factors in green', () => {
+    const app: ApplicationResponse = {
+      ...baseApp,
+      scoreFactors: [
+        { feature: 'debtRatio', contribution: 0.3 },
+        { feature: 'age', contribution: -0.2 },
+      ],
+    };
+    const bars = Array.from(
+      (setupDetail(() => of(app)).nativeElement as HTMLElement).querySelectorAll('[data-testid="factor-bar"]'),
+    );
+
+    expect(bars.map((b) => b.classList.contains('bg-coral'))).toEqual([true, false]);
+    expect(bars.map((b) => b.classList.contains('bg-approved'))).toEqual([false, true]);
   });
 });

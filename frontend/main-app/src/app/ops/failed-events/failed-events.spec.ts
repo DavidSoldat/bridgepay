@@ -4,6 +4,7 @@ import { FailedEventsPage } from './failed-events';
 import { FailedEventsApi } from '../failed-events-api';
 import { FailedEvent } from '../../shared/models/failed-event';
 import { Page } from '../../shared/models/page';
+import { ToastService } from '../../shared/ui/toast-service';
 
 const row: FailedEvent = {
   id: 'e-1', topic: 'applications.approved', messageKey: 'app-123', errorMessage: 'paddle down',
@@ -120,5 +121,44 @@ describe('FailedEventsPage', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Could not retry this event');
+  });
+
+  it('shows a skeleton while the first page loads', () => {
+    const el = setup({ list: () => new Subject<Page<FailedEvent>>() }).nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="skeleton"]')).not.toBeNull();
+    expect(el.textContent).not.toContain('No failed events');
+  });
+
+  it('keeps the current rows on screen while a retry refetches the list', () => {
+    let call = 0;
+    const fixture = setup({
+      list: () => (call++ === 0 ? of(page([row])) : new Subject<Page<FailedEvent>>()),
+      retry: () => of({ ...row, status: 'RESOLVED' }),
+    });
+
+    button(fixture.nativeElement, 'Retry').click();
+    fixture.detectChanges();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('[data-testid="skeleton"]')).toBeNull();
+    expect(el.textContent).toContain('app-123');
+  });
+
+  it('confirms a retry that resolved the event with a toast', () => {
+    const fixture = setup({ retry: () => of({ ...row, status: 'RESOLVED' }) });
+    button(fixture.nativeElement, 'Retry').click();
+
+    expect(TestBed.inject(ToastService).toasts().map((t) => [t.kind, t.text])).toEqual([
+      ['success', 'Retry resolved the event'],
+    ]);
+  });
+
+  it('raises an error toast when a retry comes back still failing', () => {
+    const fixture = setup({ retry: () => of({ ...row, attempts: 2, errorMessage: 'still down' }) });
+    button(fixture.nativeElement, 'Retry').click();
+
+    expect(TestBed.inject(ToastService).toasts().map((t) => [t.kind, t.text])).toEqual([
+      ['error', 'Retry failed: still down'],
+    ]);
   });
 });

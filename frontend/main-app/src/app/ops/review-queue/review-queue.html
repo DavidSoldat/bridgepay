@@ -1,54 +1,57 @@
-<h1 class="text-xl font-medium mb-4">Review queue</h1>
-<div class="flex gap-2 mb-4">
+<h1 class="mb-5 font-display text-2xl font-bold">Review queue</h1>
+
+<div class="mb-5 flex flex-wrap gap-2" role="group" aria-label="Filter by status">
   @for (status of statusFilters; track status) {
     <button
       type="button"
       (click)="selectFilter(status)"
-      class="px-3 py-1 text-sm border rounded"
-      [class.border-coral]="filter() === status"
-      [class.text-coral]="filter() === status"
-      [class.border-hairline]="filter() !== status"
-      [class.text-ink-muted]="filter() !== status"
+      [attr.aria-pressed]="filter() === status"
+      class="min-h-11 rounded-full border px-4 text-sm font-semibold"
+      [class]="filter() === status ? 'border-coral bg-coral text-white' : 'border-hairline bg-surface text-ink-muted hover:text-ink'"
     >
       {{ statusFilterLabels[status] }}
     </button>
   }
 </div>
-<table class="w-full text-sm">
-  <thead>
-    <tr class="border-b border-hairline text-left text-ink-muted">
-      <th class="py-2 font-normal">Merchant</th>
-      <th class="py-2 font-normal text-right">Amount</th>
-      <th class="py-2 font-normal">Status</th>
-      <th class="py-2 font-normal">Decisioned</th>
-      <th class="py-2"></th>
-    </tr>
-  </thead>
-  <tbody>
-    @if (loadError()) {
-      <tr>
-        <td colspan="5" class="py-6 text-center text-declined">
-          Could not load the review queue. Try refreshing.
-        </td>
-      </tr>
-    } @else {
-      @for (row of rows(); track row.applicationId) {
-        <tr class="border-b border-hairline">
-          <td class="py-2 font-mono">{{ row.merchantId }}</td>
-          <td class="py-2 font-mono text-right">{{ row.amount | number: '1.2-2' }}</td>
-          <td class="py-2 font-mono">{{ row.status }}</td>
-          <td class="py-2 font-mono">{{ row.decisionAt ? (row.decisionAt | date: 'MMM d, y') : '—' }}</td>
-          <td class="py-2 text-right">
-            <a [routerLink]="['/ops', row.applicationId]" class="text-coral hover:underline">Review</a>
-          </td>
+
+<div class="card overflow-x-auto">
+  @if (loadError()) {
+    <p class="p-6 text-center text-declined">Could not load the review queue. Try refreshing.</p>
+  } @else if (loading() && rows().length === 0) {
+    <div class="px-6"><app-skeleton-rows /></div>
+  } @else if (rows().length === 0) {
+    <app-empty-state
+      icon="inbox"
+      heading="No applications waiting for review."
+      text="Checkouts the model sends to manual review show up here."
+    />
+  } @else {
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-hairline text-left text-ink-muted">
+          <th class="px-6 py-3 font-medium">Merchant</th>
+          <th class="px-6 py-3 text-right font-medium">Amount</th>
+          <th class="px-6 py-3 font-medium">Status</th>
+          <th class="px-6 py-3 font-medium">Decisioned</th>
+          <th class="px-6 py-3"><span class="sr-only">Actions</span></th>
         </tr>
-      } @empty {
-        <tr>
-          <td colspan="5" class="py-6 text-center text-ink-muted">
-            No applications waiting for review.
-          </td>
-        </tr>
-      }
-    }
-  </tbody>
-</table>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.applicationId) {
+          <tr class="border-b border-hairline last:border-0 hover:bg-cream">
+            <td class="px-6 py-3 font-mono">{{ row.merchantId }}</td>
+            <td class="px-6 py-3 text-right font-mono">{{ row.amount | number: '1.2-2' }}</td>
+            <td class="px-6 py-3"><app-status-badge [status]="row.status" /></td>
+            <td class="px-6 py-3 font-mono">{{ row.decisionAt ? (row.decisionAt | date: 'MMM d, y') : '—' }}</td>
+            <td class="px-6 py-3 text-right">
+              <a
+                [routerLink]="['/ops', row.applicationId]"
+                class="inline-flex min-h-11 items-center gap-1 font-semibold text-coral hover:text-coral-hover"
+              >Review <app-icon name="arrow-right" /></a>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

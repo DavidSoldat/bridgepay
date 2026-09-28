@@ -1,71 +1,73 @@
-<h1 class="text-xl font-medium mb-4">Failed events</h1>
-<div class="flex gap-2 mb-4">
+<h1 class="mb-5 font-display text-2xl font-bold">Failed events</h1>
+
+<div class="mb-5 flex flex-wrap gap-2" role="group" aria-label="Filter by status">
   @for (status of filters; track status) {
     <button
       type="button"
       (click)="selectFilter(status)"
-      class="px-3 py-1 text-sm border rounded"
-      [class.border-coral]="filter() === status"
-      [class.text-coral]="filter() === status"
-      [class.border-hairline]="filter() !== status"
-      [class.text-ink-muted]="filter() !== status"
+      [attr.aria-pressed]="filter() === status"
+      class="min-h-11 rounded-full border px-4 text-sm font-semibold"
+      [class]="filter() === status ? 'border-coral bg-coral text-white' : 'border-hairline bg-surface text-ink-muted hover:text-ink'"
     >{{ filterLabels[status] }}</button>
   }
 </div>
+
 @if (retryMessage()) {
   <p class="mb-4 text-sm text-declined">{{ retryMessage() }}</p>
 }
-<table class="w-full text-sm">
-  <thead>
-    <tr class="border-b border-hairline text-left text-ink-muted">
-      <th class="py-2 font-normal">Failed at</th>
-      <th class="py-2 font-normal">Topic</th>
-      <th class="py-2 font-normal">Application</th>
-      <th class="py-2 font-normal">Error</th>
-      <th class="py-2 font-normal text-right">Attempts</th>
-      <th class="py-2 font-normal">Status</th>
-      <th class="py-2"></th>
-    </tr>
-  </thead>
-  <tbody>
-    @if (listError()) {
-      <tr>
-        <td colspan="7" class="py-6 text-center text-declined">Could not load failed events. Try refreshing.</td>
-      </tr>
-    } @else {
-      @for (row of rows(); track row.id) {
-        <tr class="border-b border-hairline align-top">
-          <td class="py-2 font-mono">{{ row.createdAt | date: 'MMM d, y HH:mm' }}</td>
-          <td class="py-2 font-mono">{{ row.topic }}</td>
-          <td class="py-2 font-mono">{{ row.messageKey ?? '—' }}</td>
-          @if (row.status === 'RESOLVED') {
-            <td class="py-2 max-w-md break-words text-ink-muted">Resolved — was: {{ row.errorMessage }}</td>
-          } @else {
-            <td class="py-2 max-w-md break-words">{{ row.errorMessage }}</td>
-          }
-          <td class="py-2 font-mono text-right">{{ row.attempts }}</td>
-          <td class="py-2 font-mono">{{ row.status }}</td>
-          <td class="py-2 text-right">
-            @if (row.status === 'FAILED') {
-              <button
-                type="button"
-                (click)="retry(row)"
-                [disabled]="retrying() !== null"
-                class="text-coral hover:underline disabled:opacity-50"
-              >Retry</button>
+
+<div class="card overflow-x-auto">
+  @if (listError()) {
+    <p class="p-6 text-center text-declined">Could not load failed events. Try refreshing.</p>
+  } @else if (loading() && rows().length === 0) {
+    <div class="px-6"><app-skeleton-rows /></div>
+  } @else if (rows().length === 0) {
+    <app-empty-state icon="check" heading="No failed events." text="Events that fail processing show up here for a retry." />
+  } @else {
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-hairline text-left text-ink-muted">
+          <th class="px-4 py-3 font-medium">Failed at</th>
+          <th class="px-4 py-3 font-medium">Topic</th>
+          <th class="px-4 py-3 font-medium">Application</th>
+          <th class="px-4 py-3 font-medium">Error</th>
+          <th class="px-4 py-3 text-right font-medium">Attempts</th>
+          <th class="px-4 py-3 font-medium">Status</th>
+          <th class="px-4 py-3"><span class="sr-only">Actions</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.id) {
+          <tr class="border-b border-hairline align-top last:border-0">
+            <td class="px-4 py-3 font-mono whitespace-nowrap">{{ row.createdAt | date: 'MMM d, y HH:mm' }}</td>
+            <td class="px-4 py-3 font-mono">{{ row.topic }}</td>
+            <td class="px-4 py-3 font-mono">{{ row.messageKey ?? '—' }}</td>
+            @if (row.status === 'RESOLVED') {
+              <td class="max-w-md break-words px-4 py-3 text-ink-muted">Resolved — was: {{ row.errorMessage }}</td>
+            } @else {
+              <td class="max-w-md break-words px-4 py-3">{{ row.errorMessage }}</td>
             }
-          </td>
-        </tr>
-      } @empty {
-        <tr>
-          <td colspan="7" class="py-6 text-center text-ink-muted">No failed events.</td>
-        </tr>
-      }
-    }
-  </tbody>
-</table>
-<div class="flex items-center gap-3 mt-4 text-sm">
-  <button type="button" (click)="prevPage()" [disabled]="page() === 0" class="px-3 py-1 border border-hairline rounded disabled:opacity-40">Prev</button>
-  <span class="text-ink-muted font-mono">Page {{ page() + 1 }} of {{ totalPages() || 1 }}</span>
-  <button type="button" (click)="nextPage()" [disabled]="page() + 1 >= totalPages()" class="px-3 py-1 border border-hairline rounded disabled:opacity-40">Next</button>
+            <td class="px-4 py-3 text-right font-mono">{{ row.attempts }}</td>
+            <td class="px-4 py-3"><app-status-badge [status]="row.status" /></td>
+            <td class="px-4 py-3 text-right">
+              @if (row.status === 'FAILED') {
+                <button
+                  type="button"
+                  (click)="retry(row)"
+                  [disabled]="retrying() !== null"
+                  class="inline-flex min-h-11 items-center gap-1.5 font-semibold text-coral hover:text-coral-hover disabled:opacity-50"
+                ><app-icon name="refresh-cw" />Retry</button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>
+
+<div class="mt-4 flex items-center gap-3 text-sm">
+  <button type="button" (click)="prevPage()" [disabled]="page() === 0" class="btn-secondary">Prev</button>
+  <span class="font-mono text-ink-muted">Page {{ page() + 1 }} of {{ totalPages() || 1 }}</span>
+  <button type="button" (click)="nextPage()" [disabled]="page() + 1 >= totalPages()" class="btn-secondary">Next</button>
 </div>

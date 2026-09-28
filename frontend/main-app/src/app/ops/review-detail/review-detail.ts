@@ -2,8 +2,12 @@ import { Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { switchMap } from 'rxjs';
+import { catchError, of, switchMap } from 'rxjs';
 import { Applications } from '../applications';
+import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
+import { SkeletonRows } from '../../shared/ui/skeleton-rows/skeleton-rows';
+import { Icon } from '../../shared/ui/icon/icon';
+import { ToastService } from '../../shared/ui/toast-service';
 
 // The model's 10 bureau-shaped feature keys (services/credit-risk-engine's
 // coefficients.json) plus PolicyOverlay's rule keys - unknown keys fall back
@@ -27,7 +31,7 @@ const FEATURE_LABELS: Record<string, string> = {
 
 @Component({
   selector: 'app-review-detail',
-  imports: [RouterLink, DatePipe, DecimalPipe],
+  imports: [RouterLink, DatePipe, DecimalPipe, StatusBadge, SkeletonRows, Icon],
   templateUrl: './review-detail.html',
   styleUrl: './review-detail.css',
 })
@@ -35,9 +39,21 @@ export class ReviewDetail {
   private readonly applications = inject(Applications);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly toasts = inject(ToastService);
+
+  protected readonly loadError = signal(false);
 
   protected readonly application = toSignal(
-    this.route.paramMap.pipe(switchMap((params) => this.applications.getApplication(params.get('id')!))),
+    this.route.paramMap.pipe(
+      switchMap((params) =>
+        this.applications.getApplication(params.get('id')!).pipe(
+          catchError(() => {
+            this.loadError.set(true);
+            return of(undefined);
+          }),
+        ),
+      ),
+    ),
   );
 
   protected readonly reviewerNote = signal('');
@@ -59,10 +75,15 @@ export class ReviewDetail {
     this.submitting.set(true);
     this.decisionError.set(null);
     this.applications.reviewDecision(id, decision, this.reviewerNote() || undefined).subscribe({
-      next: () => this.router.navigateByUrl('/ops').catch((err) => console.error('Failed to navigate to /ops after decision', err)),
+      next: () => {
+        this.toasts.show('success', decision === 'APPROVE' ? 'Application approved' : 'Application declined');
+        this.router.navigateByUrl('/ops').catch((err) => console.error('Failed to navigate to /ops after decision', err));
+      },
       error: () => {
         this.submitting.set(false);
-        this.decisionError.set('Could not save this decision. Try again.');
+        const message = 'Could not save this decision. Try again.';
+        this.decisionError.set(message);
+        this.toasts.show('error', message);
       },
     });
   }
