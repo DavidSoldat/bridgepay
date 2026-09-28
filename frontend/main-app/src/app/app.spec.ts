@@ -8,7 +8,7 @@ describe('App', () => {
     TestBed.configureTestingModule({
       imports: [App],
       providers: [
-        provideRouter([]),
+        provideRouter([{ path: '**', children: [] }]),
         {
           provide: Auth,
           useValue: {
@@ -41,5 +41,39 @@ describe('App', () => {
       ['Payouts', '/merchant/payouts'],
     ]);
     expect(el.textContent).not.toContain('Review Queue');
+  });
+
+  it('opens and closes the navigation from the menu button on small screens', () => {
+    const fixture = setup(['ops']);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const menu = el.querySelector('button[aria-controls="main-nav"]') as HTMLButtonElement;
+    const nav = el.querySelector('#main-nav')!;
+
+    expect(menu.getAttribute('aria-expanded')).toBe('false');
+    expect(nav.classList).toContain('hidden');
+
+    menu.click();
+    fixture.detectChanges();
+    expect(menu.getAttribute('aria-expanded')).toBe('true');
+    expect(nav.classList).not.toContain('hidden');
+  });
+
+  it('closes the opened menu when a navigation link is chosen', () => {
+    const fixture = setup(['ops']);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    (el.querySelector('button[aria-controls="main-nav"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    (el.querySelector('#main-nav a') as HTMLAnchorElement).click();
+    fixture.detectChanges();
+    expect(el.querySelector('#main-nav')!.classList).toContain('hidden');
+  });
+
+  it('labels the icon-only log out button', () => {
+    const fixture = setup(['ops']);
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('button[aria-label="Log out"]')).not.toBeNull();
   });
 });

@@ -1,39 +1,77 @@
-<div class="flex min-h-screen">
-  <aside class="w-56 shrink-0 border-r border-hairline p-4 flex flex-col gap-1">
-    <div class="font-medium text-lg mb-4">BridgePay</div>
+<div class="min-h-screen md:flex">
+  <div class="flex items-center justify-between border-b border-hairline bg-surface px-4 py-2 md:hidden">
+    <app-bridgepay-mark />
+    <button
+      type="button"
+      (click)="menuOpen.set(!menuOpen())"
+      [attr.aria-expanded]="menuOpen()"
+      aria-controls="main-nav"
+      aria-label="Menu"
+      class="flex size-11 items-center justify-center rounded-sm text-xl text-ink hover:bg-blush"
+    >
+      <app-icon name="menu" />
+    </button>
+  </div>
+
+  <aside
+    id="main-nav"
+    class="flex-col gap-1 border-b border-hairline bg-surface p-4 md:flex md:w-60 md:shrink-0 md:border-r md:border-b-0"
+    [class.hidden]="!menuOpen()"
+    [class.flex]="menuOpen()"
+  >
+    <div class="mb-6 hidden px-3 pt-2 md:block">
+      <app-bridgepay-mark />
+    </div>
     @if (auth.hasRole('ops')) {
       <a
         routerLink="/ops"
-        routerLinkActive="text-coral font-medium"
-        class="px-2 py-1.5 rounded-sm hover:bg-hairline/40"
-      >Review Queue</a>
+        routerLinkActive="bg-blush text-coral font-semibold"
+        [routerLinkActiveOptions]="{ exact: true }"
+        (click)="menuOpen.set(false)"
+        class="flex min-h-11 items-center gap-3 rounded-sm px-3 text-ink hover:bg-blush"
+      ><app-icon name="list" />Review Queue</a>
       <a
         routerLink="/ops/failed-events"
-        routerLinkActive="text-coral font-medium"
-        class="px-2 py-1.5 rounded-sm hover:bg-hairline/40"
-      >Failed Events</a>
+        routerLinkActive="bg-blush text-coral font-semibold"
+        (click)="menuOpen.set(false)"
+        class="flex min-h-11 items-center gap-3 rounded-sm px-3 text-ink hover:bg-blush"
+      ><app-icon name="alert-triangle" />Failed Events</a>
     }
     @if (auth.hasRole('merchant')) {
       <a
         routerLink="/merchant"
-        routerLinkActive="text-coral font-medium"
+        routerLinkActive="bg-blush text-coral font-semibold"
         [routerLinkActiveOptions]="{ exact: true }"
-        class="px-2 py-1.5 rounded-sm hover:bg-hairline/40"
-      >Sales</a>
+        (click)="menuOpen.set(false)"
+        class="flex min-h-11 items-center gap-3 rounded-sm px-3 text-ink hover:bg-blush"
+      ><app-icon name="shopping-bag" />Sales</a>
       <a
         routerLink="/merchant/payouts"
-        routerLinkActive="text-coral font-medium"
-        class="px-2 py-1.5 rounded-sm hover:bg-hairline/40"
-      >Payouts</a>
+        routerLinkActive="bg-blush text-coral font-semibold"
+        (click)="menuOpen.set(false)"
+        class="flex min-h-11 items-center gap-3 rounded-sm px-3 text-ink hover:bg-blush"
+      ><app-icon name="wallet" />Payouts</a>
     }
   </aside>
-  <div class="flex-1 flex flex-col">
-    <header class="border-b border-hairline px-6 py-3 flex justify-end items-center gap-3 text-sm text-ink-muted">
-      <span class="font-mono">{{ auth.username() }}</span>
-      <button (click)="auth.logout()" class="hover:text-ink">Log out</button>
+
+  <div class="flex min-w-0 flex-1 flex-col">
+    <header class="flex items-center justify-end gap-2 px-4 py-3 text-sm text-ink-muted md:px-8">
+      <span class="flex items-center gap-2">
+        <app-icon name="user" />
+        <span class="font-mono">{{ auth.username() }}</span>
+      </span>
+      <button
+        type="button"
+        (click)="auth.logout()"
+        aria-label="Log out"
+        class="flex size-11 items-center justify-center rounded-sm text-lg hover:bg-blush hover:text-ink"
+      >
+        <app-icon name="log-out" />
+      </button>
     </header>
-    <main class="flex-1 p-6">
+    <main class="flex-1 px-4 pb-10 md:px-8">
       <router-outlet />
     </main>
   </div>
 </div>
+<app-toast-outlet />
