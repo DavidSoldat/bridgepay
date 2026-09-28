@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Page } from '../shared/models/page';
 import { ApplicationResponse } from '../shared/models/application';
+import { ApplicationCase } from '../shared/models/application-case';
 
 @Injectable({ providedIn: 'root' })
 export class Applications {
@@ -18,6 +19,10 @@ export class Applications {
 
   getApplication(id: string): Observable<ApplicationResponse> {
     return this.http.get<ApplicationResponse>(`${this.baseUrl}/${id}`);
+  }
+
+  getCase(id: string): Observable<ApplicationCase> {
+    return this.http.get<ApplicationCase>(`${this.baseUrl}/${id}/case`);
   }
 
   reviewDecision(

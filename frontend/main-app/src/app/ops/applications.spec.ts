@@ -3,6 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Applications } from './applications';
 import { ApplicationResponse } from '../shared/models/application';
+import { ApplicationCase } from '../shared/models/application-case';
 
 describe('Applications', () => {
   let service: Applications;
@@ -63,5 +64,16 @@ describe('Applications', () => {
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ decision: 'APPROVE', reviewerNote: 'looks fine' });
     req.flush({});
+  });
+
+  it('fetches the ops case file for an application', () => {
+    let result: ApplicationCase | undefined;
+    service.getCase('app-1').subscribe((c) => (result = c));
+
+    const req = httpMock.expectOne((r) => r.url.endsWith('/api/v1/applications/app-1/case'));
+    expect(req.request.method).toBe('GET');
+    req.flush({ applicationId: 'app-1', status: 'APPROVED' });
+
+    expect(result?.applicationId).toBe('app-1');
   });
 });
