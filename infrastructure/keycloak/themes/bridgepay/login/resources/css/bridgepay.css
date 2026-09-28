@@ -1,13 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
 
+/* Direction B "Warm Coral" - same values as frontend/*/src/brand.css. */
 :root {
   --pf-v5-global--FontFamily--text: 'IBM Plex Sans', sans-serif;
-  --pf-v5-global--FontFamily--heading: 'IBM Plex Sans', sans-serif;
-  --pf-v5-global--primary-color--100: #2F5D50;
-  --pf-v5-global--primary-color--200: #3E7A69;
-  --pf-v5-global--BackgroundColor--100: #FAFAF9;
+  --pf-v5-global--FontFamily--heading: 'Sora', sans-serif;
+  --pf-v5-global--primary-color--100: #C93A20;
+  --pf-v5-global--primary-color--200: #9E2A14;
+  --pf-v5-global--BackgroundColor--100: #FFF7F0;
 
-  --keycloak-card-top-color: #2F5D50;
+  --keycloak-card-top-color: #C93A20;
   --keycloak-logo-url: url('../img/bridgepay-logo.svg');
   --keycloak-bg-logo-url: none;
 }
