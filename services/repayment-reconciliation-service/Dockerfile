@@ -1,5 +1,6 @@
-# Build stage
-FROM maven:3.9-eclipse-temurin-21 AS build
+# Build stage - on the CI runner's native platform; its output (jar / static bundle) is
+# platform-independent, so nothing but the COPY-only run stage targets arm64 (no QEMU).
+FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 COPY pom.xml ./
 RUN mvn dependency:go-offline -B

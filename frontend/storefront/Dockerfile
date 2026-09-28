@@ -1,5 +1,6 @@
-# Build stage
-FROM node:22-alpine AS build
+# Build stage - on the CI runner's native platform; its output (jar / static bundle) is
+# platform-independent, so nothing but the COPY-only run stage targets arm64 (no QEMU).
+FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 # node:22's bundled npm (10.x) reads this lockfile (written by npm 11.6.1,
