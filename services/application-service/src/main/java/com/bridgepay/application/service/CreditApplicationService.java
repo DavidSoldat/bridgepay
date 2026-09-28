@@ -12,6 +12,7 @@ import com.bridgepay.application.domain.Merchant;
 import com.bridgepay.application.domain.MerchantPayout;
 import com.bridgepay.application.domain.PayoutStatus;
 import com.bridgepay.application.domain.OutboxEvent;
+import com.bridgepay.application.dto.ApplicationCaseResponse;
 import com.bridgepay.application.dto.ApplicationResponse;
 import com.bridgepay.application.dto.CheckoutRequest;
 import com.bridgepay.application.dto.MerchantPayoutResponse;
@@ -41,6 +42,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -49,6 +51,8 @@ public class CreditApplicationService {
     private static final Logger log = LoggerFactory.getLogger(CreditApplicationService.class);
 
     private static final int INSTALLMENT_COUNT = 4;
+    private static final Set<ApplicationStatus> AWAITING_DECISION =
+            Set.of(ApplicationStatus.PENDING, ApplicationStatus.MANUAL_REVIEW);
 
     private final CreditApplicationRepository applicationRepository;
     private final MerchantRepository merchantRepository;
@@ -137,6 +141,40 @@ public class CreditApplicationService {
         CreditApplication application = applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new NoSuchElementException("Application not found"));
         return toResponse(application);
+    }
+
+    @Transactional(readOnly = true)
+    public ApplicationCaseResponse getCase(UUID applicationId) {
+        CreditApplication application = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new NoSuchElementException("Application not found"));
+        Merchant merchant = application.getMerchant();
+
+        ApplicationCaseResponse.Decision decision = AWAITING_DECISION.contains(application.getStatus())
+                ? null
+                : new ApplicationCaseResponse.Decision(
+                        application.getDecisionSource() == null ? null : application.getDecisionSource().name(),
+                        application.getDecidedBy(),
+                        application.getReviewerNote());
+
+        ApplicationCaseResponse.PayoutInfo payout = merchantPayoutRepository.findByApplicationId(applicationId)
+                .map(p -> new ApplicationCaseResponse.PayoutInfo(p.getAmount(), p.getFeeAmount(),
+                        p.getAmount().subtract(p.getFeeAmount()), p.getStatus().name(), p.getPaidAt()))
+                .orElse(null);
+
+        return new ApplicationCaseResponse(
+                application.getId(),
+                application.getApplicantId(),
+                application.getAmount(),
+                application.getStatus().name(),
+                application.getRiskScore(),
+                readScoreFactors(application.getScoreFactorsJson()),
+                application.getInstallmentCount(),
+                application.getInstallmentAmount(),
+                application.getCreatedAt(),
+                application.getDecisionAt(),
+                decision,
+                new ApplicationCaseResponse.MerchantInfo(merchant.getId(), merchant.getName(), merchant.getFeeRatePct()),
+                payout);
     }
 
     @Transactional(readOnly = true)

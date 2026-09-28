@@ -1,5 +1,6 @@
 package com.bridgepay.application.web;
 
+import com.bridgepay.application.dto.ApplicationCaseResponse;
 import com.bridgepay.application.dto.ApplicationResponse;
 import com.bridgepay.application.dto.CheckoutRequest;
 import com.bridgepay.application.dto.ReviewDecisionRequest;
@@ -66,6 +67,12 @@ public class CreditApplicationController {
                 ? applicationService.getForOps(id)
                 : applicationService.getForApplicant(UUID.fromString(jwt.getSubject()), id);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/case")
+    @PreAuthorize("hasRole('OPS')")
+    public ResponseEntity<ApplicationCaseResponse> getCase(@PathVariable UUID id) {
+        return ResponseEntity.ok(applicationService.getCase(id));
     }
 
     @GetMapping
