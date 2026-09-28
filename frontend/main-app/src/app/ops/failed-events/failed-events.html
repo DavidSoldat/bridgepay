@@ -5,15 +5,15 @@
       type="button"
       (click)="selectFilter(status)"
       class="px-3 py-1 text-sm border rounded"
-      [class.border-accent]="filter() === status"
-      [class.text-accent]="filter() === status"
+      [class.border-coral]="filter() === status"
+      [class.text-coral]="filter() === status"
       [class.border-hairline]="filter() !== status"
       [class.text-ink-muted]="filter() !== status"
     >{{ filterLabels[status] }}</button>
   }
 </div>
 @if (retryMessage()) {
-  <p class="mb-4 text-sm text-status-declined">{{ retryMessage() }}</p>
+  <p class="mb-4 text-sm text-declined">{{ retryMessage() }}</p>
 }
 <table class="w-full text-sm">
   <thead>
@@ -30,7 +30,7 @@
   <tbody>
     @if (listError()) {
       <tr>
-        <td colspan="7" class="py-6 text-center text-status-declined">Could not load failed events. Try refreshing.</td>
+        <td colspan="7" class="py-6 text-center text-declined">Could not load failed events. Try refreshing.</td>
       </tr>
     } @else {
       @for (row of rows(); track row.id) {
@@ -51,7 +51,7 @@
                 type="button"
                 (click)="retry(row)"
                 [disabled]="retrying() !== null"
-                class="text-accent hover:underline disabled:opacity-50"
+                class="text-coral hover:underline disabled:opacity-50"
               >Retry</button>
             }
           </td>

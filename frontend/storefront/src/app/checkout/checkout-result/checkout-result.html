@@ -1,7 +1,7 @@
-<div class="max-w-md mx-auto p-6 rounded-2xl bg-widget-surface font-widget text-center">
+<div class="max-w-md mx-auto p-6 rounded-2xl bg-blush font-sans text-center">
   @switch (response().status) {
     @case ('APPROVED') {
-      <h2 class="text-lg font-semibold text-widget-accent mb-2">You're approved</h2>
+      <h2 class="text-lg font-semibold text-coral mb-2">You're approved</h2>
       <p class="text-sm text-ink-muted">
         ${{ response().installmentAmount | number: '1.2-2' }} today, then
         {{ (response().installmentCount ?? 1) - 1 }} more weekly payments of the same amount.
@@ -9,13 +9,13 @@
       <app-first-payment [applicationId]="response().applicationId" [awaitPlan]="true" />
     }
     @case ('MANUAL_REVIEW') {
-      <h2 class="text-lg font-semibold text-widget-accent mb-2">Your order is under review</h2>
+      <h2 class="text-lg font-semibold text-coral mb-2">Your order is under review</h2>
       <p class="text-sm text-ink-muted">We're taking a closer look. We'll follow up by email — once approved, you'll make the first payment from your account.</p>
     }
     @default {
-      <h2 class="text-lg font-semibold text-widget-accent mb-2">This purchase couldn't be approved</h2>
+      <h2 class="text-lg font-semibold text-coral mb-2">This purchase couldn't be approved</h2>
       <p class="text-sm text-ink-muted">Pay in 4 isn't available for this order. Try another payment method.</p>
     }
   }
-  <button (click)="backToShop.emit()" class="mt-6 text-widget-accent underline">Back to shop</button>
+  <button (click)="backToShop.emit()" class="mt-6 text-coral underline">Back to shop</button>
 </div>

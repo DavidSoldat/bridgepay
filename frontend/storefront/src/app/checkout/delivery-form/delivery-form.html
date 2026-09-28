@@ -1,5 +1,5 @@
 <div class="max-w-md">
-  <h1 class="font-serif text-2xl mb-1">Where should we send it?</h1>
+  <h1 class="font-display text-2xl mb-1">Where should we send it?</h1>
   <p class="text-ink-muted mb-6">Free shipping on orders over $100.</p>
 
   <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
@@ -23,12 +23,12 @@
     </div>
 
     @if (form.touched && form.invalid) {
-      <p class="text-sm text-red-700">Please fill in every field.</p>
+      <p class="text-sm text-declined">Please fill in every field.</p>
     }
 
     <button
       type="submit"
-      class="mt-2 px-4 py-2 rounded-lg bg-widget-accent text-white font-widget font-medium"
+      class="mt-2 px-4 py-2 rounded-lg bg-coral text-white font-sans font-medium"
     >Continue to review</button>
   </form>
 </div>

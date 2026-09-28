@@ -1,22 +1,22 @@
 <div class="min-h-screen p-6 sm:p-10 max-w-3xl mx-auto">
   <div class="mb-6 text-sm">
-    <a routerLink="/" class="text-widget-accent underline">← Back to shop</a>
+    <a routerLink="/" class="text-coral underline">← Back to shop</a>
   </div>
   <h1 class="text-lg font-semibold mb-6">My Account</h1>
 
   @if (loadError()) {
-    <p class="text-sm text-red-600">Could not load your purchases.</p>
+    <p class="text-sm text-declined">Could not load your purchases.</p>
   } @else if (rows().length === 0) {
     <p class="text-sm text-ink-muted">No purchases yet.</p>
   } @else {
     <ul class="space-y-3">
       @for (app of rows(); track app.applicationId) {
-        <li class="rounded-xl bg-widget-surface p-4">
+        <li class="rounded-xl bg-blush p-4">
           <div class="flex justify-between items-center gap-4">
             <span>{{ app.status }}</span>
             <span>${{ app.amount | number: '1.2-2' }}</span>
             @if (app.status === 'APPROVED') {
-              <button (click)="toggle(app.applicationId)" class="text-widget-accent underline text-sm">
+              <button (click)="toggle(app.applicationId)" class="text-coral underline text-sm">
                 {{ expandedId() === app.applicationId ? 'Hide schedule' : 'View schedule' }}
               </button>
             }

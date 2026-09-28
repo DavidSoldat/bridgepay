@@ -46,6 +46,8 @@ jobs:
           - storefront
     steps:
       - uses: actions/checkout@v4
+      - name: Brand tokens identical in both apps
+        run: cmp frontend/main-app/src/brand.css frontend/storefront/src/brand.css
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

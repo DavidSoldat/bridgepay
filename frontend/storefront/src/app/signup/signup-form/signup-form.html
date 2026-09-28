@@ -1,5 +1,5 @@
 <div class="max-w-md">
-  <h1 class="font-serif text-2xl mb-1">Tell us who you are</h1>
+  <h1 class="font-display text-2xl mb-1">Tell us who you are</h1>
   <p class="text-ink-muted mb-6">Just once — we'll remember you next time.</p>
 
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="flex flex-col gap-4">
@@ -7,14 +7,14 @@
       <span class="text-sm text-ink-muted">First name</span>
       <input formControlName="firstName" autocomplete="given-name" class="border border-hairline px-3 py-2 rounded-lg" />
       @if (showError('firstName')) {
-        <span class="text-sm text-red-700">Enter your first name</span>
+        <span class="text-sm text-declined">Enter your first name</span>
       }
     </label>
     <label class="flex flex-col gap-1">
       <span class="text-sm text-ink-muted">Last name</span>
       <input formControlName="lastName" autocomplete="family-name" class="border border-hairline px-3 py-2 rounded-lg" />
       @if (showError('lastName')) {
-        <span class="text-sm text-red-700">Enter your last name</span>
+        <span class="text-sm text-declined">Enter your last name</span>
       }
     </label>
     <label class="flex flex-col gap-1">
@@ -22,7 +22,7 @@
       <input formControlName="dateOfBirth" type="date" [max]="latestBirthDate" autocomplete="bday"
              class="border border-hairline px-3 py-2 rounded-lg" />
       @if (showError('dateOfBirth')) {
-        <span class="text-sm text-red-700">
+        <span class="text-sm text-declined">
           {{ form.controls.dateOfBirth.hasError('tooYoung') ? 'You must be at least 18 to use Pay in 4' : 'Enter your date of birth' }}
         </span>
       }
@@ -31,25 +31,25 @@
       <span class="text-sm text-ink-muted">Email</span>
       <input formControlName="email" type="email" autocomplete="email" class="border border-hairline px-3 py-2 rounded-lg" />
       @if (showError('email')) {
-        <span class="text-sm text-red-700">Enter an email like name&#64;example.com</span>
+        <span class="text-sm text-declined">Enter an email like name&#64;example.com</span>
       }
     </label>
     <label class="flex flex-col gap-1">
       <span class="text-sm text-ink-muted">Phone</span>
       <input formControlName="phone" type="tel" autocomplete="tel" class="border border-hairline px-3 py-2 rounded-lg" />
       @if (showError('phone')) {
-        <span class="text-sm text-red-700">Enter a phone number with 7–15 digits</span>
+        <span class="text-sm text-declined">Enter a phone number with 7–15 digits</span>
       }
     </label>
 
     @if (error(); as message) {
-      <p role="alert" class="text-sm text-red-700">{{ message }}</p>
+      <p role="alert" class="text-sm text-declined">{{ message }}</p>
     }
 
     <button
       type="submit"
       [disabled]="submitting()"
-      class="mt-2 px-4 py-2 rounded-lg bg-widget-accent text-white font-widget font-medium disabled:opacity-50"
+      class="mt-2 px-4 py-2 rounded-lg bg-coral text-white font-sans font-medium disabled:opacity-50"
     >Continue</button>
   </form>
 </div>

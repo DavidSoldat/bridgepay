@@ -1,17 +1,17 @@
 <div class="min-h-screen p-6 sm:p-10 max-w-3xl mx-auto">
   @if (step() !== 'catalog') {
     <div class="mb-6 text-sm">
-      <button (click)="keepShopping()" class="text-widget-accent underline">← Keep shopping</button>
+      <button (click)="keepShopping()" class="text-coral underline">← Keep shopping</button>
     </div>
   }
 
   @if (step() === 'delivery' || step() === 'confirm') {
     <ol class="flex gap-3 text-sm mb-6" aria-label="Checkout steps">
       <li [attr.aria-current]="step() === 'delivery' ? 'step' : null"
-          [class]="step() === 'delivery' ? 'font-semibold text-widget-accent' : 'text-ink-muted'">Delivery</li>
+          [class]="step() === 'delivery' ? 'font-semibold text-coral' : 'text-ink-muted'">Delivery</li>
       <li class="text-ink-muted" aria-hidden="true">·</li>
       <li [attr.aria-current]="step() === 'confirm' ? 'step' : null"
-          [class]="step() === 'confirm' ? 'font-semibold text-widget-accent' : 'text-ink-muted'">Review &amp; pay</li>
+          [class]="step() === 'confirm' ? 'font-semibold text-coral' : 'text-ink-muted'">Review &amp; pay</li>
     </ol>
   }
 

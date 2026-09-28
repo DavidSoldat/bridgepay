@@ -1,7 +1,7 @@
 <div class="max-w-3xl mx-auto px-6 sm:px-10 pt-4 flex justify-end items-center gap-4 text-sm">
-  <a routerLink="/" class="text-widget-accent underline mr-auto">Shop</a>
+  <a routerLink="/" class="text-coral underline mr-auto">Shop</a>
   @if (auth.authenticated()) {
-    <a routerLink="/account" class="text-widget-accent underline">My Account</a>
+    <a routerLink="/account" class="text-coral underline">My Account</a>
     <button (click)="auth.logout()" class="text-ink-muted underline">Sign out</button>
   }
 </div>

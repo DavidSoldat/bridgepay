@@ -11,7 +11,7 @@
   <tbody>
     @if (loadError()) {
       <tr>
-        <td colspan="4" class="py-6 text-center text-status-declined">
+        <td colspan="4" class="py-6 text-center text-declined">
           Could not load your payouts. Try refreshing.
         </td>
       </tr>
@@ -22,9 +22,9 @@
           <td class="py-2 font-mono text-right">{{ row.feeAmount | number: '1.2-2' }}</td>
           <td class="py-2">
             @if (row.status === 'PAID') {
-              <span class="inline-block w-1.5 h-1.5 rounded-full bg-accent mr-1.5"></span>
+              <span class="inline-block w-1.5 h-1.5 rounded-full bg-coral mr-1.5"></span>
             } @else {
-              <span class="inline-block w-1.5 h-1.5 rounded-full bg-status-review mr-1.5"></span>
+              <span class="inline-block w-1.5 h-1.5 rounded-full bg-review mr-1.5"></span>
             }
             {{ row.status | lowercase }}
           </td>

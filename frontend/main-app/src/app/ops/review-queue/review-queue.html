@@ -5,8 +5,8 @@
       type="button"
       (click)="selectFilter(status)"
       class="px-3 py-1 text-sm border rounded"
-      [class.border-accent]="filter() === status"
-      [class.text-accent]="filter() === status"
+      [class.border-coral]="filter() === status"
+      [class.text-coral]="filter() === status"
       [class.border-hairline]="filter() !== status"
       [class.text-ink-muted]="filter() !== status"
     >
@@ -27,7 +27,7 @@
   <tbody>
     @if (loadError()) {
       <tr>
-        <td colspan="5" class="py-6 text-center text-status-declined">
+        <td colspan="5" class="py-6 text-center text-declined">
           Could not load the review queue. Try refreshing.
         </td>
       </tr>
@@ -39,7 +39,7 @@
           <td class="py-2 font-mono">{{ row.status }}</td>
           <td class="py-2 font-mono">{{ row.decisionAt ? (row.decisionAt | date: 'MMM d, y') : '—' }}</td>
           <td class="py-2 text-right">
-            <a [routerLink]="['/ops', row.applicationId]" class="text-accent hover:underline">Review</a>
+            <a [routerLink]="['/ops', row.applicationId]" class="text-coral hover:underline">Review</a>
           </td>
         </tr>
       } @empty {

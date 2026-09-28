@@ -1,7 +1,7 @@
 <h1 class="text-xl font-medium mb-4">Sales</h1>
 
 @if (summaryError()) {
-  <p class="mb-6 text-sm text-status-declined">Could not load your sales summary. Try refreshing.</p>
+  <p class="mb-6 text-sm text-declined">Could not load your sales summary. Try refreshing.</p>
 } @else {
   @if (summary(); as s) {
     <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-2">
@@ -39,8 +39,8 @@
       type="button"
       (click)="selectFilter(status)"
       class="px-3 py-1 text-sm border rounded"
-      [class.border-accent]="filter() === status"
-      [class.text-accent]="filter() === status"
+      [class.border-coral]="filter() === status"
+      [class.text-coral]="filter() === status"
       [class.border-hairline]="filter() !== status"
       [class.text-ink-muted]="filter() !== status"
     >
@@ -62,7 +62,7 @@
   <tbody>
     @if (listError()) {
       <tr>
-        <td colspan="5" class="py-6 text-center text-status-declined">
+        <td colspan="5" class="py-6 text-center text-declined">
           Could not load your sales. Try refreshing.
         </td>
       </tr>
@@ -77,13 +77,13 @@
           <td class="py-2">
             @switch (row.status) {
               @case ('APPROVED') {
-                <span class="inline-block w-1.5 h-1.5 rounded-full bg-accent mr-1.5"></span>approved
+                <span class="inline-block w-1.5 h-1.5 rounded-full bg-coral mr-1.5"></span>approved
               }
               @case ('MANUAL_REVIEW') {
-                <span class="inline-block w-1.5 h-1.5 rounded-full bg-status-review mr-1.5"></span>in review
+                <span class="inline-block w-1.5 h-1.5 rounded-full bg-review mr-1.5"></span>in review
               }
               @case ('DECLINED') {
-                <span class="inline-block w-1.5 h-1.5 rounded-full bg-status-declined mr-1.5"></span>declined
+                <span class="inline-block w-1.5 h-1.5 rounded-full bg-declined mr-1.5"></span>declined
               }
               @default {
                 {{ row.status.toLowerCase() }}
