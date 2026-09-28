@@ -1,0 +1,22 @@
+<div role="status" aria-live="polite" class="fixed bottom-4 right-4 z-50 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2">
+  @for (toast of toastService.toasts(); track toast.id) {
+    <div class="flex items-start gap-3 rounded-md bg-surface p-4 text-sm shadow-raised" [attr.data-kind]="toast.kind">
+      <span
+        class="text-lg"
+        [class.text-approved]="toast.kind === 'success'"
+        [class.text-declined]="toast.kind === 'error'"
+      >
+        <app-icon [name]="toast.kind === 'success' ? 'check' : 'alert-triangle'" />
+      </span>
+      <p class="flex-1 pt-0.5">{{ toast.text }}</p>
+      <button
+        type="button"
+        (click)="toastService.dismiss(toast.id)"
+        aria-label="Dismiss"
+        class="-m-2 flex size-11 items-center justify-center rounded-sm text-ink-muted hover:bg-blush hover:text-ink"
+      >
+        <app-icon name="x" />
+      </button>
+    </div>
+  }
+</div>
