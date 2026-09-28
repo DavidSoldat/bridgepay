@@ -25,31 +25,39 @@
     @if (auth.hasRole('ops')) {
       <a
         routerLink="/ops"
-        routerLinkActive="bg-blush text-coral font-semibold"
+        routerLinkActive="bg-blush text-coral-hover font-semibold"
+        #rla1="routerLinkActive"
+        [class.text-ink]="!rla1.isActive"
         [routerLinkActiveOptions]="{ exact: true }"
         (click)="menuOpen.set(false)"
-        class="flex min-h-11 items-center gap-3 rounded-sm px-3 text-ink hover:bg-blush"
+        class="flex min-h-11 items-center gap-3 rounded-sm px-3 hover:bg-blush"
       ><app-icon name="list" />Review Queue</a>
       <a
         routerLink="/ops/failed-events"
-        routerLinkActive="bg-blush text-coral font-semibold"
+        routerLinkActive="bg-blush text-coral-hover font-semibold"
+        #rla2="routerLinkActive"
+        [class.text-ink]="!rla2.isActive"
         (click)="menuOpen.set(false)"
-        class="flex min-h-11 items-center gap-3 rounded-sm px-3 text-ink hover:bg-blush"
+        class="flex min-h-11 items-center gap-3 rounded-sm px-3 hover:bg-blush"
       ><app-icon name="alert-triangle" />Failed Events</a>
     }
     @if (auth.hasRole('merchant')) {
       <a
         routerLink="/merchant"
-        routerLinkActive="bg-blush text-coral font-semibold"
+        routerLinkActive="bg-blush text-coral-hover font-semibold"
+        #rla3="routerLinkActive"
+        [class.text-ink]="!rla3.isActive"
         [routerLinkActiveOptions]="{ exact: true }"
         (click)="menuOpen.set(false)"
-        class="flex min-h-11 items-center gap-3 rounded-sm px-3 text-ink hover:bg-blush"
+        class="flex min-h-11 items-center gap-3 rounded-sm px-3 hover:bg-blush"
       ><app-icon name="shopping-bag" />Sales</a>
       <a
         routerLink="/merchant/payouts"
-        routerLinkActive="bg-blush text-coral font-semibold"
+        routerLinkActive="bg-blush text-coral-hover font-semibold"
+        #rla4="routerLinkActive"
+        [class.text-ink]="!rla4.isActive"
         (click)="menuOpen.set(false)"
-        class="flex min-h-11 items-center gap-3 rounded-sm px-3 text-ink hover:bg-blush"
+        class="flex min-h-11 items-center gap-3 rounded-sm px-3 hover:bg-blush"
       ><app-icon name="wallet" />Payouts</a>
     }
   </aside>

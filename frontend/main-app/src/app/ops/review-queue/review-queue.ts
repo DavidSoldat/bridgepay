@@ -37,7 +37,9 @@ export class ReviewQueue {
 
   protected readonly rows = toSignal(
     toObservable(this.filter).pipe(
+      // Reset the error only when a fetch actually starts - re-clicking the active filter fetches nothing.
       switchMap((status) => {
+        this.loadError.set(false);
         this.loading.set(true);
         return this.applications.list(status).pipe(
           map((page) => page.content),
@@ -53,7 +55,6 @@ export class ReviewQueue {
   );
 
   protected selectFilter(status: StatusFilter): void {
-    this.loadError.set(false);
     this.filter.set(status);
   }
 }

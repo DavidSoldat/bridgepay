@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { Router, provideRouter } from '@angular/router';
 import { App } from './app';
 import { Auth } from './core/auth';
 
@@ -69,6 +69,18 @@ describe('App', () => {
     (el.querySelector('#main-nav a') as HTMLAnchorElement).click();
     fixture.detectChanges();
     expect(el.querySelector('#main-nav')!.classList).toContain('hidden');
+  });
+
+  it('marks the active nav link in the darker coral that passes AA contrast on blush', async () => {
+    const fixture = setup(['ops']);
+    fixture.detectChanges();
+    await TestBed.inject(Router).navigateByUrl('/ops');
+    fixture.detectChanges();
+
+    const active = (fixture.nativeElement as HTMLElement).querySelector('#main-nav a[href="/ops"]')!;
+    expect(active.classList).toContain('text-coral-hover');
+    // text-ink comes later in the generated CSS, so it would override the active colour if both were set.
+    expect(active.classList).not.toContain('text-ink');
   });
 
   it('labels the icon-only log out button', () => {

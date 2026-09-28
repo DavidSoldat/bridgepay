@@ -144,6 +144,25 @@ describe('ReviewQueue', () => {
     expect(el.textContent).toContain('No applications waiting for review');
   });
 
+  it('keeps showing the load error when the already-active filter is clicked again', () => {
+    TestBed.configureTestingModule({
+      imports: [ReviewQueue],
+      providers: [
+        provideRouter([]),
+        { provide: Applications, useValue: { list: () => throwError(() => new Error('503')) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(ReviewQueue);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    (Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Pending') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(el.textContent).toContain('Could not load the review queue');
+    expect(el.textContent).not.toContain('No applications waiting for review');
+  });
+
   it('shows each status as a badge', () => {
     const page: Page<ApplicationResponse> = {
       content: [{
