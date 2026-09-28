@@ -10,4 +10,8 @@ import { Auth } from './core/auth';
 })
 export class App {
   protected readonly auth = inject(Auth);
+
+  protected signIn(): void {
+    this.auth.login(window.location.href);
+  }
 }

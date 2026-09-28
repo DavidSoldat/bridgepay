@@ -8,6 +8,7 @@ import { CheckoutResult } from '../checkout/checkout-result/checkout-result';
 import { DeliveryForm, DeliveryAddress } from '../checkout/delivery-form/delivery-form';
 import { PRODUCTS, Product } from '../catalog/products';
 import { ApplicationResponse } from '../shared/models/application';
+import { Icon } from '../shared/ui/icon/icon';
 
 type Step = 'catalog' | 'signup' | 'delivery' | 'confirm' | 'result';
 
@@ -15,7 +16,7 @@ const PENDING_PRODUCT_KEY = 'storefront.pendingProductId';
 
 @Component({
   selector: 'app-shop',
-  imports: [ProductCatalog, SignupForm, DeliveryForm, CheckoutConfirm, CheckoutResult],
+  imports: [ProductCatalog, SignupForm, DeliveryForm, CheckoutConfirm, CheckoutResult, Icon],
   templateUrl: './shop.html',
   styleUrl: './shop.css',
 })

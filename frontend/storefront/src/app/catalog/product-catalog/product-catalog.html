@@ -1,17 +1,22 @@
-<header class="mb-10">
-  <h1 class="font-display text-3xl">Ridgeline Supply Co.</h1>
-  <p class="text-ink-muted">Considered gear for slow trips outside.</p>
+<header class="mb-8">
+  <h1 class="font-display text-3xl font-bold tracking-tight sm:text-4xl">Considered gear for slow trips outside.</h1>
+  <p class="mt-2 flex flex-wrap items-center gap-1.5 text-ink-muted">
+    Pay in 4 interest-free payments with <app-bridgepay-mark size="sm" />
+  </p>
 </header>
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-8 max-w-2xl">
+<div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
   @for (product of products; track product.id) {
-    <article class="flex flex-col">
-      <div class="aspect-square mb-3" [style.background-color]="product.swatchColor"></div>
-      <h2 class="font-display text-lg">{{ product.name }}</h2>
-      <p class="text-ink-muted mb-3">${{ product.price | number: '1.2-2' }}</p>
-      <button
-        (click)="payInFour.emit(product.id)"
-        class="self-start px-4 py-2 rounded-lg bg-coral text-white font-sans font-medium hover:opacity-90"
-      >Pay in 4</button>
+    <article class="flex flex-col overflow-hidden rounded-lg bg-surface shadow-raised">
+      <div class="aspect-[4/3]" [style.background-color]="product.swatchColor"></div>
+      <div class="flex flex-1 flex-col gap-1 p-5">
+        <h2 class="font-medium">{{ product.name }}</h2>
+        <p class="font-display text-2xl font-bold">${{ product.price | number: '1.2-2' }}</p>
+        <p class="flex flex-wrap items-center gap-1 text-sm text-ink-muted">
+          or 4 × <strong class="text-coral">${{ installment(product) | number: '1.2-2' }}</strong> with
+          <app-bridgepay-mark size="sm" />
+        </p>
+        <button type="button" (click)="payInFour.emit(product.id)" class="btn-primary mt-4 self-start">Pay in 4</button>
+      </div>
     </article>
   }
 </div>

@@ -1,24 +1,24 @@
-<div class="max-w-md">
-  <h1 class="font-display text-2xl mb-1">Where should we send it?</h1>
-  <p class="text-ink-muted mb-6">Free shipping on orders over $100.</p>
+<div class="card max-w-lg p-6 sm:p-8">
+  <h1 class="mb-1 font-display text-2xl font-bold">Where should we send it?</h1>
+  <p class="mb-6 text-ink-muted">Free shipping on orders over $100.</p>
 
   <form [formGroup]="form" (ngSubmit)="submit()" class="flex flex-col gap-4">
     <label class="flex flex-col gap-1">
-      <span class="text-sm text-ink-muted">Full name</span>
-      <input formControlName="fullName" autocomplete="name" class="border border-hairline px-3 py-2 rounded-lg" />
+      <span class="text-sm font-medium">Full name</span>
+      <input formControlName="fullName" autocomplete="name" class="input" />
     </label>
     <label class="flex flex-col gap-1">
-      <span class="text-sm text-ink-muted">Street address</span>
-      <input formControlName="street" autocomplete="street-address" class="border border-hairline px-3 py-2 rounded-lg" />
+      <span class="text-sm font-medium">Street address</span>
+      <input formControlName="street" autocomplete="street-address" class="input" />
     </label>
     <div class="flex gap-4">
-      <label class="flex flex-col gap-1 flex-1">
-        <span class="text-sm text-ink-muted">City</span>
-        <input formControlName="city" autocomplete="address-level2" class="border border-hairline px-3 py-2 rounded-lg" />
+      <label class="flex flex-1 flex-col gap-1">
+        <span class="text-sm font-medium">City</span>
+        <input formControlName="city" autocomplete="address-level2" class="input" />
       </label>
-      <label class="flex flex-col gap-1 w-32">
-        <span class="text-sm text-ink-muted">Postal code</span>
-        <input formControlName="postalCode" autocomplete="postal-code" class="border border-hairline px-3 py-2 rounded-lg" />
+      <label class="flex w-32 flex-col gap-1">
+        <span class="text-sm font-medium">Postal code</span>
+        <input formControlName="postalCode" autocomplete="postal-code" class="input" />
       </label>
     </div>
 
@@ -26,9 +26,6 @@
       <p class="text-sm text-declined">Please fill in every field.</p>
     }
 
-    <button
-      type="submit"
-      class="mt-2 px-4 py-2 rounded-lg bg-coral text-white font-sans font-medium"
-    >Continue to review</button>
+    <button type="submit" class="btn-primary mt-2 self-start">Continue to review</button>
   </form>
 </div>

@@ -1,17 +1,25 @@
-<div class="min-h-screen p-6 sm:p-10 max-w-3xl mx-auto">
+<div class="mx-auto max-w-5xl px-4 py-8 sm:px-8">
   @if (step() !== 'catalog') {
-    <div class="mb-6 text-sm">
-      <button (click)="keepShopping()" class="text-coral underline">← Keep shopping</button>
-    </div>
+    <button
+      type="button"
+      (click)="keepShopping()"
+      class="mb-6 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-coral hover:text-coral-hover"
+    ><app-icon name="arrow-left" /> Keep shopping</button>
   }
 
   @if (step() === 'delivery' || step() === 'confirm') {
-    <ol class="flex gap-3 text-sm mb-6" aria-label="Checkout steps">
-      <li [attr.aria-current]="step() === 'delivery' ? 'step' : null"
-          [class]="step() === 'delivery' ? 'font-semibold text-coral' : 'text-ink-muted'">Delivery</li>
-      <li class="text-ink-muted" aria-hidden="true">·</li>
-      <li [attr.aria-current]="step() === 'confirm' ? 'step' : null"
-          [class]="step() === 'confirm' ? 'font-semibold text-coral' : 'text-ink-muted'">Review &amp; pay</li>
+    <ol class="mb-6 flex items-center gap-3 text-sm" aria-label="Checkout steps">
+      <li
+        [attr.aria-current]="step() === 'delivery' ? 'step' : null"
+        class="flex items-center gap-2"
+        [class]="step() === 'delivery' ? 'font-semibold text-ink' : 'text-ink-muted'"
+      ><span class="size-2.5 rounded-full bg-coral" aria-hidden="true"></span>Delivery</li>
+      <li class="h-px w-8 bg-hairline" aria-hidden="true"></li>
+      <li
+        [attr.aria-current]="step() === 'confirm' ? 'step' : null"
+        class="flex items-center gap-2"
+        [class]="step() === 'confirm' ? 'font-semibold text-ink' : 'text-ink-muted'"
+      ><span class="size-2.5 rounded-full" [class]="step() === 'confirm' ? 'bg-coral' : 'bg-hairline'" aria-hidden="true"></span>Review &amp; pay</li>
     </ol>
   }
 

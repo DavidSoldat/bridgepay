@@ -22,4 +22,13 @@ describe('ProductCatalog', () => {
 
     expect(emitted).toEqual(['basin-rain-jacket']);
   });
+
+  it('shows the Pay in 4 installment for each product, branded BridgePay', () => {
+    const fixture = TestBed.createComponent(ProductCatalog);
+    fixture.detectChanges();
+    const firstCard = (fixture.nativeElement as HTMLElement).querySelector('article')!;
+
+    expect(firstCard.textContent).toContain('or 4 × $49.50');
+    expect(firstCard.querySelector('app-bridgepay-mark')).not.toBeNull();
+  });
 });
