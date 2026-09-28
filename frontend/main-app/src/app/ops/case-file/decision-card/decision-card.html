@@ -1,0 +1,19 @@
+<section class="card p-6" aria-labelledby="decision-heading">
+  <h2 id="decision-heading" class="mb-4 font-display text-lg font-bold">Decision</h2>
+  <div class="mb-3 flex flex-wrap items-center gap-3">
+    <app-status-badge [status]="status()" />
+    @if (decisionAt(); as at) {
+      <span class="font-mono text-sm text-ink-muted">{{ at | date: 'MMM d, y HH:mm' }}</span>
+    }
+  </div>
+  <p data-testid="decided-by" class="flex items-center gap-2 text-sm">
+    @switch (decision().source) {
+      @case ('MODEL') { <app-icon name="check" /> Model (automatic) }
+      @case ('OPS') { <app-icon name="user" /> {{ decision().decidedBy ?? '—' }} }
+      @default { Unknown (decided before decision records) }
+    }
+  </p>
+  <p data-testid="reviewer-note" class="mt-3 rounded-md bg-cream p-3 text-sm" [class.text-ink-muted]="!decision().reviewerNote">
+    {{ decision().reviewerNote ?? 'No note' }}
+  </p>
+</section>

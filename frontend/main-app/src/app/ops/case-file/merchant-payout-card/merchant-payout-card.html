@@ -1,0 +1,21 @@
+<section class="card p-6" aria-labelledby="merchant-heading">
+  <h2 id="merchant-heading" class="mb-4 font-display text-lg font-bold">Merchant &amp; payout</h2>
+  <p class="font-semibold">{{ merchant().name }}</p>
+  <p class="text-sm text-ink-muted">Fee rate {{ merchant().feeRatePct | number: '1.2-2' }}%</p>
+  @if (payout(); as p) {
+    <dl class="mt-4 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+      <dt class="text-ink-muted">Payout</dt>
+      <dd class="font-mono">{{ p.amount | number: '1.2-2' }}</dd>
+      <dt class="text-ink-muted">Fee</dt>
+      <dd class="font-mono">{{ p.feeAmount | number: '1.2-2' }}</dd>
+      <dt class="text-ink-muted">Net to merchant</dt>
+      <dd class="font-mono font-semibold">{{ p.netAmount | number: '1.2-2' }}</dd>
+      <dt class="text-ink-muted">Status</dt>
+      <dd><app-status-badge [status]="p.status" /></dd>
+      <dt class="text-ink-muted">Paid</dt>
+      <dd class="font-mono">{{ p.paidAt ? (p.paidAt | date: 'MMM d, y') : '—' }}</dd>
+    </dl>
+  } @else {
+    <p class="mt-4 text-sm text-ink-muted">No payout</p>
+  }
+</section>

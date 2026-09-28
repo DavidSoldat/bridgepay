@@ -1,0 +1,36 @@
+<section class="card p-6" aria-labelledby="repayment-heading">
+  <h2 id="repayment-heading" class="mb-4 font-display text-lg font-bold">Repayment</h2>
+  @switch (section().state) {
+    @case ('loading') { <app-skeleton-rows [rows]="4" /> }
+    @case ('error') { <p class="text-sm text-declined">Couldn't load the repayment plan.</p> }
+    @case ('none') {
+      <p class="text-sm text-ink-muted">
+        {{ applicationStatus() === 'APPROVED' ? 'Plan being set up' : 'No repayment plan' }}
+      </p>
+    }
+  }
+  @if (plan(); as p) {
+    <div class="mb-3 flex items-center gap-3">
+      <app-status-badge [status]="p.status" />
+      <span class="text-sm text-ink-muted">{{ paidCount() }} of {{ p.installmentCount }} paid</span>
+    </div>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-hairline text-left text-ink-muted">
+          <th class="py-2 font-medium">Due</th>
+          <th class="py-2 text-right font-medium">Amount</th>
+          <th class="py-2 font-medium">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (installment of p.installments; track installment.sequenceNumber) {
+          <tr class="border-b border-hairline last:border-0">
+            <td class="py-2 font-mono">{{ installment.dueDate | date: 'MMM d, y' }}</td>
+            <td class="py-2 text-right font-mono">{{ installment.amount | number: '1.2-2' }}</td>
+            <td class="py-2 pl-4"><app-status-badge [status]="installment.status" /></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</section>
