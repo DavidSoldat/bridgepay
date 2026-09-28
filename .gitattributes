@@ -1,0 +1,5 @@
+# LF in every checkout, so kustomize ConfigMap hashes (and pod restarts) don't depend on the OS.
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.onnx binary
