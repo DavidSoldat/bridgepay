@@ -1,120 +1,95 @@
-<h1 class="text-xl font-medium mb-4">Sales</h1>
+<h1 class="mb-5 font-display text-2xl font-bold">Sales</h1>
 
 @if (summaryError()) {
   <p class="mb-6 text-sm text-declined">Could not load your sales summary. Try refreshing.</p>
-} @else {
-  @if (summary(); as s) {
-    <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-2">
-      <div class="border border-hairline rounded p-4" data-tile="approved-volume">
-        <div class="text-xs text-ink-muted mb-1">Approved volume</div>
-        <div class="font-mono text-lg">{{ s.approvedVolume | number: '1.2-2' }}</div>
-      </div>
-      <div class="border border-hairline rounded p-4" data-tile="approval-rate">
-        <div class="text-xs text-ink-muted mb-1">Approval rate</div>
-        <div class="font-mono text-lg">{{ s.approvalRate === null ? '—' : (s.approvalRate | percent: '1.0-0') }}</div>
-      </div>
-      <div class="border border-hairline rounded p-4" data-tile="fees-paid">
-        <div class="text-xs text-ink-muted mb-1">Fees paid</div>
-        <div class="font-mono text-lg">{{ s.feesPaid | number: '1.2-2' }}</div>
-      </div>
-      <div class="border border-hairline rounded p-4" data-tile="net-paid-out">
-        <div class="text-xs text-ink-muted mb-1">Net paid out</div>
-        <div class="font-mono text-lg">{{ s.netPaidOut | number: '1.2-2' }}</div>
-      </div>
-      <div class="border border-hairline rounded p-4" data-tile="pending-payout">
-        <div class="text-xs text-ink-muted mb-1">Pending payout</div>
-        <div class="font-mono text-lg">{{ s.pendingPayout | number: '1.2-2' }}</div>
-      </div>
+} @else if (summary(); as s) {
+  <div class="mb-3 grid grid-cols-2 gap-4 lg:grid-cols-5">
+    <div class="card p-5" data-tile="approved-volume">
+      <p class="text-sm text-ink-muted">Approved volume</p>
+      <p class="mt-1 font-display text-2xl font-bold">{{ s.approvedVolume | number: '1.2-2' }}</p>
     </div>
-    <p class="mb-6 text-xs text-ink-muted font-mono">
-      {{ s.approvedCount }} approved · {{ s.inReviewCount }} in review · {{ s.declinedCount }} declined
-      of {{ s.totalCheckouts }} checkouts
-    </p>
-  }
+    <div class="card p-5" data-tile="approval-rate">
+      <p class="text-sm text-ink-muted">Approval rate</p>
+      <p class="mt-1 font-display text-2xl font-bold">{{ s.approvalRate === null ? '—' : (s.approvalRate | percent: '1.0-0') }}</p>
+    </div>
+    <div class="card p-5" data-tile="fees-paid">
+      <p class="text-sm text-ink-muted">Fees paid</p>
+      <p class="mt-1 font-display text-2xl font-bold">{{ s.feesPaid | number: '1.2-2' }}</p>
+    </div>
+    <div class="card p-5" data-tile="net-paid-out">
+      <p class="text-sm text-ink-muted">Net paid out</p>
+      <p class="mt-1 font-display text-2xl font-bold">{{ s.netPaidOut | number: '1.2-2' }}</p>
+    </div>
+    <div class="card p-5" data-tile="pending-payout">
+      <p class="text-sm text-ink-muted">Pending payout</p>
+      <p class="mt-1 font-display text-2xl font-bold">{{ s.pendingPayout | number: '1.2-2' }}</p>
+    </div>
+  </div>
+  <p class="mb-6 text-sm text-ink-muted">
+    {{ s.approvedCount }} approved · {{ s.inReviewCount }} in review · {{ s.declinedCount }} declined
+    of {{ s.totalCheckouts }} checkouts
+  </p>
+} @else {
+  <div data-testid="tiles-skeleton" class="mb-9 grid grid-cols-2 gap-4 lg:grid-cols-5">
+    @for (i of [0, 1, 2, 3, 4]; track i) {
+      <div class="card h-24 motion-safe:animate-pulse"></div>
+    }
+  </div>
 }
 
-<div class="flex gap-2 mb-4">
+<div class="mb-5 flex flex-wrap gap-2" role="group" aria-label="Filter by status">
   @for (status of saleFilters; track status) {
     <button
       type="button"
       (click)="selectFilter(status)"
-      class="px-3 py-1 text-sm border rounded"
-      [class.border-coral]="filter() === status"
-      [class.text-coral]="filter() === status"
-      [class.border-hairline]="filter() !== status"
-      [class.text-ink-muted]="filter() !== status"
+      [attr.aria-pressed]="filter() === status"
+      class="min-h-11 rounded-full border px-4 text-sm font-semibold"
+      [class]="filter() === status ? 'border-coral bg-coral text-white' : 'border-hairline bg-surface text-ink-muted hover:text-ink'"
     >
       {{ saleFilterLabels[status] }}
     </button>
   }
 </div>
 
-<table class="w-full text-sm">
-  <thead>
-    <tr class="border-b border-hairline text-left text-ink-muted">
-      <th class="py-2 font-normal">Date</th>
-      <th class="py-2 font-normal text-right">Amount</th>
-      <th class="py-2 font-normal">Plan</th>
-      <th class="py-2 font-normal">Status</th>
-      <th class="py-2 font-normal">Decided</th>
-    </tr>
-  </thead>
-  <tbody>
-    @if (listError()) {
-      <tr>
-        <td colspan="5" class="py-6 text-center text-declined">
-          Could not load your sales. Try refreshing.
-        </td>
-      </tr>
-    } @else {
-      @for (row of rows(); track row.id) {
-        <tr class="border-b border-hairline">
-          <td class="py-2 font-mono">{{ row.createdAt | date: 'MMM d, y' }}</td>
-          <td class="py-2 font-mono text-right">{{ row.amount | number: '1.2-2' }}</td>
-          <td class="py-2 font-mono">
-            {{ row.installmentCount ? row.installmentCount + ' × ' + (row.installmentAmount | number: '1.2-2') : '—' }}
-          </td>
-          <td class="py-2">
-            @switch (row.status) {
-              @case ('APPROVED') {
-                <span class="inline-block w-1.5 h-1.5 rounded-full bg-coral mr-1.5"></span>approved
-              }
-              @case ('MANUAL_REVIEW') {
-                <span class="inline-block w-1.5 h-1.5 rounded-full bg-review mr-1.5"></span>in review
-              }
-              @case ('DECLINED') {
-                <span class="inline-block w-1.5 h-1.5 rounded-full bg-declined mr-1.5"></span>declined
-              }
-              @default {
-                {{ row.status.toLowerCase() }}
-              }
-            }
-          </td>
-          <td class="py-2 font-mono">{{ row.decisionAt ? (row.decisionAt | date: 'MMM d, y') : '—' }}</td>
+<div class="card overflow-x-auto">
+  @if (listError()) {
+    <p class="p-6 text-center text-declined">Could not load your sales. Try refreshing.</p>
+  } @else if (loading() && rows().length === 0) {
+    <div class="px-6"><app-skeleton-rows /></div>
+  } @else if (rows().length === 0) {
+    <app-empty-state icon="shopping-bag" heading="No sales yet." text="Checkouts paid with BridgePay show up here." />
+  } @else {
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-hairline text-left text-ink-muted">
+          <th class="px-6 py-3 font-medium">Date</th>
+          <th class="px-6 py-3 text-right font-medium">Amount</th>
+          <th class="px-6 py-3 font-medium">Plan</th>
+          <th class="px-6 py-3 font-medium">Status</th>
+          <th class="px-6 py-3 font-medium">Decided</th>
         </tr>
-      } @empty {
-        <tr>
-          <td colspan="5" class="py-6 text-center text-ink-muted">No sales yet.</td>
-        </tr>
-      }
-    }
-  </tbody>
-</table>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.id) {
+          <tr class="border-b border-hairline last:border-0">
+            <td class="px-6 py-3 font-mono">{{ row.createdAt | date: 'MMM d, y' }}</td>
+            <td class="px-6 py-3 text-right font-mono">{{ row.amount | number: '1.2-2' }}</td>
+            <td class="px-6 py-3 font-mono">
+              {{ row.installmentCount ? row.installmentCount + ' × ' + (row.installmentAmount | number: '1.2-2') : '—' }}
+            </td>
+            <td class="px-6 py-3"><app-status-badge [status]="row.status" /></td>
+            <td class="px-6 py-3 font-mono">{{ row.decisionAt ? (row.decisionAt | date: 'MMM d, y') : '—' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>
 
 @if (!listError()) {
-  <div class="flex items-center justify-between mt-4 text-sm">
-    <button
-      type="button"
-      (click)="prevPage()"
-      [disabled]="page() === 0"
-      class="px-3 py-1 border border-hairline rounded disabled:opacity-40"
-    >Prev</button>
-    <span class="text-ink-muted font-mono">Page {{ page() + 1 }} of {{ totalPages() || 1 }}</span>
-    <button
-      type="button"
-      (click)="nextPage()"
-      [disabled]="page() + 1 >= totalPages()"
-      class="px-3 py-1 border border-hairline rounded disabled:opacity-40"
-    >Next</button>
+  <div class="mt-4 flex items-center justify-between text-sm">
+    <button type="button" (click)="prevPage()" [disabled]="page() === 0" class="btn-secondary">Prev</button>
+    <span class="font-mono text-ink-muted">Page {{ page() + 1 }} of {{ totalPages() || 1 }}</span>
+    <button type="button" (click)="nextPage()" [disabled]="page() + 1 >= totalPages()" class="btn-secondary">Next</button>
   </div>
 }

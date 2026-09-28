@@ -1,9 +1,10 @@
 import { Component, inject } from '@angular/core';
 import { Auth } from '../core/auth';
+import { EmptyState } from '../shared/ui/empty-state/empty-state';
 
 @Component({
   selector: 'app-no-access',
-  imports: [],
+  imports: [EmptyState],
   templateUrl: './no-access.html',
   styleUrl: './no-access.css',
 })

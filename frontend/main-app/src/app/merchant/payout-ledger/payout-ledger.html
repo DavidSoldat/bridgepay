@@ -1,40 +1,36 @@
-<h1 class="text-xl font-medium mb-4">Payouts</h1>
-<table class="w-full text-sm">
-  <thead>
-    <tr class="border-b border-hairline text-left text-ink-muted">
-      <th class="py-2 font-normal text-right">Amount</th>
-      <th class="py-2 font-normal text-right">Fee</th>
-      <th class="py-2 font-normal">Status</th>
-      <th class="py-2 font-normal">Paid</th>
-    </tr>
-  </thead>
-  <tbody>
-    @if (loadError()) {
-      <tr>
-        <td colspan="4" class="py-6 text-center text-declined">
-          Could not load your payouts. Try refreshing.
-        </td>
-      </tr>
-    } @else {
-      @for (row of rows(); track row.id) {
-        <tr class="border-b border-hairline">
-          <td class="py-2 font-mono text-right">{{ row.amount | number: '1.2-2' }}</td>
-          <td class="py-2 font-mono text-right">{{ row.feeAmount | number: '1.2-2' }}</td>
-          <td class="py-2">
-            @if (row.status === 'PAID') {
-              <span class="inline-block w-1.5 h-1.5 rounded-full bg-coral mr-1.5"></span>
-            } @else {
-              <span class="inline-block w-1.5 h-1.5 rounded-full bg-review mr-1.5"></span>
-            }
-            {{ row.status | lowercase }}
-          </td>
-          <td class="py-2 font-mono">{{ row.paidAt ? (row.paidAt | date: 'MMM d, y') : '—' }}</td>
+<h1 class="mb-5 font-display text-2xl font-bold">Payouts</h1>
+
+<div class="card overflow-x-auto">
+  @if (loadError()) {
+    <p class="p-6 text-center text-declined">Could not load your payouts. Try refreshing.</p>
+  } @else if (loading() && rows().length === 0) {
+    <div class="px-6"><app-skeleton-rows /></div>
+  } @else if (rows().length === 0) {
+    <app-empty-state
+      icon="wallet"
+      heading="No payouts yet."
+      text="You're paid once a shopper makes their first installment."
+    />
+  } @else {
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-hairline text-left text-ink-muted">
+          <th class="px-6 py-3 text-right font-medium">Amount</th>
+          <th class="px-6 py-3 text-right font-medium">Fee</th>
+          <th class="px-6 py-3 font-medium">Status</th>
+          <th class="px-6 py-3 font-medium">Paid</th>
         </tr>
-      } @empty {
-        <tr>
-          <td colspan="4" class="py-6 text-center text-ink-muted">No payouts yet.</td>
-        </tr>
-      }
-    }
-  </tbody>
-</table>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.id) {
+          <tr class="border-b border-hairline last:border-0">
+            <td class="px-6 py-3 text-right font-mono">{{ row.amount | number: '1.2-2' }}</td>
+            <td class="px-6 py-3 text-right font-mono">{{ row.feeAmount | number: '1.2-2' }}</td>
+            <td class="px-6 py-3"><app-status-badge [status]="row.status" /></td>
+            <td class="px-6 py-3 font-mono">{{ row.paidAt ? (row.paidAt | date: 'MMM d, y') : '—' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>

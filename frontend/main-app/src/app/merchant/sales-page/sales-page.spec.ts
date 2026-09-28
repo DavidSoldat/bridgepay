@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, Subject, of, throwError } from 'rxjs';
 import { SalesPage } from './sales-page';
 import { Sales } from '../sales';
 import { Auth } from '../../core/auth';
@@ -140,5 +140,22 @@ describe('SalesPage', () => {
     expect(text).toContain('Could not load your sales');
     expect(text).not.toContain('No sales yet');
     expect(el.querySelector('[data-tile="approved-volume"]')?.textContent).toContain('300.00');
+  });
+
+  it('shows placeholders for the tiles and the list while they load', () => {
+    const el = setup({
+      list: () => new Subject<Page<MerchantSaleResponse>>(),
+      summary: () => new Subject<MerchantSummaryResponse>(),
+    }).nativeElement as HTMLElement;
+
+    expect(el.querySelector('[data-testid="tiles-skeleton"]')).not.toBeNull();
+    expect(el.querySelector('[data-testid="skeleton"]')).not.toBeNull();
+    expect(el.textContent).not.toContain('No sales yet');
+  });
+
+  it('shows each sale status as a badge', () => {
+    const el = setup({}).nativeElement as HTMLElement;
+    const tones = Array.from(el.querySelectorAll('tbody [data-tone]')).map((b) => b.getAttribute('data-tone'));
+    expect(tones).toEqual(['declined', 'approved']);
   });
 });

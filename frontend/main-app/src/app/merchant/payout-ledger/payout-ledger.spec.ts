@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { PayoutLedger } from './payout-ledger';
 import { Payouts } from '../payouts';
 import { Auth } from '../../core/auth';
@@ -28,7 +28,7 @@ describe('PayoutLedger', () => {
 
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('1,240.00');
-    expect(text).toContain('paid');
+    expect(text).toContain('Paid');
   });
 
   it('shows an empty-state message when there are no payouts', () => {
@@ -66,4 +66,45 @@ describe('PayoutLedger', () => {
     expect(text).toContain('Could not load your payouts');
     expect(text).not.toContain('No payouts yet');
   });
+
+  it('shows a skeleton while payouts load, not the empty message', () => {
+    TestBed.configureTestingModule({
+      imports: [PayoutLedger],
+      providers: [
+        { provide: Payouts, useValue: { listPayouts: () => new Subject<Page<MerchantPayoutResponse>>() } },
+        { provide: Auth, useValue: { merchantId: () => 'm-1' } },
+      ],
+    });
+    const fixture = TestBed.createComponent(PayoutLedger);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('[data-testid="skeleton"]')).not.toBeNull();
+    expect(el.textContent).not.toContain('No payouts yet');
+  });
+
+  it('tells a cancelled payout apart from a pending one', () => {
+    const page: Page<MerchantPayoutResponse> = {
+      content: [
+        { id: 'p-1', applicationId: 'a-1', amount: 10, feeAmount: 1, status: 'PENDING', paidAt: null },
+        { id: 'p-2', applicationId: 'a-2', amount: 20, feeAmount: 2, status: 'CANCELLED', paidAt: null },
+      ],
+      totalElements: 2, totalPages: 1, number: 0, size: 20,
+    };
+    TestBed.configureTestingModule({
+      imports: [PayoutLedger],
+      providers: [
+        { provide: Payouts, useValue: { listPayouts: () => of(page) } },
+        { provide: Auth, useValue: { merchantId: () => 'm-1' } },
+      ],
+    });
+    const fixture = TestBed.createComponent(PayoutLedger);
+    fixture.detectChanges();
+
+    const tones = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('tbody [data-tone]')).map((b) =>
+      b.getAttribute('data-tone'),
+    );
+    expect(tones).toEqual(['review', 'neutral']);
+  });
 });
+
