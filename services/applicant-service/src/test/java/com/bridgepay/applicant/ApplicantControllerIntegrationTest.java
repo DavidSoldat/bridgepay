@@ -6,6 +6,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
@@ -220,6 +221,41 @@ class ApplicantControllerIntegrationTest {
     @Test
     void internalGet_returnsNotFound_whenNoApplicantHasThatSubject() throws Exception {
         mockMvc.perform(get("/internal/applicants/{id}", UUID.randomUUID()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void opsLookup_returnsTheShopperBySubject_forTheOpsRole() throws Exception {
+        String subject = UUID.randomUUID().toString();
+        mockMvc.perform(post("/api/v1/applicants")
+                        .with(jwt().jwt(j -> j.subject(subject)))
+                        .contentType("application/json")
+                        .content(signupPayload("ops-lookup@example.com")))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/v1/ops/applicants/{subject}", subject)
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_OPS"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.subject").value(subject))
+                .andExpect(jsonPath("$.firstName").value("Ana"))
+                .andExpect(jsonPath("$.lastName").value("Doe"))
+                .andExpect(jsonPath("$.email").value("ops-lookup@example.com"))
+                .andExpect(jsonPath("$.phone").value("+38765123456"))
+                .andExpect(jsonPath("$.dateOfBirth").value("1995-04-12"))
+                .andExpect(jsonPath("$.paddleCustomerId").doesNotExist());
+    }
+
+    @Test
+    void opsLookup_isForbiddenWithoutTheOpsRole() throws Exception {
+        mockMvc.perform(get("/api/v1/ops/applicants/{subject}", UUID.randomUUID())
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString()))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void opsLookup_returnsNotFound_forAnUnknownSubject() throws Exception {
+        mockMvc.perform(get("/api/v1/ops/applicants/{subject}", UUID.randomUUID())
+                        .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_OPS"))))
                 .andExpect(status().isNotFound());
     }
 }

@@ -107,4 +107,30 @@ class LocalProfileSecurityIntegrationTest {
     private static String base64Url(String json) {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(json.getBytes(StandardCharsets.UTF_8));
     }
+
+    @Test
+    void opsLookup_underLocalProfile_allowsAnOpsBearerToken_andRejectsARequestWithoutOne() throws Exception {
+        String shopper = unsignedTestToken("local-ops-lookup-shopper");
+        mockMvc.perform(post("/api/v1/applicants")
+                        .header("Authorization", "Bearer " + shopper)
+                        .contentType("application/json")
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "firstName", "Local", "lastName", "Shopper", "dateOfBirth", "1995-04-12",
+                                "email", "local-ops-lookup@example.com", "phone", "+38765123456"))))
+                .andExpect(status().isCreated());
+
+        String opsToken = unsignedTokenWithPayload(
+                "{\"sub\":\"local-ops-user\",\"preferred_username\":\"ops1\",\"realm_access\":{\"roles\":[\"ops\"]}}");
+        mockMvc.perform(get("/api/v1/ops/applicants/{subject}", "local-ops-lookup-shopper")
+                        .header("Authorization", "Bearer " + opsToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value("local-ops-lookup@example.com"));
+
+        mockMvc.perform(get("/api/v1/ops/applicants/{subject}", "local-ops-lookup-shopper"))
+                .andExpect(status().isForbidden());
+    }
+
+    private static String unsignedTokenWithPayload(String payloadJson) {
+        return base64Url("{\"alg\":\"none\"}") + "." + base64Url(payloadJson) + ".";
+    }
 }

@@ -3,6 +3,7 @@ package com.bridgepay.applicant.service;
 import com.bridgepay.applicant.domain.Applicant;
 import com.bridgepay.applicant.dto.ApplicantResponse;
 import com.bridgepay.applicant.dto.InternalApplicantResponse;
+import com.bridgepay.applicant.dto.OpsApplicantResponse;
 import com.bridgepay.applicant.dto.SignupRequest;
 import com.bridgepay.applicant.repository.ApplicantRepository;
 import org.springframework.stereotype.Service;
@@ -58,6 +59,13 @@ public class ApplicantService {
         Applicant applicant = findBySubjectOrThrow(keycloakSubjectId);
         return new InternalApplicantResponse(applicant.getKeycloakSubjectId(), applicant.getFirstName(),
                 applicant.getLastName(), applicant.getEmail(), applicant.getPaddleCustomerId());
+    }
+
+    @Transactional(readOnly = true)
+    public OpsApplicantResponse getForOps(String keycloakSubjectId) {
+        Applicant applicant = findBySubjectOrThrow(keycloakSubjectId);
+        return new OpsApplicantResponse(applicant.getKeycloakSubjectId(), applicant.getFirstName(),
+                applicant.getLastName(), applicant.getEmail(), applicant.getPhone(), applicant.getDateOfBirth());
     }
 
     @Transactional
