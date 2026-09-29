@@ -1,6 +1,6 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withComponentInputBinding } from '@angular/router';
 import {
   provideKeycloak,
   includeBearerTokenInterceptor,
@@ -20,7 +20,7 @@ export function appConfig(keycloakUrl: string, paddleClientToken = ''): Applicat
   return {
     providers: [
       provideBrowserGlobalErrorListeners(),
-      provideRouter(routes),
+      provideRouter(routes, withComponentInputBinding()),
       provideKeycloak({
         config: {
           url: keycloakUrl,

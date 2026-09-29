@@ -1,20 +1,21 @@
-import { Component, output } from '@angular/core';
+import { Component } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { PRODUCTS, Product } from '../products';
+import { orderTotals } from '../pricing';
 import { BridgepayMark } from '../../shared/ui/bridgepay-mark/bridgepay-mark';
 
 @Component({
   selector: 'app-product-catalog',
-  imports: [DecimalPipe, BridgepayMark],
+  imports: [DecimalPipe, RouterLink, BridgepayMark],
   templateUrl: './product-catalog.html',
   styleUrl: './product-catalog.css',
 })
 export class ProductCatalog {
   protected readonly products = PRODUCTS;
-  payInFour = output<string>();
 
-  /** "or 4 × $X" on the card: the product price split in four; checkout finances the full total. */
+  /** "or 4 × $X": the installment on the financed total, so the card shows what checkout will charge. */
   protected installment(product: Product): number {
-    return Math.round((product.price * 100) / 4) / 100;
+    return orderTotals(product.price).installment;
   }
 }

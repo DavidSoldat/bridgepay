@@ -1,34 +1,39 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { ProductCatalog } from './product-catalog';
 
 describe('ProductCatalog', () => {
-  it('renders every product with its name and price', () => {
+  function render() {
+    TestBed.configureTestingModule({ imports: [ProductCatalog], providers: [provideRouter([])] });
     const fixture = TestBed.createComponent(ProductCatalog);
     fixture.detectChanges();
-    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
-    expect(text).toContain('Basin Rain Jacket');
-    expect(text).toContain('198.00');
-    expect(text).toContain('Ridgeline Trail Pack');
+    return fixture.nativeElement as HTMLElement;
+  }
+
+  it('renders every product with its name, price and photo', () => {
+    const el = render();
+    expect(el.textContent).toContain('Basin Rain Jacket');
+    expect(el.textContent).toContain('198.00');
+    expect(el.textContent).toContain('Ridgeline Trail Pack');
+    const img = el.querySelector('article img')!;
+    expect(img.getAttribute('src')).toBe('/products/basin-rain-jacket.webp');
+    expect(img.getAttribute('loading')).toBe('lazy');
   });
 
-  it('emits the clicked product\'s id on Pay in 4', () => {
-    const fixture = TestBed.createComponent(ProductCatalog);
-    fixture.detectChanges();
-    const emitted: string[] = [];
-    fixture.componentInstance.payInFour.subscribe((id) => emitted.push(id));
-
-    const buttons = (fixture.nativeElement as HTMLElement).querySelectorAll('button');
-    (buttons[0] as HTMLButtonElement).click();
-
-    expect(emitted).toEqual(['basin-rain-jacket']);
+  it('links each card to its product page', () => {
+    const hrefs = Array.from(render().querySelectorAll('article a')).map((a) => a.getAttribute('href'));
+    expect(hrefs).toEqual([
+      '/products/basin-rain-jacket',
+      '/products/ridgeline-trail-pack',
+      '/products/camp-multitool',
+      '/products/insulated-field-bottle',
+    ]);
   });
 
-  it('shows the Pay in 4 installment for each product, branded BridgePay', () => {
-    const fixture = TestBed.createComponent(ProductCatalog);
-    fixture.detectChanges();
-    const firstCard = (fixture.nativeElement as HTMLElement).querySelector('article')!;
-
-    expect(firstCard.textContent).toContain('or 4 × $49.50');
-    expect(firstCard.querySelector('app-bridgepay-mark')).not.toBeNull();
+  it('shows Pay in 4 on the financed total, branded BridgePay', () => {
+    const cards = render().querySelectorAll('article');
+    expect(cards[0].textContent).toContain('or 4 × $53.59');
+    expect(cards[3].textContent).toContain('or 4 × $13.11');
+    expect(cards[0].querySelector('app-bridgepay-mark')).not.toBeNull();
   });
 });

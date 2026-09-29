@@ -1,0 +1,49 @@
+<div class="mx-auto max-w-5xl px-4 py-8 sm:px-8">
+  @if (product(); as p) {
+    @if (step() !== 'result') {
+      <a routerLink="/" (click)="clearAddress()" class="mb-6 inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-coral hover:text-coral-hover">
+        <app-icon name="arrow-left" /> Keep shopping
+      </a>
+    }
+
+    <app-checkout-steps [current]="stepKey()" (goTo)="onGoTo($event)" />
+
+    @if (step() === 'result') {
+      @if (result(); as response) {
+        <app-checkout-result [response]="response" (backToShop)="backToShop()" />
+      }
+    } @else {
+      <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]">
+        <div class="order-2 lg:order-1">
+          @switch (step()) {
+            @case ('loading') {
+              <app-skeleton-rows [rows]="3" />
+            }
+            @case ('signup') {
+              <app-signup-form (signedUp)="onSignedUp()" />
+            }
+            @case ('delivery') {
+              <app-delivery-form [address]="address()" (submitted)="onDeliverySubmitted($event)" />
+            }
+            @case ('confirm') {
+              @if (address(); as shipTo) {
+                <app-checkout-confirm [product]="p" [address]="shipTo" (decided)="onDecided($event)" (editAddress)="onGoTo('delivery')" />
+              }
+            }
+          }
+        </div>
+        <aside data-testid="order-card" class="card order-1 flex items-center gap-3 p-3 lg:order-2">
+          <img [src]="p.image" alt="" width="1200" height="900" class="aspect-[4/3] w-20 shrink-0 rounded-sm object-cover" [style.background-color]="p.swatchColor" />
+          <div class="text-sm">
+            <p class="font-medium">{{ p.name }}</p>
+            <p class="font-mono text-ink-muted">${{ totals().total | number: '1.2-2' }} total</p>
+          </div>
+        </aside>
+      </div>
+    }
+  } @else {
+    <app-empty-state icon="shopping-bag" heading="Product not found" text="It may no longer be available.">
+      <a routerLink="/" class="btn-secondary">Back to shop</a>
+    </app-empty-state>
+  }
+</div>
