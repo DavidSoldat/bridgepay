@@ -1,0 +1,27 @@
+<p data-testid="step-summary" class="mb-4 text-sm font-semibold sm:hidden">
+  Step {{ currentIndex() + 1 }} of 4 · {{ steps[currentIndex()].label }}
+</p>
+<ol aria-label="Checkout steps" class="sr-only sm:not-sr-only sm:mb-6 sm:flex sm:items-center sm:gap-3 sm:text-sm">
+  @for (s of steps; track s.key; let i = $index) {
+    @if (i > 0) {
+      <li class="h-px w-8 bg-hairline" aria-hidden="true"></li>
+    }
+    <li
+      [attr.data-state]="state(i)"
+      [attr.aria-current]="state(i) === 'current' ? 'step' : null"
+      class="flex items-center gap-2"
+      [class]="state(i) === 'current' ? 'font-semibold text-ink' : state(i) === 'done' ? 'text-ink' : 'text-ink-muted'"
+    >
+      @if (state(i) === 'done') {
+        <app-icon name="check" class="text-coral" />
+      } @else {
+        <span class="size-2.5 rounded-full" [class]="state(i) === 'current' ? 'bg-coral' : 'bg-hairline'" aria-hidden="true"></span>
+      }
+      @if (clickable(s.key)) {
+        <button type="button" (click)="goTo.emit(s.key)" class="min-h-11 underline-offset-4 hover:text-coral hover:underline">{{ s.label }}</button>
+      } @else {
+        {{ s.label }}
+      }
+    </li>
+  }
+</ol>
