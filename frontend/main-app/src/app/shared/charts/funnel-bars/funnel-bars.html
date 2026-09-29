@@ -1,0 +1,15 @@
+<ol class="flex flex-col gap-3">
+  @for (step of steps(); track step.label; let i = $index) {
+    <li>
+      <div class="mb-1 flex items-baseline justify-between gap-3 text-sm">
+        <span class="font-medium text-ink">{{ step.label }} <span class="font-mono">{{ step.count }}</span></span>
+        @if (i > 0) {
+          <span data-conversion class="text-ink-muted">{{ conversion(i) }}</span>
+        }
+      </div>
+      <div class="h-3 rounded-sm bg-hairline">
+        <div data-bar class="h-3 rounded-sm" [class]="fill(i)" [style.width.%]="width(step.count)"></div>
+      </div>
+    </li>
+  }
+</ol>

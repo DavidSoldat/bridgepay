@@ -1,0 +1,16 @@
+<div class="relative">
+  <app-time-chart title="Approved volume" kind="area" format="money" [points]="volumePoints()" [(activeIndex)]="active" />
+  <app-time-chart class="mt-4 block" title="Checkouts" kind="bar" format="count" [points]="checkoutPoints()" [(activeIndex)]="active" />
+  @if (tooltip(); as t) {
+    <div
+      data-testid="chart-tooltip"
+      role="status"
+      class="pointer-events-none absolute top-6 z-10 -translate-x-1/2 whitespace-nowrap rounded-sm bg-ink px-3 py-2 text-xs text-white shadow-raised"
+      [style.left.%]="t.left"
+    >
+      <p class="font-semibold">{{ t.label }}</p>
+      <p>Approved volume {{ t.volume }}</p>
+      <p>Checkouts {{ t.checkouts }}</p>
+    </div>
+  }
+</div>
