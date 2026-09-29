@@ -24,9 +24,9 @@ import java.util.UUID;
 
 /**
  * Every branch here is idempotent against Paddle's at-least-once webhook
- * delivery: re-marking an already-settled installment/plan is a no-op update
- * (the pending-installment lookup simply returns empty), same shape as the
- * spec's other naturally-idempotent consumers.
+ * delivery (and against RepaymentPlanService replaying transaction.completed
+ * when a read finds Paddle ahead of us): a transaction already recorded on an
+ * installment is skipped, and re-marking a settled plan is a no-op.
  */
 @Service
 public class PaddleWebhookService {
@@ -70,6 +70,10 @@ public class PaddleWebhookService {
         }
         if (data.subscriptionId() != null && !data.subscriptionId().equals(plan.getPaddleSubscriptionId())) {
             plan.adoptSubscriptionId(data.subscriptionId());
+        }
+        if (installmentRepository.existsByPaddleTransactionId(data.id())) {
+            log.debug("Transaction {} already applied to plan {}, duplicate delivery", data.id(), plan.getId());
+            return;
         }
 
         Installment installment = nextPending(plan).orElse(null);

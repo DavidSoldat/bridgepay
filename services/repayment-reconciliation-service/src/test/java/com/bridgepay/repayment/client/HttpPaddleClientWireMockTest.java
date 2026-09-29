@@ -131,4 +131,21 @@ class HttpPaddleClientWireMockTest {
         assertThatThrownBy(() -> client(wm).createInstallmentTransaction("ctm_1", new BigDecimal("50.00")))
                 .isInstanceOf(PaddleUnavailableException.class);
     }
+
+    @Test
+    void findCompletedTransaction_returnsIdAndSubscription_whenCompleted(WireMockRuntimeInfo wm) {
+        stubFor(get(urlPathEqualTo("/transactions/txn_1"))
+                .willReturn(okJson("{ \"data\": { \"id\": \"txn_1\", \"status\": \"completed\", \"subscription_id\": \"sub_1\" } }")));
+
+        assertThat(client(wm).findCompletedTransaction("txn_1"))
+                .contains(new PaddleWebhookData("txn_1", "sub_1"));
+    }
+
+    @Test
+    void findCompletedTransaction_isEmpty_whenNotCompletedYet(WireMockRuntimeInfo wm) {
+        stubFor(get(urlPathEqualTo("/transactions/txn_1"))
+                .willReturn(okJson("{ \"data\": { \"id\": \"txn_1\", \"status\": \"ready\", \"subscription_id\": null } }")));
+
+        assertThat(client(wm).findCompletedTransaction("txn_1")).isEmpty();
+    }
 }

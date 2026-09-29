@@ -1,5 +1,6 @@
 package com.bridgepay.repayment.web;
 
+import com.bridgepay.repayment.client.PaddleClient;
 import com.bridgepay.repayment.client.PaddleWebhookData;
 import com.bridgepay.repayment.domain.Installment;
 import com.bridgepay.repayment.domain.RepaymentPlan;
@@ -17,6 +18,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.kafka.KafkaContainer;
@@ -25,8 +27,10 @@ import org.testcontainers.utility.DockerImageName;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Optional;
 import java.util.UUID;
 
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -76,6 +80,9 @@ class RepaymentPlanControllerIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+    // never the real sandbox from a test; unstubbed = "not completed yet"
+    @MockitoBean
+    private PaddleClient paddleClient;
     @Autowired
     private RepaymentPlanRepository repaymentPlanRepository;
     @Autowired
@@ -182,5 +189,25 @@ class RepaymentPlanControllerIntegrationTest {
                                 .authorities(new SimpleGrantedAuthority("ROLE_OPS"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.applicationId").value(applicationId.toString()));
+    }
+
+    @Test
+    void read_appliesAFirstPaymentPaddleCompleted_andALateWebhookThenChangesNothing() throws Exception {
+        UUID applicationId = UUID.randomUUID();
+        String subject = UUID.randomUUID().toString();
+        planWithFourInstallments(applicationId, subject, "txn_lost_webhook");
+        PaddleWebhookData completed = new PaddleWebhookData("txn_lost_webhook", "sub_lost_webhook");
+        when(paddleClient.findCompletedTransaction("txn_lost_webhook")).thenReturn(Optional.of(completed));
+
+        mockMvc.perform(get("/api/v1/repayment-plans/" + applicationId).with(jwt().jwt(j -> j.subject(subject))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.installments[0].status").value("PAID"))
+                .andExpect(jsonPath("$.checkoutTransactionId").doesNotExist());
+
+        paddleWebhookService.handle("transaction.completed", completed);
+
+        mockMvc.perform(get("/api/v1/repayment-plans/" + applicationId).with(jwt().jwt(j -> j.subject(subject))))
+                .andExpect(jsonPath("$.installments[0].status").value("PAID"))
+                .andExpect(jsonPath("$.installments[1].status").value("SCHEDULED"));
     }
 }

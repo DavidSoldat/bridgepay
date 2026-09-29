@@ -1,6 +1,7 @@
 package com.bridgepay.repayment.client;
 
 import java.math.BigDecimal;
+import java.util.Optional;
 
 public interface PaddleClient {
 
@@ -19,4 +20,7 @@ public interface PaddleClient {
 
     /** Cancels a not-yet-paid transaction (Paddle allows this for draft/ready only) - used when installment 1 expires. */
     void cancelTransaction(String transactionId);
+
+    /** The transaction's id and subscription id if Paddle reports it completed - what transaction.completed carries. */
+    Optional<PaddleWebhookData> findCompletedTransaction(String transactionId);
 }

@@ -99,6 +99,12 @@ class FirstPaymentExpiryJobIntegrationTest {
             }
             cancelled.add(transactionId);
         }
+
+        @Override
+        public java.util.Optional<com.bridgepay.repayment.client.PaddleWebhookData> findCompletedTransaction(
+                String transactionId) {
+            return java.util.Optional.empty();
+        }
     }
 
     @Autowired

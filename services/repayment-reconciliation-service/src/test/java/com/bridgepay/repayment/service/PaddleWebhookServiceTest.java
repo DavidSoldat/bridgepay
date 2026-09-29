@@ -153,4 +153,16 @@ class PaddleWebhookServiceTest {
         assertThat(plan.getStatus()).isEqualTo(PlanStatus.COMPLETED);
         verifyNoInteractions(outboxEventRepository);
     }
+
+    @Test
+    void transactionCompleted_redeliveredForAnAlreadyPaidTransaction_doesNotPayTheNextInstallment() {
+        RepaymentPlan plan = newPlan(4);
+        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_real")).thenReturn(Optional.of(plan));
+        when(installmentRepository.existsByPaddleTransactionId("txn_placeholder")).thenReturn(true);
+
+        service.handle("transaction.completed", new PaddleWebhookData("txn_placeholder", "sub_real"));
+
+        verify(installmentRepository, never()).findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(any(), any());
+        verifyNoInteractions(outboxEventRepository);
+    }
 }

@@ -17,6 +17,8 @@ public interface InstallmentRepository extends JpaRepository<Installment, UUID> 
     Optional<Installment> findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
             RepaymentPlan repaymentPlan, List<InstallmentStatus> statuses);
 
+    boolean existsByPaddleTransactionId(String paddleTransactionId);
+
     long countByRepaymentPlanApplicantIdAndStatusAndRepaymentPlanStatusNot(UUID applicantId, InstallmentStatus status,
                                                                          PlanStatus excludedPlanStatus);
 }

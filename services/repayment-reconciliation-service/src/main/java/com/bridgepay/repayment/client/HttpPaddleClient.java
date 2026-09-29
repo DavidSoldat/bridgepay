@@ -16,6 +16,7 @@ import java.math.RoundingMode;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
@@ -121,6 +122,20 @@ public class HttpPaddleClient implements PaddleClient {
         }, "cancel transaction " + transactionId);
     }
 
+    @Override
+    public Optional<PaddleWebhookData> findCompletedTransaction(String transactionId) {
+        return execute(() -> {
+            TransactionData data = restClient.get()
+                    .uri("/transactions/{id}", transactionId)
+                    .retrieve()
+                    .body(TransactionEnvelope.class)
+                    .data();
+            return "completed".equals(data.status())
+                    ? Optional.of(new PaddleWebhookData(data.id(), data.subscriptionId()))
+                    : Optional.<PaddleWebhookData>empty();
+        }, "get transaction " + transactionId);
+    }
+
     private <T> T execute(Supplier<T> call, String description) {
         try {
             return circuitBreaker.executeSupplier(call);
@@ -171,7 +186,8 @@ public class HttpPaddleClient implements PaddleClient {
     private record UnitPrice(String amount, @JsonProperty("currency_code") String currencyCode) {
     }
 
-    private record TransactionData(String id, @JsonProperty("subscription_id") String subscriptionId,
+    private record TransactionData(String id, String status,
+                                    @JsonProperty("subscription_id") String subscriptionId,
                                     Checkout checkout) {
     }
 

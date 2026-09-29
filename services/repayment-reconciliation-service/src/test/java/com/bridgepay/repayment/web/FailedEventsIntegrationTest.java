@@ -161,6 +161,12 @@ class FailedEventsIntegrationTest {
         @Override
         public void cancelTransaction(String transactionId) {
         }
+
+        @Override
+        public java.util.Optional<com.bridgepay.repayment.client.PaddleWebhookData> findCompletedTransaction(
+                String transactionId) {
+            return java.util.Optional.empty();
+        }
     }
 
     @Autowired

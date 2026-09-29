@@ -4,6 +4,8 @@ import com.bridgepay.repayment.client.ApplicantClient;
 import com.bridgepay.repayment.client.ApplicantProfile;
 import com.bridgepay.repayment.client.PaddleClient;
 import com.bridgepay.repayment.client.PaddleTransactionResult;
+import com.bridgepay.repayment.client.PaddleUnavailableException;
+import com.bridgepay.repayment.client.PaddleWebhookData;
 import com.bridgepay.repayment.domain.Installment;
 import com.bridgepay.repayment.domain.RepaymentPlan;
 import com.bridgepay.repayment.dto.RepaymentPlanResponse;
@@ -40,6 +42,8 @@ class RepaymentPlanServiceTest {
     private ApplicantClient applicantClient;
     @Mock
     private PaddleClient paddleClient;
+    @Mock
+    private PaddleWebhookService paddleWebhookService;
 
     private RepaymentPlanService service;
 
@@ -50,7 +54,8 @@ class RepaymentPlanServiceTest {
 
     @Test
     void createPlan_createsAPaddleCustomer_whenApplicantHasNone() {
-        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient);
+        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient,
+                paddleWebhookService);
         UUID applicationId = UUID.randomUUID();
         UUID applicantId = UUID.randomUUID();
         when(repaymentPlanRepository.findByApplicationId(applicationId)).thenReturn(Optional.empty());
@@ -73,7 +78,8 @@ class RepaymentPlanServiceTest {
 
     @Test
     void createPlan_reusesExistingPaddleCustomer_withoutCreatingANewOne() {
-        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient);
+        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient,
+                paddleWebhookService);
         UUID applicationId = UUID.randomUUID();
         UUID applicantId = UUID.randomUUID();
         when(repaymentPlanRepository.findByApplicationId(applicationId)).thenReturn(Optional.empty());
@@ -91,7 +97,8 @@ class RepaymentPlanServiceTest {
 
     @Test
     void createPlan_skipsEntirely_whenAPlanAlreadyExistsForThisApplication() {
-        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient);
+        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient,
+                paddleWebhookService);
         UUID applicationId = UUID.randomUUID();
         UUID applicantId = UUID.randomUUID();
         when(repaymentPlanRepository.findByApplicationId(applicationId))
@@ -105,7 +112,8 @@ class RepaymentPlanServiceTest {
 
     @Test
     void getForApplicant_returnsThePlanWithItsInstallmentsInOrder() {
-        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient);
+        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient,
+                paddleWebhookService);
         UUID applicationId = UUID.randomUUID();
         UUID applicantId = UUID.randomUUID();
         RepaymentPlan plan = new RepaymentPlan(applicationId, applicantId, "ctm_1", "txn_1",
@@ -124,7 +132,8 @@ class RepaymentPlanServiceTest {
 
     @Test
     void getForApplicant_throwsNoSuchElement_whenNoPlanExistsForThisApplication() {
-        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient);
+        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient,
+                paddleWebhookService);
         UUID applicationId = UUID.randomUUID();
         when(repaymentPlanRepository.findByApplicationId(applicationId)).thenReturn(Optional.empty());
 
@@ -134,7 +143,8 @@ class RepaymentPlanServiceTest {
 
     @Test
     void getForApplicant_throwsAccessDenied_whenThePlanBelongsToAnotherApplicant() {
-        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient);
+        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient,
+                paddleWebhookService);
         UUID applicationId = UUID.randomUUID();
         RepaymentPlan plan = new RepaymentPlan(applicationId, UUID.randomUUID(), "ctm_1", "txn_1",
                 new BigDecimal("200.00"), 4, new BigDecimal("50.00"));
@@ -142,5 +152,73 @@ class RepaymentPlanServiceTest {
 
         assertThatThrownBy(() -> service.getForApplicant(applicationId, UUID.randomUUID()))
                 .isInstanceOf(AccessDeniedException.class);
+    }
+
+    private RepaymentPlan unpaidPlan(UUID applicationId, UUID applicantId) {
+        RepaymentPlan plan = new RepaymentPlan(applicationId, applicantId, "ctm_1", "txn_1",
+                new BigDecimal("200.00"), 4, new BigDecimal("50.00"));
+        Installment first = new Installment(plan, 1, LocalDate.of(2026, 1, 1), new BigDecimal("50.00"));
+        when(repaymentPlanRepository.findByApplicationId(applicationId)).thenReturn(Optional.of(plan));
+        when(installmentRepository.findByRepaymentPlanOrderBySequenceNumberAsc(plan)).thenReturn(List.of(first));
+        return plan;
+    }
+
+    @Test
+    void getForApplicant_appliesAFirstPaymentPaddleHasCompleted_whenTheWebhookHasNotArrived() {
+        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient,
+                paddleWebhookService);
+        UUID applicationId = UUID.randomUUID();
+        UUID applicantId = UUID.randomUUID();
+        unpaidPlan(applicationId, applicantId);
+        PaddleWebhookData completed = new PaddleWebhookData("txn_1", "sub_1");
+        when(paddleClient.findCompletedTransaction("txn_1")).thenReturn(Optional.of(completed));
+
+        service.getForApplicant(applicationId, applicantId);
+
+        verify(paddleWebhookService).handle("transaction.completed", completed);
+    }
+
+    @Test
+    void getForApplicant_leavesThePlanAlone_whenPaddleHasNotCompletedTheFirstPayment() {
+        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient,
+                paddleWebhookService);
+        UUID applicationId = UUID.randomUUID();
+        UUID applicantId = UUID.randomUUID();
+        unpaidPlan(applicationId, applicantId);
+        when(paddleClient.findCompletedTransaction("txn_1")).thenReturn(Optional.empty());
+
+        RepaymentPlanResponse response = service.getForApplicant(applicationId, applicantId);
+
+        assertThat(response.checkoutTransactionId()).isEqualTo("txn_1");
+        verifyNoInteractions(paddleWebhookService);
+    }
+
+    @Test
+    void getForOps_stillAnswers_whenPaddleIsDown() {
+        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient,
+                paddleWebhookService);
+        UUID applicationId = UUID.randomUUID();
+        unpaidPlan(applicationId, UUID.randomUUID());
+        when(paddleClient.findCompletedTransaction("txn_1"))
+                .thenThrow(new PaddleUnavailableException("down", new RuntimeException()));
+
+        RepaymentPlanResponse response = service.getForOps(applicationId);
+
+        assertThat(response.checkoutTransactionId()).isEqualTo("txn_1");
+        verifyNoInteractions(paddleWebhookService);
+    }
+
+    @Test
+    void getForApplicant_doesNotAskPaddle_whenTheFirstInstallmentIsAlreadyPaid() {
+        service = new RepaymentPlanService(repaymentPlanRepository, installmentRepository, applicantClient, paddleClient,
+                paddleWebhookService);
+        UUID applicationId = UUID.randomUUID();
+        UUID applicantId = UUID.randomUUID();
+        RepaymentPlan plan = unpaidPlan(applicationId, applicantId);
+        installmentRepository.findByRepaymentPlanOrderBySequenceNumberAsc(plan).get(0).markPaid("txn_1");
+
+        service.getForApplicant(applicationId, applicantId);
+
+        verifyNoInteractions(paddleClient, paddleWebhookService);
     }
 }

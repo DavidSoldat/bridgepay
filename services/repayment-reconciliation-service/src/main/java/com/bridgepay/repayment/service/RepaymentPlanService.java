@@ -4,6 +4,7 @@ import com.bridgepay.repayment.client.ApplicantClient;
 import com.bridgepay.repayment.client.ApplicantProfile;
 import com.bridgepay.repayment.client.PaddleClient;
 import com.bridgepay.repayment.client.PaddleTransactionResult;
+import com.bridgepay.repayment.client.PaddleWebhookData;
 import com.bridgepay.repayment.domain.Installment;
 import com.bridgepay.repayment.domain.InstallmentStatus;
 import com.bridgepay.repayment.domain.PlanStatus;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -34,15 +36,18 @@ public class RepaymentPlanService {
     private final InstallmentRepository installmentRepository;
     private final ApplicantClient applicantClient;
     private final PaddleClient paddleClient;
+    private final PaddleWebhookService paddleWebhookService;
 
     public RepaymentPlanService(RepaymentPlanRepository repaymentPlanRepository,
                                  InstallmentRepository installmentRepository,
                                  ApplicantClient applicantClient,
-                                 PaddleClient paddleClient) {
+                                 PaddleClient paddleClient,
+                                 PaddleWebhookService paddleWebhookService) {
         this.repaymentPlanRepository = repaymentPlanRepository;
         this.installmentRepository = installmentRepository;
         this.applicantClient = applicantClient;
         this.paddleClient = paddleClient;
+        this.paddleWebhookService = paddleWebhookService;
     }
 
     /**
@@ -89,19 +94,43 @@ public class RepaymentPlanService {
                 plan.getId(), applicationId, transaction.checkoutUrl());
     }
 
-    @Transactional(readOnly = true)
+    // Not @Transactional: reconciling calls Paddle, and the webhook handling it replays runs its own transaction.
     public RepaymentPlanResponse getForApplicant(UUID applicationId, UUID applicantId) {
         RepaymentPlan plan = findPlan(applicationId);
         if (!plan.getApplicantId().equals(applicantId)) {
             throw new AccessDeniedException("Repayment plan does not belong to this applicant");
         }
-        return toResponse(plan);
+        return reconciled(plan);
     }
 
     /** Ops case file: any plan. Shoppers go through getForApplicant's owner check. */
-    @Transactional(readOnly = true)
     public RepaymentPlanResponse getForOps(UUID applicationId) {
-        return toResponse(findPlan(applicationId));
+        return reconciled(findPlan(applicationId));
+    }
+
+    /**
+     * A lost or late transaction.completed webhook (e.g. Paddle can't reach a local cluster) would leave the
+     * shopper on "Action required" after paying. While installment 1 still looks unpaid, ask Paddle and replay
+     * the webhook's own handling if it has completed. Paddle trouble never fails the read.
+     */
+    private RepaymentPlanResponse reconciled(RepaymentPlan plan) {
+        RepaymentPlanResponse response = toResponse(plan);
+        if (response.checkoutTransactionId() == null) {
+            return response;
+        }
+        try {
+            Optional<PaddleWebhookData> completed = paddleClient.findCompletedTransaction(response.checkoutTransactionId());
+            if (completed.isEmpty()) {
+                return response;
+            }
+            log.info("Paddle reports first payment {} completed for plan {}, applying it on read",
+                    response.checkoutTransactionId(), plan.getId());
+            paddleWebhookService.handle("transaction.completed", completed.get());
+        } catch (RuntimeException ex) {
+            log.warn("Could not reconcile first payment for plan {} with Paddle: {}", plan.getId(), ex.getMessage());
+            return response;
+        }
+        return toResponse(findPlan(plan.getApplicationId()));
     }
 
     private RepaymentPlan findPlan(UUID applicationId) {
