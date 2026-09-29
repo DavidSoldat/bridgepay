@@ -32,7 +32,11 @@
             @if (totals().shipping === 0) { free shipping } @else { ${{ totals().shipping | number: '1.2-2' }} shipping }
           </p>
           <p class="mt-1 text-xs text-ink-muted">No interest. First payment today, then weekly.</p>
-          <a [routerLink]="['/checkout', p.id]" data-testid="checkout" class="btn-primary mt-4 w-full">Check out with Pay in 4</a>
+          @if (auth.authenticated()) {
+            <a [routerLink]="['/checkout', p.id]" data-testid="checkout" class="btn-primary mt-4 w-full">Check out with Pay in 4</a>
+          } @else {
+            <button type="button" data-testid="checkout" (click)="signInToCheckout()" class="btn-primary mt-4 w-full">Check out with Pay in 4</button>
+          }
         </section>
       </div>
     </div>

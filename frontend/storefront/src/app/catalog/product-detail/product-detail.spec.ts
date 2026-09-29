@@ -1,10 +1,14 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ProductDetail } from './product-detail';
+import { Auth } from '../../core/auth';
 
 describe('ProductDetail', () => {
-  function render(id: string) {
-    TestBed.configureTestingModule({ imports: [ProductDetail], providers: [provideRouter([])] });
+  function render(id: string, auth: { authenticated: () => boolean; login?: (uri: string) => void } = { authenticated: () => true }) {
+    TestBed.configureTestingModule({
+      imports: [ProductDetail],
+      providers: [provideRouter([]), { provide: Auth, useValue: { login: () => {}, ...auth } }],
+    });
     const fixture = TestBed.createComponent(ProductDetail);
     fixture.componentRef.setInput('id', id);
     fixture.detectChanges();
@@ -48,5 +52,15 @@ describe('ProductDetail', () => {
     expect(el.textContent).toContain('Product not found');
     expect(el.querySelector('a[href="/"]')).not.toBeNull();
     expect(el.querySelector('[data-testid="checkout"]')).toBeNull();
+  });
+
+  it('sends a signed-out shopper to login from the product page, so Back returns here rather than to Keycloak', () => {
+    let redirect = '';
+    const el = render('camp-multitool', { authenticated: () => false, login: (uri) => (redirect = uri) });
+    const button = el.querySelector('[data-testid="checkout"]') as HTMLElement;
+    expect(button.getAttribute('href')).toBeNull();
+    expect(button.textContent?.trim()).toBe('Check out with Pay in 4');
+    button.click();
+    expect(redirect).toBe(`${window.location.origin}/checkout/camp-multitool`);
   });
 });

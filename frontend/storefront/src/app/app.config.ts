@@ -1,6 +1,6 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { provideRouter, withComponentInputBinding, withInMemoryScrolling } from '@angular/router';
 import {
   provideKeycloak,
   includeBearerTokenInterceptor,
@@ -16,11 +16,17 @@ const gatewayUrlCondition = createInterceptorCondition<IncludeBearerTokenConditi
   bearerPrefix: 'Bearer',
 });
 
+export const routerProviders = provideRouter(
+  routes,
+  withComponentInputBinding(),
+  withInMemoryScrolling({ scrollPositionRestoration: 'enabled' }),
+);
+
 export function appConfig(keycloakUrl: string, paddleClientToken = ''): ApplicationConfig {
   return {
     providers: [
       provideBrowserGlobalErrorListeners(),
-      provideRouter(routes, withComponentInputBinding()),
+      routerProviders,
       provideKeycloak({
         config: {
           url: keycloakUrl,

@@ -27,6 +27,14 @@ export class Auth {
   }
 
   logout(): void {
+    // Checkout keeps the delivery address per product in this tab; the next shopper here must not see it.
+    try {
+      Object.keys(sessionStorage)
+        .filter((key) => key.startsWith('storefront.checkout.'))
+        .forEach((key) => sessionStorage.removeItem(key));
+    } catch {
+      // storage blocked: nothing was saved
+    }
     this.keycloak.logout({ redirectUri: window.location.origin });
   }
 }

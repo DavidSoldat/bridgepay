@@ -6,7 +6,7 @@ import { Auth } from './auth';
 
 describe('Auth', () => {
   function setup(authenticated: boolean, tokenParsed?: Record<string, unknown>) {
-    const fakeKeycloak = { authenticated, tokenParsed } as unknown as Keycloak;
+    const fakeKeycloak = { authenticated, tokenParsed, logout: () => Promise.resolve() } as unknown as Keycloak;
     TestBed.configureTestingModule({
       providers: [
         { provide: Keycloak, useValue: fakeKeycloak },
@@ -39,5 +39,16 @@ describe('Auth', () => {
   it('has no full name when the token carries none', () => {
     const auth = setup(true, { preferred_username: 'shopper1' });
     expect(auth.fullName()).toBe('');
+  });
+
+  it('forgets saved checkout addresses on sign out, so the next shopper on this tab never sees them', () => {
+    sessionStorage.setItem('storefront.checkout.camp-multitool.address', '{"street":"12 Pine Rd"}');
+    sessionStorage.setItem('storefront.checkout.basin-rain-jacket.address', '{"street":"12 Pine Rd"}');
+    sessionStorage.setItem('unrelated', 'keep');
+    setup(true).logout();
+    expect(sessionStorage.getItem('storefront.checkout.camp-multitool.address')).toBeNull();
+    expect(sessionStorage.getItem('storefront.checkout.basin-rain-jacket.address')).toBeNull();
+    expect(sessionStorage.getItem('unrelated')).toBe('keep');
+    sessionStorage.clear();
   });
 });

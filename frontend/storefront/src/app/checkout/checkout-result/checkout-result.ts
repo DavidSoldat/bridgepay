@@ -18,7 +18,8 @@ export class CheckoutResult {
   response = input.required<ApplicationResponse>();
   product = input.required<Product>();
 
-  protected readonly orderRef = computed(() => this.response().applicationId.slice(0, 8));
+  // UUIDv7: the first 8 hex digits are a timestamp shared by orders placed within ~a minute; the tail is random.
+  protected readonly orderRef = computed(() => this.response().applicationId.slice(-8));
   /** Display only; the real plan (created asynchronously) is on /account. */
   protected readonly schedule = computed(() => weeklySchedule(new Date(), this.response().installmentCount ?? 4));
 }

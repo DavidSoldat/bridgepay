@@ -32,7 +32,8 @@ describe('CheckoutResult', () => {
   it('shows an approved order with its reference and the product', () => {
     const el = setup('APPROVED');
     expect(el.textContent).toContain("You're approved");
-    expect(el.querySelector('[data-testid="order-ref"]')?.textContent?.trim()).toBe('0199a1b2');
+    // UUIDv7: the head is a millisecond timestamp shared by orders placed within ~a minute; the tail is random
+    expect(el.querySelector('[data-testid="order-ref"]')?.textContent?.trim()).toBe('2e3f4a5b');
     expect(el.textContent).toContain('Basin Rain Jacket');
     expect(el.querySelector('img')?.getAttribute('src')).toBe('/products/basin-rain-jacket.webp');
   });
