@@ -2,8 +2,9 @@ package com.bridgepay.application.web;
 
 import com.bridgepay.application.dto.MerchantPayoutResponse;
 import com.bridgepay.application.dto.MerchantSaleResponse;
-import com.bridgepay.application.dto.MerchantSummaryResponse;
+import com.bridgepay.application.dto.MerchantDashboardResponse;
 import com.bridgepay.application.service.CreditApplicationService;
+import com.bridgepay.application.service.MerchantDashboardService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -23,9 +24,11 @@ import java.util.UUID;
 public class MerchantController {
 
     private final CreditApplicationService applicationService;
+    private final MerchantDashboardService dashboardService;
 
-    public MerchantController(CreditApplicationService applicationService) {
+    public MerchantController(CreditApplicationService applicationService, MerchantDashboardService dashboardService) {
         this.applicationService = applicationService;
+        this.dashboardService = dashboardService;
     }
 
     @GetMapping("/{id}/payouts")
@@ -43,11 +46,12 @@ public class MerchantController {
         return applicationService.listSalesForMerchant(id, status, pageable);
     }
 
-    @GetMapping("/{id}/summary")
+    @GetMapping("/{id}/dashboard")
     @PreAuthorize("hasRole('MERCHANT')")
-    public MerchantSummaryResponse summary(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+    public MerchantDashboardResponse dashboard(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
+                                               @RequestParam int days, @RequestParam(required = false) String tz) {
         requireOwnMerchant(jwt, id);
-        return applicationService.summaryForMerchant(id);
+        return dashboardService.dashboard(id, days, tz);
     }
 
     private void requireOwnMerchant(Jwt jwt, UUID id) {

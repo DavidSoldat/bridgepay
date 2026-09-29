@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.closeTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -193,59 +194,91 @@ class MerchantControllerIntegrationTest {
     }
 
     @Test
-    void summaryTotalsMatchTheMerchantsCheckoutsAndPayouts() throws Exception {
-        Merchant merchant = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("3.50")));
-        Merchant other = merchantRepository.save(new Merchant("Merchant B", new BigDecimal("3.50")));
-        checkout(merchant.getId(), "100.00");   // approved, fee 3.50
-        checkout(merchant.getId(), "200.00");   // approved, fee 7.00
-        checkout(merchant.getId(), "600.00");   // manual review
-        checkout(merchant.getId(), "1500.00");  // declined
-        checkout(other.getId(), "300.00");      // someone else's, must not count
-
-        mockMvc.perform(get("/api/v1/merchants/{id}/summary", merchant.getId())
-                        .with(merchantJwt(merchant.getId())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalCheckouts").value(4))
-                .andExpect(jsonPath("$.approvedCount").value(2))
-                .andExpect(jsonPath("$.inReviewCount").value(1))
-                .andExpect(jsonPath("$.declinedCount").value(1))
-                .andExpect(jsonPath("$.approvalRate", closeTo(0.6667, 0.001)))
-                .andExpect(jsonPath("$.approvedVolume").value(300.00))
-                .andExpect(jsonPath("$.feesPaid").value(0))
-                .andExpect(jsonPath("$.netPaidOut").value(0))
-                .andExpect(jsonPath("$.pendingPayout").value(289.50));
-    }
-
-    @Test
-    void summaryForAMerchantWithNoCheckoutsIsZeroedWithNoApprovalRate() throws Exception {
-        Merchant merchant = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("3.50")));
-
-        mockMvc.perform(get("/api/v1/merchants/{id}/summary", merchant.getId())
-                        .with(merchantJwt(merchant.getId())))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalCheckouts").value(0))
-                .andExpect(jsonPath("$.approvalRate").doesNotExist())
-                .andExpect(jsonPath("$.feesPaid").value(0))
-                .andExpect(jsonPath("$.netPaidOut").value(0))
-                .andExpect(jsonPath("$.pendingPayout").value(0));
-    }
-
-    @Test
-    void merchantIsBlockedFromAnotherMerchantsSummary() throws Exception {
-        Merchant merchantA = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("3.50")));
-        Merchant merchantB = merchantRepository.save(new Merchant("Merchant B", new BigDecimal("3.50")));
-
-        mockMvc.perform(get("/api/v1/merchants/{id}/summary", merchantB.getId())
-                        .with(merchantJwt(merchantA.getId())))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
     void nonMerchantRoleIsBlocked() throws Exception {
         Merchant merchant = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("3.50")));
 
         mockMvc.perform(get("/api/v1/merchants/{id}/payouts", merchant.getId())
                         .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString()))))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void dashboardReturnsThePeriodTotalsAndSeriesForTheMerchant() throws Exception {
+        Merchant merchant = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("2.90")));
+        checkout(merchant.getId(), "100.00");  // approved by the stub risk engine
+        checkout(merchant.getId(), "1500.00"); // declined
+
+        mockMvc.perform(get("/api/v1/merchants/{id}/dashboard", merchant.getId())
+                        .param("days", "7").param("tz", "UTC")
+                        .with(merchantJwt(merchant.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.days").value(7))
+                .andExpect(jsonPath("$.bucket").value("DAY"))
+                .andExpect(jsonPath("$.to").isString())
+                .andExpect(jsonPath("$.series", hasSize(7)))
+                .andExpect(jsonPath("$.series[6].checkouts").value(2))
+                .andExpect(jsonPath("$.current.checkouts").value(2))
+                .andExpect(jsonPath("$.current.approved").value(1))
+                .andExpect(jsonPath("$.current.declined").value(1))
+                .andExpect(jsonPath("$.current.approvalRate").value(0.5))
+                .andExpect(jsonPath("$.current.approvedVolume").value(100.00))
+                .andExpect(jsonPath("$.previous.checkouts").value(0))
+                .andExpect(jsonPath("$.pendingPayout").value(97.10));
+    }
+
+    @Test
+    void dashboardWithoutTimeZoneUsesUtcAndNinetyDaysAreWeekly() throws Exception {
+        Merchant merchant = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("2.90")));
+
+        mockMvc.perform(get("/api/v1/merchants/{id}/dashboard", merchant.getId())
+                        .param("days", "90")
+                        .with(merchantJwt(merchant.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bucket").value("WEEK"))
+                .andExpect(jsonPath("$.current.approvalRate").doesNotExist());
+    }
+
+    @Test
+    void dashboardRejectsBadParametersWithTheSharedValidationError() throws Exception {
+        Merchant merchant = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("2.90")));
+        String url = "/api/v1/merchants/{id}/dashboard";
+
+        mockMvc.perform(get(url, merchant.getId()).param("days", "14").with(merchantJwt(merchant.getId())))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+        mockMvc.perform(get(url, merchant.getId()).param("days", "abc").with(merchantJwt(merchant.getId())))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+        mockMvc.perform(get(url, merchant.getId()).with(merchantJwt(merchant.getId())))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+        mockMvc.perform(get(url, merchant.getId()).param("days", "7").param("tz", "Mars/Base")
+                        .with(merchantJwt(merchant.getId())))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+        mockMvc.perform(get(url, merchant.getId()).param("days", "7").param("tz", "+02:00")
+                        .with(merchantJwt(merchant.getId())))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void merchantIsBlockedFromAnotherMerchantsDashboard() throws Exception {
+        Merchant merchantA = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("2.90")));
+        Merchant merchantB = merchantRepository.save(new Merchant("Merchant B", new BigDecimal("2.90")));
+
+        mockMvc.perform(get("/api/v1/merchants/{id}/dashboard", merchantB.getId()).param("days", "7")
+                        .with(merchantJwt(merchantA.getId())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void dashboardNeedsAToken() throws Exception {
+        mockMvc.perform(get("/api/v1/merchants/{id}/dashboard", UUID.randomUUID()).param("days", "7"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void theOldSummaryEndpointIsGone() throws Exception {
+        Merchant merchant = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("2.90")));
+
+        mockMvc.perform(get("/api/v1/merchants/{id}/summary", merchant.getId())
+                        .with(merchantJwt(merchant.getId())))
+                .andExpect(status().isNotFound());
     }
 }
