@@ -1,4 +1,4 @@
-import { orderTotals } from './pricing';
+import { orderTotals, weeklySchedule } from './pricing';
 
 describe('orderTotals', () => {
   it('charges flat shipping below the free-shipping threshold and taxes only the subtotal', () => {
@@ -21,5 +21,21 @@ describe('orderTotals', () => {
   it('splits the total into 4 installments rounded half-up to the cent, like application-service', () => {
     // 214.34 / 4 = 53.585 -> 53.59 (BigDecimal HALF_UP)
     expect(orderTotals(198).installment).toBe(53.59);
+  });
+});
+
+describe('weeklySchedule', () => {
+  const ymd = (d: Date) => [d.getFullYear(), d.getMonth() + 1, d.getDate()];
+
+  it('starts today and steps one calendar week at a time', () => {
+    expect(weeklySchedule(new Date(2026, 8, 29, 15, 30), 4).map(ymd)).toEqual([
+      [2026, 9, 29], [2026, 10, 6], [2026, 10, 13], [2026, 10, 20],
+    ]);
+  });
+
+  it('keeps whole calendar days across a month end and a DST change', () => {
+    const dates = weeklySchedule(new Date(2026, 9, 29), 2);
+    expect(dates.map(ymd)).toEqual([[2026, 10, 29], [2026, 11, 5]]);
+    expect(dates[1].getHours()).toBe(0);
   });
 });

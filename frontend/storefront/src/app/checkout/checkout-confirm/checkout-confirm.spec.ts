@@ -2,12 +2,12 @@ import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { CheckoutConfirm } from './checkout-confirm';
 import { Applications } from '../applications';
-import { Product } from '../../catalog/products';
+import { Product, findProduct } from '../../catalog/products';
 import { DeliveryAddress } from '../delivery-form/delivery-form';
 
 describe('CheckoutConfirm', () => {
   // 198 -> free shipping, 16.34 tax, 214.34 total, 53.59 per installment
-  const product: Product = { id: 'basin-rain-jacket', name: 'Basin Rain Jacket', price: 198, swatchColor: '#3F5843' };
+  const product: Product = findProduct('basin-rain-jacket')!;
   const address: DeliveryAddress = { fullName: 'Sam Shopper', street: '12 Pine Rd', city: 'Boulder', postalCode: '80302' };
 
   function setup(checkout: (amount: number) => any) {

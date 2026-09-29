@@ -24,3 +24,11 @@ export function orderTotals(price: number): OrderTotals {
     installment: Math.round(total / 4) / 100,
   };
 }
+
+/** Display-only due dates: today, then one per calendar week (setDate, so DST never shifts the day). */
+export function weeklySchedule(start: Date, count: number): Date[] {
+  return Array.from(
+    { length: count },
+    (_, i) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7 * i),
+  );
+}
