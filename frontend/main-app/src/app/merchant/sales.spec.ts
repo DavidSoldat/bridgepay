@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Sales } from './sales';
 import { MerchantSaleResponse } from '../shared/models/merchant-sale';
-import { MerchantSummaryResponse } from '../shared/models/merchant-summary';
+import { MerchantDashboard } from '../shared/models/merchant-dashboard';
 
 describe('Sales', () => {
   let service: Sales;
@@ -33,18 +33,14 @@ describe('Sales', () => {
     expect(result).toEqual([]);
   });
 
-  it('fetches the merchant summary', () => {
-    let result: MerchantSummaryResponse | undefined;
-    service.summary('m-1').subscribe((s) => (result = s));
+  it('fetches the dashboard for a period and time zone', () => {
+    let result: MerchantDashboard | undefined;
+    service.dashboard('m-1', 90, 'Europe/Belgrade').subscribe((d) => (result = d));
 
-    const req = httpMock.expectOne((r) => r.url.endsWith('/api/v1/merchants/m-1/summary'));
-    expect(req.request.method).toBe('GET');
-    const body: MerchantSummaryResponse = {
-      totalCheckouts: 0, approvedCount: 0, inReviewCount: 0, declinedCount: 0,
-      approvalRate: null, approvedVolume: 0, feesPaid: 0, netPaidOut: 0, pendingPayout: 0,
-    };
-    req.flush(body);
-
-    expect(result).toEqual(body);
+    const req = httpMock.expectOne((r) => r.url.endsWith('/api/v1/merchants/m-1/dashboard'));
+    expect(req.request.params.get('days')).toBe('90');
+    expect(req.request.params.get('tz')).toBe('Europe/Belgrade');
+    req.flush({ days: 90 } as MerchantDashboard);
+    expect(result?.days).toBe(90);
   });
 });

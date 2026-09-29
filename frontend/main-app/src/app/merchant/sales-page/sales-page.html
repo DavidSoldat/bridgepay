@@ -1,39 +1,84 @@
-<h1 class="mb-5 font-display text-2xl font-bold">Sales</h1>
+<div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+  <h1 class="font-display text-2xl font-bold">Sales</h1>
+  <div class="flex gap-2" role="group" aria-label="Period">
+    @for (p of periods; track p) {
+      <button
+        type="button"
+        (click)="selectDays(p)"
+        [attr.aria-pressed]="days() === p"
+        class="min-h-11 rounded-full border px-4 text-sm font-semibold"
+        [class]="days() === p ? 'border-coral bg-coral text-white' : 'border-hairline bg-surface text-ink-muted hover:text-ink'"
+      >{{ p }} days</button>
+    }
+  </div>
+</div>
 
-@if (summaryError()) {
-  <p class="mb-6 text-sm text-declined">Could not load your sales summary. Try refreshing.</p>
-} @else if (summary(); as s) {
+@if (dashboardError()) {
+  <p class="mb-6 text-sm text-declined">Could not load your sales dashboard. Try refreshing.</p>
+} @else if (dashboard(); as d) {
   <div class="mb-3 grid grid-cols-2 gap-4 lg:grid-cols-5">
     <div class="card p-5" data-tile="approved-volume">
       <p class="text-sm text-ink-muted">Approved volume</p>
-      <p class="mt-1 font-display text-2xl font-bold">{{ s.approvedVolume | number: '1.2-2' }}</p>
+      <p class="mt-1 font-display text-2xl font-bold">{{ d.current.approvedVolume | number: '1.2-2' }}</p>
+      @if (volumeChange(); as c) {
+        <p data-change [attr.data-direction]="c.direction" class="mt-1 text-xs" [class]="changeClass(c)">{{ c.text }}</p>
+      }
+      <app-sparkline class="mt-2 block" [values]="volumeTrend()" />
     </div>
     <div class="card p-5" data-tile="approval-rate">
       <p class="text-sm text-ink-muted">Approval rate</p>
-      <p class="mt-1 font-display text-2xl font-bold">{{ s.approvalRate === null ? '—' : (s.approvalRate | percent: '1.0-0') }}</p>
+      <p class="mt-1 font-display text-2xl font-bold">{{ d.current.approvalRate === null ? '—' : (d.current.approvalRate | percent: '1.0-0') }}</p>
+      @if (rateChange(); as c) {
+        <p data-change [attr.data-direction]="c.direction" class="mt-1 text-xs" [class]="changeClass(c)">{{ c.text }}</p>
+      }
     </div>
     <div class="card p-5" data-tile="fees-paid">
       <p class="text-sm text-ink-muted">Fees paid</p>
-      <p class="mt-1 font-display text-2xl font-bold">{{ s.feesPaid | number: '1.2-2' }}</p>
+      <p class="mt-1 font-display text-2xl font-bold">{{ d.current.feesPaid | number: '1.2-2' }}</p>
+      @if (feesChange(); as c) {
+        <p data-change [attr.data-direction]="c.direction" class="mt-1 text-xs" [class]="changeClass(c)">{{ c.text }}</p>
+      }
     </div>
     <div class="card p-5" data-tile="net-paid-out">
       <p class="text-sm text-ink-muted">Net paid out</p>
-      <p class="mt-1 font-display text-2xl font-bold">{{ s.netPaidOut | number: '1.2-2' }}</p>
+      <p class="mt-1 font-display text-2xl font-bold">{{ d.current.netPaidOut | number: '1.2-2' }}</p>
+      @if (netChange(); as c) {
+        <p data-change [attr.data-direction]="c.direction" class="mt-1 text-xs" [class]="changeClass(c)">{{ c.text }}</p>
+      }
     </div>
     <div class="card p-5" data-tile="pending-payout">
-      <p class="text-sm text-ink-muted">Pending payout</p>
-      <p class="mt-1 font-display text-2xl font-bold">{{ s.pendingPayout | number: '1.2-2' }}</p>
+      <p class="text-sm text-ink-muted">Pending payout <span class="text-xs">(now)</span></p>
+      <p class="mt-1 font-display text-2xl font-bold">{{ d.pendingPayout | number: '1.2-2' }}</p>
     </div>
   </div>
   <p class="mb-6 text-sm text-ink-muted">
-    {{ s.approvedCount }} approved · {{ s.inReviewCount }} in review · {{ s.declinedCount }} declined
-    of {{ s.totalCheckouts }} checkouts
+    {{ d.current.approved }} approved · {{ d.current.inReview }} in review · {{ d.current.declined }} declined
+    of {{ d.current.checkouts }} checkouts
   </p>
+
+  <div class="mb-8 grid items-start gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <section class="card p-6" aria-labelledby="sales-over-time-heading">
+      <h2 id="sales-over-time-heading" class="mb-4 font-display text-lg font-bold">Sales over time</h2>
+      <app-sales-over-time [series]="d.series" [bucket]="d.bucket" />
+    </section>
+    <section class="card p-6" aria-labelledby="funnel-heading">
+      <h2 id="funnel-heading" class="mb-4 font-display text-lg font-bold">Checkout funnel</h2>
+      <app-funnel-bars [steps]="funnel()" />
+      <p class="mt-4 text-xs text-ink-muted">
+        {{ d.current.declined }} declined · {{ d.current.inReview }} still in review ·
+        {{ d.current.approved - d.current.paid }} approved but not paid
+      </p>
+    </section>
+  </div>
 } @else {
   <div data-testid="tiles-skeleton" class="mb-9 grid grid-cols-2 gap-4 lg:grid-cols-5">
     @for (i of [0, 1, 2, 3, 4]; track i) {
       <div class="card h-24 motion-safe:animate-pulse"></div>
     }
+  </div>
+  <div data-testid="chart-skeleton" class="mb-8 grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <div class="card h-80 motion-safe:animate-pulse"></div>
+    <div class="card h-80 motion-safe:animate-pulse"></div>
   </div>
 }
 

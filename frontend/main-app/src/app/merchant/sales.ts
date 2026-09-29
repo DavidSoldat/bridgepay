@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Page } from '../shared/models/page';
 import { MerchantSaleResponse } from '../shared/models/merchant-sale';
-import { MerchantSummaryResponse } from '../shared/models/merchant-summary';
+import { MerchantDashboard } from '../shared/models/merchant-dashboard';
 
 @Injectable({ providedIn: 'root' })
 export class Sales {
@@ -17,9 +17,10 @@ export class Sales {
     );
   }
 
-  summary(merchantId: string): Observable<MerchantSummaryResponse> {
-    return this.http.get<MerchantSummaryResponse>(
-      `${environment.gatewayBaseUrl}/api/v1/merchants/${merchantId}/summary`,
+  dashboard(merchantId: string, days: number, tz: string): Observable<MerchantDashboard> {
+    return this.http.get<MerchantDashboard>(
+      `${environment.gatewayBaseUrl}/api/v1/merchants/${merchantId}/dashboard`,
+      { params: { days, tz } },
     );
   }
 }
