@@ -40,3 +40,10 @@ secretGenerator:
     namespace: bridgepay
     envs:
       - ../../../../.env
+patches:
+  # Demo sales history for the merchant dashboard; the base (and so production) never loads db/demo.
+  - target: { kind: Deployment, name: application-service }
+    patch: |-
+      - op: add
+        path: /spec/template/spec/containers/0/env/-
+        value: { name: SPRING_FLYWAY_LOCATIONS, value: "classpath:db/migration,classpath:db/demo" }

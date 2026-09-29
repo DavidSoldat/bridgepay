@@ -84,3 +84,16 @@ these are all findable with a targeted search rather than another guess.
 | GET | `/api/v1/applications/{id}` | shopper (own) or ops (any) | Status lookup |
 | GET | `/api/v1/applications` | ops | Manual review queue |
 | POST | `/api/v1/applications/{id}/review-decision` | ops | Approve/decline a manual-review application |
+
+## Demo sales history
+
+`src/main/resources/db/demo/R__demo_sales_history.sql` seeds ~90 days of sales for the demo merchant so the
+merchant dashboard has something to show. It runs only where `SPRING_FLYWAY_LOCATIONS` includes
+`classpath:db/demo` (root `docker-compose.yml`, k3d `overlays/local`); it is a repeatable migration, re-run
+whenever the file changes. Timestamps are relative to when it first ran, so on a long-lived stack the history
+slowly leaves the 90-day window. To remove the rows:
+
+    DELETE FROM application.merchant_payouts p USING application.applications a
+     WHERE p.application_id = a.id AND a.applicant_id::text LIKE '00000000-0000-7000-8000-0000000de0%';
+    DELETE FROM application.applications
+     WHERE applicant_id::text LIKE '00000000-0000-7000-8000-0000000de0%';
