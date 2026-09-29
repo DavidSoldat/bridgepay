@@ -1,0 +1,61 @@
+<figure class="m-0">
+  <figcaption class="mb-1 text-sm font-medium text-ink-muted">{{ title() }}</figcaption>
+  <svg
+    [attr.viewBox]="'0 0 ' + C.width + ' ' + C.height"
+    class="block h-auto w-full overflow-visible rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral"
+    tabindex="0"
+    role="group"
+    [attr.aria-label]="title() + ' chart. Use the left and right arrow keys to read each period.'"
+    (keydown)="onKey($event)"
+    (pointerleave)="activeIndex.set(null)"
+    (blur)="activeIndex.set(null)"
+  >
+    @for (t of ticks(); track t) {
+      <line [attr.x1]="C.padLeft" [attr.x2]="C.width - C.padRight" [attr.y1]="y()(t)" [attr.y2]="y()(t)" class="stroke-hairline" stroke-width="1" />
+      <text data-tick [attr.x]="C.padLeft - 6" [attr.y]="y()(t)" text-anchor="end" dominant-baseline="middle" class="fill-ink-muted text-[10px]">{{ fmt(t) }}</text>
+    }
+
+    @if (kind() === 'area') {
+      <path data-mark="area" [attr.d]="area()" class="fill-coral/15" />
+      <path data-mark="line" [attr.d]="line()" class="fill-none stroke-coral" stroke-width="2" stroke-linejoin="round" />
+    } @else {
+      @for (bar of bars(); track bar.i) {
+        <path data-mark="bar" [attr.d]="bar.d" [class]="bar.i === activeIndex() ? 'fill-ink' : 'fill-ink-muted/60'" />
+      }
+    }
+
+    @if (activeIndex() !== null) {
+      <line
+        data-testid="crosshair"
+        [attr.x1]="xs()[activeIndex()!]" [attr.x2]="xs()[activeIndex()!]"
+        [attr.y1]="C.padTop" [attr.y2]="baseline"
+        class="stroke-ink-muted" stroke-width="1" stroke-dasharray="3 3"
+      />
+      @if (kind() === 'area') {
+        <circle [attr.cx]="xs()[activeIndex()!]" [attr.cy]="y()(points()[activeIndex()!].value)" r="4" class="fill-coral stroke-surface" stroke-width="2" />
+      }
+    }
+
+    @for (p of points(); track $index) {
+      @if ($index % labelEvery() === 0) {
+        <text [attr.x]="xs()[$index]" [attr.y]="C.height - 4" text-anchor="middle" class="fill-ink-muted text-[10px]">{{ p.label }}</text>
+      }
+      <rect
+        data-hit
+        [attr.x]="xs()[$index] - band() / 2" [attr.y]="C.padTop"
+        [attr.width]="band()" [attr.height]="baseline - C.padTop"
+        fill="transparent"
+        (pointerenter)="activeIndex.set($index)"
+      />
+    }
+  </svg>
+  <table class="sr-only">
+    <caption>{{ title() }}</caption>
+    <thead><tr><th scope="col">Period</th><th scope="col">{{ title() }}</th></tr></thead>
+    <tbody>
+      @for (p of points(); track $index) {
+        <tr><th scope="row">{{ p.label }}</th><td>{{ fmt(p.value, true) }}</td></tr>
+      }
+    </tbody>
+  </table>
+</figure>
