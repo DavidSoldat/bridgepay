@@ -1,15 +1,35 @@
 <div class="card mx-auto flex max-w-lg flex-col items-center p-8 text-center">
   @switch (response().status) {
     @case ('APPROVED') {
-      <div data-outcome="approved" class="flex flex-col items-center">
+      <div data-outcome="approved" class="flex w-full flex-col items-center">
         <span class="mb-4 flex size-14 items-center justify-center rounded-full bg-approved-bg text-3xl text-approved">
           <app-icon name="check" />
         </span>
-        <h2 class="mb-2 font-display text-2xl font-bold text-approved">You're approved</h2>
-        <p class="text-sm text-ink-muted">
-          ${{ response().installmentAmount | number: '1.2-2' }} today, then
-          {{ (response().installmentCount ?? 1) - 1 }} more weekly payments of the same amount.
-        </p>
+        <h2 class="mb-4 font-display text-2xl font-bold text-approved">You're approved</h2>
+
+        <div class="mb-5 flex w-full items-center gap-3 rounded-sm border border-hairline p-3 text-left">
+          <img [src]="product().image" alt="" width="1200" height="900" class="aspect-[4/3] w-16 shrink-0 rounded-sm object-cover" [style.background-color]="product().swatchColor" />
+          <div class="text-sm">
+            <p class="font-medium">{{ product().name }}</p>
+            <p class="text-ink-muted">Order ref <span data-testid="order-ref" class="font-mono">{{ orderRef() }}</span></p>
+          </div>
+        </div>
+
+        <ol class="mb-2 w-full text-left text-sm" aria-label="Payment schedule">
+          @for (date of schedule(); track $index; let first = $first) {
+            <li
+              data-testid="schedule-row"
+              class="flex items-center justify-between border-b border-hairline py-2 last:border-b-0"
+              [class]="first ? 'font-semibold text-ink' : 'text-ink-muted'"
+            >
+              <span class="flex items-center gap-2">
+                <span data-date>{{ date | date: 'EEE, MMM d' }}</span>
+                @if (first) { <span class="rounded-full bg-blush px-2 py-0.5 text-xs text-coral">Due now</span> }
+              </span>
+              <span class="font-mono">${{ response().installmentAmount | number: '1.2-2' }}</span>
+            </li>
+          }
+        </ol>
       </div>
       <app-first-payment [applicationId]="response().applicationId" [awaitPlan]="true" />
     }
@@ -18,8 +38,13 @@
         <span class="mb-4 flex size-14 items-center justify-center rounded-full bg-review-bg text-3xl text-review">
           <app-icon name="clock" />
         </span>
-        <h2 class="mb-2 font-display text-2xl font-bold text-review">Your order is under review</h2>
-        <p class="text-sm text-ink-muted">We're taking a closer look. We'll follow up by email — once approved, you'll make the first payment from your account.</p>
+        <h2 class="mb-4 font-display text-2xl font-bold text-review">Your order is under review</h2>
+        <ol data-testid="next-steps" class="flex list-decimal flex-col gap-1.5 pl-5 text-left text-sm text-ink-muted">
+          <li>We review your application.</li>
+          <li>You get an email with the decision.</li>
+          <li>Once approved, pay the first installment from My Account.</li>
+        </ol>
+        <a routerLink="/account" class="btn-secondary mt-5">Go to My Account</a>
       </div>
     }
     @default {
@@ -29,9 +54,10 @@
         </span>
         <h2 class="mb-2 font-display text-2xl font-bold text-declined">This purchase couldn't be approved</h2>
         <p class="text-sm text-ink-muted">Pay in 4 isn't available for this order. Try another payment method.</p>
+        <a [routerLink]="['/products', product().id]" class="btn-secondary mt-5">Back to product</a>
       </div>
     }
   }
   <p class="mt-6 flex items-center gap-1.5 text-xs text-ink-muted">Pay in 4 by <app-bridgepay-mark size="sm" /></p>
-  <button type="button" (click)="backToShop.emit()" class="btn-secondary mt-4">Back to shop</button>
+  <a routerLink="/" class="mt-4 text-sm font-semibold text-coral hover:text-coral-hover">Keep shopping</a>
 </div>

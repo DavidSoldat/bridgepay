@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, input, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { Auth } from '../core/auth';
 import { Applicants } from '../signup/applicants';
 import { findProduct } from '../catalog/products';
@@ -36,7 +36,6 @@ const STEP_KEYS: Record<Step, CheckoutStepKey> = {
 export class Checkout implements OnInit {
   private readonly auth = inject(Auth);
   private readonly applicants = inject(Applicants);
-  private readonly router = inject(Router);
 
   id = input.required<string>();
 
@@ -90,11 +89,6 @@ export class Checkout implements OnInit {
     } catch {
       // nothing stored if storage is blocked
     }
-  }
-
-  /** Replaced in Task 6, when the result screen links back itself. */
-  protected backToShop(): void {
-    this.router.navigateByUrl('/');
   }
 
   private addressKey(): string {

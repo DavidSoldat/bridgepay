@@ -10,7 +10,7 @@
 
     @if (step() === 'result') {
       @if (result(); as response) {
-        <app-checkout-result [response]="response" (backToShop)="backToShop()" />
+        <app-checkout-result [response]="response" [product]="p" />
       }
     } @else {
       <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_16rem]">

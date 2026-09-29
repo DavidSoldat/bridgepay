@@ -122,6 +122,7 @@ describe('Checkout', () => {
     expect(sessionStorage.getItem(KEY)).toBeNull();
     f.detectChanges();
     expect(el(f).querySelector('app-checkout-result')).not.toBeNull();
+    expect(el(f).textContent).toContain("You're approved");
     expect(el(f).querySelectorAll('ol[aria-label="Checkout steps"] button').length).toBe(0);
   });
 
