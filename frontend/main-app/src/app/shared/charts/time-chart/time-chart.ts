@@ -16,12 +16,16 @@ export interface ChartPoint {
   host: { class: 'block' },
 })
 export class TimeChart {
+  private static nextId = 0;
+
   points = input.required<ChartPoint[]>();
   title = input.required<string>();
   kind = input<'area' | 'bar'>('area');
   format = input<'money' | 'count'>('count');
   activeIndex = model<number | null>(null);
 
+  /** Names the hidden data table too; two charts share a page, so each needs its own id. */
+  protected readonly titleId = `time-chart-title-${TimeChart.nextId++}`;
   protected readonly C = CHART;
   /** Rendered width in CSS pixels, used as the viewBox width so text and strokes are never scaled down. */
   protected readonly width = signal<number>(CHART.width);

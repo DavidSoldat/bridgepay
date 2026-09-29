@@ -38,7 +38,12 @@ describe('TimeChart', () => {
     const rows = Array.from(el(render('area')).querySelectorAll('table tbody tr'))
       .map((r) => Array.from((r as HTMLTableRowElement).cells).map((c) => c.textContent?.trim()).join(' '));
     expect(rows).toEqual(['Sep 23 $50.00', 'Sep 24 $0.00', 'Sep 25 $120.50']);
-    expect(el(render('area')).querySelector('table caption')?.textContent?.trim()).toBe('Approved volume');
+    // named once, by the visible figcaption: a <caption> would render outside the visually hidden table
+    const f = render('area');
+    expect(el(f).querySelector('table caption')).toBeNull();
+    const titleId = el(f).querySelector('figcaption')?.id;
+    expect(titleId).toBeTruthy();
+    expect(el(f).querySelector('table')?.getAttribute('aria-labelledby')).toBe(titleId);
   });
 
   it('activates a point on hover and shows the crosshair', () => {

@@ -1,5 +1,5 @@
 <figure class="m-0">
-  <figcaption class="mb-1 text-sm font-medium text-ink-muted">{{ title() }}</figcaption>
+  <figcaption [id]="titleId" class="mb-1 text-sm font-medium text-ink-muted">{{ title() }}</figcaption>
   <svg
     [attr.viewBox]="'0 0 ' + width() + ' ' + C.height"
     class="block h-auto w-full overflow-visible rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral"
@@ -49,8 +49,7 @@
       />
     }
   </svg>
-  <table class="sr-only">
-    <caption>{{ title() }}</caption>
+  <table class="sr-only" [attr.aria-labelledby]="titleId">
     <thead><tr><th scope="col">Period</th><th scope="col">{{ title() }}</th></tr></thead>
     <tbody>
       @for (p of points(); track $index) {
