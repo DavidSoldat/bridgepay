@@ -79,6 +79,10 @@ public class CreditApplication {
     @Column(name = "reviewer_note", length = 1000)
     private String reviewerNote;
 
+    /** Set only by the db/demo seed; the app never writes it. */
+    @Column(name = "is_demo", nullable = false, insertable = false, updatable = false)
+    private boolean demo;
+
     @Version
     @Column(name = "version", nullable = false)
     private Long version;

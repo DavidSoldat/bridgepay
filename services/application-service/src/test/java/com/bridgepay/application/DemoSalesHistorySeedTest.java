@@ -40,6 +40,8 @@ class DemoSalesHistorySeedTest {
                 + " AND a.merchant_id <> '00000000-0000-7000-8000-000000000001'")).isZero();
         assertThat(count(jdbc, "SELECT count(*) FROM application.applications a WHERE " + DEMO
                 + " AND a.status = 'MANUAL_REVIEW'")).isZero();
+        assertThat(count(jdbc, "SELECT count(*) FROM application.applications a WHERE " + DEMO
+                + " AND NOT a.is_demo")).isZero();
         long approved = count(jdbc, "SELECT count(*) FROM application.applications a WHERE " + DEMO
                 + " AND a.status IN ('APPROVED', 'CANCELLED')");
         assertThat((double) approved / total).isBetween(0.65, 0.80);

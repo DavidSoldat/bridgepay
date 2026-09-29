@@ -11,7 +11,10 @@ import java.util.UUID;
 
 public interface CreditApplicationRepository extends JpaRepository<CreditApplication, UUID> {
 
-    Page<CreditApplication> findByStatus(ApplicationStatus status, Pageable pageable);
+    /** Ops queue: seeded demo orders (is_demo) have no shopper or plan behind them, so they stay out. */
+    Page<CreditApplication> findByDemoFalse(Pageable pageable);
+
+    Page<CreditApplication> findByStatusAndDemoFalse(ApplicationStatus status, Pageable pageable);
 
     Optional<CreditApplication> findByIdAndApplicantId(UUID id, UUID applicantId);
 

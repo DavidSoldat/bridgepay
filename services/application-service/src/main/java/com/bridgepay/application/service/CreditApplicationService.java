@@ -177,9 +177,9 @@ public class CreditApplicationService {
     @Transactional(readOnly = true)
     public Page<ApplicationResponse> listApplications(String status, Pageable pageable) {
         if ("ALL".equalsIgnoreCase(status)) {
-            return applicationRepository.findAll(pageable).map(this::toResponse);
+            return applicationRepository.findByDemoFalse(pageable).map(this::toResponse);
         }
-        return applicationRepository.findByStatus(ApplicationStatus.valueOf(status), pageable)
+        return applicationRepository.findByStatusAndDemoFalse(ApplicationStatus.valueOf(status), pageable)
                 .map(this::toResponse);
     }
 

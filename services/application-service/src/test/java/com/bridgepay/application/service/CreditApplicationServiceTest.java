@@ -217,14 +217,14 @@ class CreditApplicationServiceTest {
         Pageable pageable = PageRequest.of(0, 20);
         CreditApplication declined = new CreditApplication(applicantId, merchant, new BigDecimal("100.00"));
         declined.applyDecision(ApplicationStatus.DECLINED, 0.9, "[]", null, null);
-        when(applicationRepository.findByStatus(ApplicationStatus.DECLINED, pageable))
+        when(applicationRepository.findByStatusAndDemoFalse(ApplicationStatus.DECLINED, pageable))
                 .thenReturn(new PageImpl<>(List.of(declined)));
 
         Page<ApplicationResponse> result = service.listApplications("DECLINED", pageable);
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).status()).isEqualTo("DECLINED");
-        verify(applicationRepository, never()).findAll(any(Pageable.class));
+        verify(applicationRepository, never()).findByDemoFalse(any(Pageable.class));
     }
 
     @Test
@@ -232,12 +232,12 @@ class CreditApplicationServiceTest {
         Pageable pageable = PageRequest.of(0, 20);
         CreditApplication approved = new CreditApplication(applicantId, merchant, new BigDecimal("100.00"));
         approved.applyDecision(ApplicationStatus.APPROVED, 0.1, "[]", 4, new BigDecimal("25.00"));
-        when(applicationRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(approved)));
+        when(applicationRepository.findByDemoFalse(pageable)).thenReturn(new PageImpl<>(List.of(approved)));
 
         Page<ApplicationResponse> result = service.listApplications("ALL", pageable);
 
         assertThat(result.getContent()).hasSize(1);
-        verify(applicationRepository, never()).findByStatus(any(), any());
+        verify(applicationRepository, never()).findByStatusAndDemoFalse(any(), any());
     }
 
     @Test

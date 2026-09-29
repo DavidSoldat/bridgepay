@@ -83,6 +83,8 @@ class CreditApplicationControllerIntegrationTest {
     private ObjectMapper objectMapper;
     @Autowired
     private MerchantRepository merchantRepository;
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbc;
 
     private UUID merchantId;
 
@@ -190,6 +192,25 @@ class CreditApplicationControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/applications").param("status", "ALL").with(opsUser))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].status").exists());
+    }
+
+    @Test
+    void opsEndpoints_leaveOutSeededDemoOrdersForEveryFilter() throws Exception {
+        var opsUser = jwt().jwt(j -> j.subject(UUID.randomUUID().toString())
+                        .claim("realm_access", Map.of("roles", List.of("ops"))))
+                .authorities(new SimpleGrantedAuthority("ROLE_OPS"));
+        // what db/demo/R__demo_sales_history.sql inserts: decided orders with no shopper profile or plan behind them
+        UUID demoId = UUID.randomUUID();
+        jdbc.update("""
+                INSERT INTO application.applications (id, applicant_id, merchant_id, amount, status, is_demo, created_at, updated_at)
+                VALUES (?, '00000000-0000-7000-8000-0000000de001', ?, 52.42, 'APPROVED', true, now() + interval '1 hour', now())""",
+                demoId, merchantId);
+
+        for (String status : List.of("ALL", "APPROVED")) {
+            mockMvc.perform(get("/api/v1/applications").param("status", status).param("size", "100").with(opsUser))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[?(@.applicationId == '" + demoId + "')]").isEmpty());
+        }
     }
 
     @Test

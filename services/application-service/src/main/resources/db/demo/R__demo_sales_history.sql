@@ -2,7 +2,7 @@
 -- Loaded only where SPRING_FLYWAY_LOCATIONS adds classpath:db/demo (root docker-compose, k3d overlays/local).
 -- Repeatable: Flyway re-runs it whenever this file changes, so it removes its own rows first.
 -- Marker: applicant ids 00000000-0000-7000-8000-0000000de000 .. de039. Ids are UUIDv4 (Postgres 16 has no v7).
--- No MANUAL_REVIEW rows: those would put fake shoppers into the real ops queue.
+-- Rows are flagged is_demo, which keeps them out of the ops queue; no MANUAL_REVIEW rows either.
 
 DELETE FROM application.merchant_payouts p
 USING application.applications a
@@ -52,7 +52,7 @@ FROM raw;
 
 INSERT INTO application.applications
     (id, applicant_id, merchant_id, amount, status, risk_score, score_factors, decision_at,
-     installment_count, installment_amount, decision_source, created_at, updated_at)
+     installment_count, installment_amount, decision_source, is_demo, created_at, updated_at)
 SELECT id,
        ('00000000-0000-7000-8000-0000000de0' || lpad((n % 40)::text, 2, '0'))::uuid,
        '00000000-0000-7000-8000-000000000001',
@@ -65,6 +65,7 @@ SELECT id,
        4,
        installment,
        'MODEL',
+       true,
        created_at,
        created_at
 FROM demo_orders;
