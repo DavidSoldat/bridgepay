@@ -1,7 +1,7 @@
 <figure class="m-0">
   <figcaption class="mb-1 text-sm font-medium text-ink-muted">{{ title() }}</figcaption>
   <svg
-    [attr.viewBox]="'0 0 ' + C.width + ' ' + C.height"
+    [attr.viewBox]="'0 0 ' + width() + ' ' + C.height"
     class="block h-auto w-full overflow-visible rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral"
     tabindex="0"
     role="group"
@@ -11,8 +11,8 @@
     (blur)="activeIndex.set(null)"
   >
     @for (t of ticks(); track t) {
-      <line [attr.x1]="C.padLeft" [attr.x2]="C.width - C.padRight" [attr.y1]="y()(t)" [attr.y2]="y()(t)" class="stroke-hairline" stroke-width="1" />
-      <text data-tick [attr.x]="C.padLeft - 6" [attr.y]="y()(t)" text-anchor="end" dominant-baseline="middle" class="fill-ink-muted text-[10px]">{{ fmt(t) }}</text>
+      <line [attr.x1]="C.padLeft" [attr.x2]="width() - C.padRight" [attr.y1]="y()(t)" [attr.y2]="y()(t)" class="stroke-hairline" stroke-width="1" />
+      <text data-tick [attr.x]="C.padLeft - 6" [attr.y]="y()(t)" text-anchor="end" dominant-baseline="middle" class="fill-ink-muted text-[11px]">{{ fmt(t) }}</text>
     }
 
     @if (kind() === 'area') {
@@ -38,7 +38,7 @@
 
     @for (p of points(); track $index) {
       @if ($index % labelEvery() === 0) {
-        <text [attr.x]="xs()[$index]" [attr.y]="C.height - 4" text-anchor="middle" class="fill-ink-muted text-[10px]">{{ p.label }}</text>
+        <text [attr.x]="xs()[$index]" [attr.y]="C.height - 4" text-anchor="middle" class="fill-ink-muted text-[11px]">{{ p.label }}</text>
       }
       <rect
         data-hit

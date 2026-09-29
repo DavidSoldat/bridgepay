@@ -1,7 +1,8 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { formatDate } from '@angular/common';
 import { TimeChart, ChartPoint } from '../time-chart/time-chart';
-import { bandCenterPercent, formatValue } from '../scale';
+import { CHART, bandCenterPercent, formatValue } from '../scale';
+import { observeWidth } from '../observe-width';
 import { SeriesPoint } from '../../models/merchant-dashboard';
 
 /** yyyy-MM-dd as a local date (new Date('2026-09-29') would be UTC midnight and can show the day before). */
@@ -14,12 +15,19 @@ function localDate(iso: string): Date {
   selector: 'app-sales-over-time',
   imports: [TimeChart],
   templateUrl: './sales-over-time.html',
+  host: { class: 'block' },
 })
 export class SalesOverTime {
   series = input.required<SeriesPoint[]>();
   bucket = input.required<'DAY' | 'WEEK'>();
 
   protected readonly active = signal<number | null>(null);
+  /** Same rendered width as the two panels inside, so the tooltip lines up with their buckets. */
+  private readonly width = signal<number>(CHART.width);
+
+  constructor() {
+    observeWidth(this.width);
+  }
 
   private readonly axisLabels = computed(() =>
     this.series().map((p) => formatDate(localDate(p.start), 'MMM d', 'en-US')),
@@ -36,7 +44,7 @@ export class SalesOverTime {
     if (i === null || !point) return null;
     const date = localDate(point.start);
     return {
-      left: bandCenterPercent(i, this.series().length),
+      left: bandCenterPercent(i, this.series().length, this.width()),
       label: this.bucket() === 'WEEK' ? `Week of ${formatDate(date, 'MMM d', 'en-US')}` : formatDate(date, 'EEE, MMM d', 'en-US'),
       volume: formatValue(point.approvedVolume, 'money', true),
       checkouts: formatValue(point.checkouts, 'count'),

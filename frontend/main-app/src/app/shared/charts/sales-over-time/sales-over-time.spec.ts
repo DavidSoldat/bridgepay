@@ -44,4 +44,26 @@ describe('SalesOverTime', () => {
     f.detectChanges();
     expect(el.querySelector('[data-testid="chart-tooltip"]')?.textContent).toContain('Week of Sep 29');
   });
+
+  it('places the tooltip over the hovered bucket at the rendered width', () => {
+    let resize: (entries: { contentRect: { width: number } }[]) => void = () => {};
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: typeof resize) { resize = callback; }
+      observe() {}
+      disconnect() {}
+    });
+    try {
+      const f = render('DAY');
+      TestBed.tick();
+      resize([{ contentRect: { width: 320 } }]);
+      f.detectChanges();
+      const el = f.nativeElement as HTMLElement;
+      (el.querySelectorAll('[data-hit]')[0] as SVGElement).dispatchEvent(new Event('pointerenter'));
+      f.detectChanges();
+      // plot 320 - 48 - 8 = 264 wide, 2 buckets of 132: first centre at 48 + 66 = 114 -> 35.625%
+      expect((el.querySelector('[data-testid="chart-tooltip"]') as HTMLElement).style.left).toBe('35.625%');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

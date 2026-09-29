@@ -1,7 +1,8 @@
-import { Component, computed, input, model } from '@angular/core';
+import { Component, computed, input, model, signal } from '@angular/core';
 import {
   CHART, areaPath, bandCenter, bandWidth, formatValue, linePath, linearScale, niceTicks, roundedBarPath,
 } from '../scale';
+import { observeWidth } from '../observe-width';
 
 export interface ChartPoint {
   label: string;
@@ -12,6 +13,7 @@ export interface ChartPoint {
 @Component({
   selector: 'app-time-chart',
   templateUrl: './time-chart.html',
+  host: { class: 'block' },
 })
 export class TimeChart {
   points = input.required<ChartPoint[]>();
@@ -21,13 +23,20 @@ export class TimeChart {
   activeIndex = model<number | null>(null);
 
   protected readonly C = CHART;
+  /** Rendered width in CSS pixels, used as the viewBox width so text and strokes are never scaled down. */
+  protected readonly width = signal<number>(CHART.width);
+
+  constructor() {
+    observeWidth(this.width);
+  }
+
   protected readonly baseline = CHART.height - CHART.padBottom;
   protected readonly ticks = computed(() =>
     niceTicks(Math.max(0, ...this.points().map((p) => p.value)), 4, this.format() === 'count'),
   );
   protected readonly y = computed(() => linearScale([0, this.ticks().at(-1) || 1], [this.baseline, CHART.padTop]));
-  protected readonly band = computed(() => bandWidth(this.points().length));
-  protected readonly xs = computed(() => this.points().map((_, i) => bandCenter(i, this.points().length)));
+  protected readonly band = computed(() => bandWidth(this.points().length, this.width()));
+  protected readonly xs = computed(() => this.points().map((_, i) => bandCenter(i, this.points().length, this.width())));
   private readonly coords = computed(() =>
     this.points().map((p, i) => [this.xs()[i], this.y()(p.value)] as [number, number]),
   );

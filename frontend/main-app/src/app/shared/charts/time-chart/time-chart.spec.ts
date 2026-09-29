@@ -72,4 +72,22 @@ describe('TimeChart', () => {
     expect(el(f).innerHTML).not.toContain('NaN');
     expect(Array.from(el(f).querySelectorAll('[data-tick]')).map((t) => t.textContent?.trim())).toEqual(['$0']);
   });
+
+  it('uses its rendered width as the coordinate system, so labels stay at their real pixel size', () => {
+    let resize: (entries: { contentRect: { width: number } }[]) => void = () => {};
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: typeof resize) { resize = callback; }
+      observe() {}
+      disconnect() {}
+    });
+    try {
+      const f = render('area');
+      TestBed.tick();
+      resize([{ contentRect: { width: 320 } }]);
+      f.detectChanges();
+      expect(el(f).querySelector('svg')?.getAttribute('viewBox')).toBe('0 0 320 160');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

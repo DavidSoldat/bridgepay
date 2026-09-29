@@ -1,4 +1,4 @@
-/** Geometry shared by every chart: one fixed viewBox, scaled to its container by the SVG itself. */
+/** Geometry shared by every chart. width is only the default: charts use their rendered width (observeWidth). */
 export const CHART = { width: 600, height: 160, padLeft: 48, padRight: 8, padTop: 8, padBottom: 20 } as const;
 
 const round = (n: number) => Math.round(n * 10) / 10;
@@ -37,16 +37,16 @@ export function roundedBarPath(x: number, width: number, top: number, baseline: 
   return `M${x0},${b}V${round(top + r)}Q${x0},${t} ${round(x + r)},${t}H${round(x + width - r)}Q${x1},${t} ${x1},${round(top + r)}V${b}Z`;
 }
 
-export function bandWidth(n: number): number {
-  return (CHART.width - CHART.padLeft - CHART.padRight) / Math.max(1, n);
+export function bandWidth(n: number, width: number = CHART.width): number {
+  return (width - CHART.padLeft - CHART.padRight) / Math.max(1, n);
 }
 
-export function bandCenter(i: number, n: number): number {
-  return CHART.padLeft + bandWidth(n) * (i + 0.5);
+export function bandCenter(i: number, n: number, width: number = CHART.width): number {
+  return CHART.padLeft + bandWidth(n, width) * (i + 0.5);
 }
 
-export function bandCenterPercent(i: number, n: number): number {
-  return (bandCenter(i, n) / CHART.width) * 100;
+export function bandCenterPercent(i: number, n: number, width: number = CHART.width): number {
+  return (bandCenter(i, n, width) / width) * 100;
 }
 
 export function formatValue(value: number, format: 'money' | 'count', precise = false): string {
