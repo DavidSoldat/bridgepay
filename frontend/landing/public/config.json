@@ -1,0 +1,10 @@
+{
+  "storefrontUrl": "http://localhost:4201",
+  "appUrl": "http://localhost:4200",
+  "githubUrl": null,
+  "demoLogins": [
+    { "role": "shopper", "username": "shopper1", "password": "shopper1" },
+    { "role": "ops", "username": "ops1", "password": "ops1" },
+    { "role": "merchant", "username": "merchant1", "password": "merchant1" }
+  ]
+}

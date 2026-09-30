@@ -1,0 +1,57 @@
+/* BridgePay brand tokens - direction B "Warm Coral" with Sora + IBM Plex.
+   Byte-identical in frontend/main-app and frontend/storefront; CI fails if they differ.
+   Fonts are loaded by each app's styles.css (a CSS @import url must come first). */
+
+@theme {
+  --color-cream: #FFF7F0;
+  --color-surface: #FFFFFF;
+  --color-blush: #FFDCCF;
+  --color-ink: #1E1414;
+  --color-ink-muted: #6E5A55;
+  --color-hairline: #F2D6CC;
+  --color-coral: #C93A20;
+  --color-coral-hover: #9E2A14;
+  --color-approved: #1F6B45;
+  --color-approved-bg: #DDF3E6;
+  --color-review: #7A5000;
+  --color-review-bg: #FFEBC2;
+  --color-declined: #A3241C;
+  --color-declined-bg: #FDE0DC;
+  --color-paid: #2A4596;
+  --color-paid-bg: #E1E7FA;
+  --color-neutral: #5E4E4A;
+  --color-neutral-bg: #F1E6E1;
+
+  --font-display: "Sora", sans-serif;
+  --font-sans: "IBM Plex Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+
+  --radius-sm: 14px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+
+  --shadow-card: 0 6px 18px rgb(158 42 20 / 0.08);
+  --shadow-raised: 0 12px 32px rgb(158 42 20 / 0.10);
+}
+
+@layer base {
+  body {
+    @apply bg-cream text-ink font-sans;
+  }
+}
+
+@utility btn-primary {
+  @apply inline-flex items-center justify-center gap-2 min-h-11 px-5 rounded-sm bg-coral text-white font-semibold hover:bg-coral-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+@utility btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 min-h-11 px-5 rounded-sm border-2 border-ink text-ink font-semibold hover:bg-blush focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+@utility card {
+  @apply bg-surface rounded-lg shadow-card;
+}
+
+@utility input {
+  @apply w-full min-h-11 px-3 py-2 rounded-sm border border-hairline bg-surface text-ink focus:outline-2 focus:outline-coral focus:border-coral;
+}
