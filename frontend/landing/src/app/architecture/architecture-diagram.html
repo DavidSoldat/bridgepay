@@ -1,0 +1,54 @@
+<section id="architecture" aria-labelledby="architecture-heading" class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+  <h2 id="architecture-heading" class="font-display text-3xl font-bold">How it's built</h2>
+  <p class="mt-2 text-ink-muted">Seven Spring Boot services behind a gateway, talking through Kafka with a transactional outbox.</p>
+
+  <!-- Scrolls inside this box on phones; the page itself never scrolls sideways. -->
+  <div class="card mt-8 overflow-x-auto p-4">
+    <svg
+      [attr.viewBox]="'0 0 ' + W + ' ' + H"
+      class="block h-auto w-full min-w-[720px]"
+      role="img"
+      aria-labelledby="architecture-heading"
+      aria-describedby="architecture-table"
+    >
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" class="fill-ink-muted" />
+        </marker>
+      </defs>
+      @for (l of lines; track l.key) {
+        <line data-edge [attr.x1]="l.x1" [attr.y1]="l.y1" [attr.x2]="l.x2" [attr.y2]="l.y2"
+              class="stroke-ink-muted" stroke-width="1.5" marker-end="url(#arrow)" />
+      }
+      @for (n of nodes; track n.id) {
+        <g [attr.data-node]="n.id">
+          <rect [attr.x]="n.x" [attr.y]="n.y" [attr.width]="nodeW" [attr.height]="nodeH" rx="8"
+                [class]="box[n.group]" stroke-width="1.5" />
+          <text [attr.x]="n.x + nodeW / 2" [attr.y]="n.y + nodeH / 2" text-anchor="middle" dominant-baseline="middle"
+                class="fill-ink text-[13px] font-semibold">{{ n.label }}</text>
+          @if (n.id === 'postgres') {
+            <text [attr.x]="n.x + nodeW / 2" [attr.y]="n.y + nodeH + 16" text-anchor="middle"
+                  class="fill-ink-muted text-[11px]">schema per service</text>
+          }
+        </g>
+      }
+    </svg>
+  </div>
+
+  <table id="architecture-table" class="mt-6 w-full text-left text-sm">
+    <thead>
+      <tr class="border-b border-hairline text-ink-muted">
+        <th scope="col" class="py-2 pr-4 font-medium">Component</th>
+        <th scope="col" class="py-2 font-medium">What it does</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (n of nodes; track n.id) {
+        <tr class="border-b border-hairline align-top last:border-0">
+          <th scope="row" class="py-2 pr-4 font-semibold whitespace-nowrap">{{ n.label }}</th>
+          <td class="py-2 text-ink-muted">{{ n.description }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</section>
