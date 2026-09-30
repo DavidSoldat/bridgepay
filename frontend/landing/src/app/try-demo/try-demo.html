@@ -1,0 +1,39 @@
+<section id="demo" aria-labelledby="demo-heading" class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+  <h2 id="demo-heading" class="font-display text-3xl font-bold">Try the demo</h2>
+  <p class="mt-2 text-ink-muted">Three demo accounts, one for each side of the platform.</p>
+
+  <div class="mt-8 grid gap-4 md:grid-cols-3">
+    @for (role of roles; track role) {
+      <app-role-card [role]="role" [login]="login(role)" [href]="href(role)" />
+    }
+  </div>
+
+  <h3 class="mt-12 font-display text-xl font-bold">The full loop in 5 steps</h3>
+  <ol data-testid="walkthrough" class="mt-4 list-decimal space-y-3 pl-6 marker:font-semibold marker:text-coral">
+    <li>
+      <a [href]="config.storefrontUrl" class="font-semibold text-coral-hover underline">Open the store</a>
+      and sign in as <ng-container *ngTemplateOutlet="name; context: { $implicit: who('shopper') }" />.
+      Pick a product and check out with Pay in 4.
+    </li>
+    <li>See the decision. Many demo checkouts land in manual review — that's the interesting path.</li>
+    <li>
+      <a [href]="config.appUrl" class="font-semibold text-coral-hover underline">Open the app</a>
+      as <ng-container *ngTemplateOutlet="name; context: { $implicit: who('ops') }" />.
+      The application is in the review queue: open it, read the score factors, approve it.
+    </li>
+    <li>Pay the first installment from the store's account page (Paddle sandbox card 4242 4242 4242 4242).</li>
+    <li>
+      Open the app as <ng-container *ngTemplateOutlet="name; context: { $implicit: who('merchant') }" />
+      to see the sale and the payout, or as <ng-container *ngTemplateOutlet="name; context: { $implicit: who('ops') }" />
+      to see it on the operations dashboard.
+    </li>
+  </ol>
+
+  <ng-template #name let-who>
+    @if (who.isLogin) {
+      <strong class="font-mono">{{ who.name }}</strong>
+    } @else {
+      {{ who.name }}
+    }
+  </ng-template>
+</section>

@@ -1,0 +1,31 @@
+<div>
+  <h3 class="font-display text-lg font-bold">{{ text[role()].title }}</h3>
+  <p class="mt-1 text-sm text-ink-muted">{{ text[role()].line }}</p>
+</div>
+
+@if (login(); as l) {
+  <dl class="space-y-2 text-sm">
+    @for (field of [{ key: 'username', label: 'Username', value: l.username }, { key: 'password', label: 'Password', value: l.password }]; track field.key) {
+      <div class="flex items-center justify-between gap-3 rounded-sm bg-cream px-3 py-2">
+        <div class="min-w-0">
+          <dt class="text-xs text-ink-muted">{{ field.label }}</dt>
+          <dd [attr.data-testid]="field.key" class="break-all font-mono">{{ field.value }}</dd>
+        </div>
+        <button
+          type="button"
+          (click)="copy(field.value)"
+          [attr.aria-label]="'Copy ' + role() + ' ' + field.key"
+          class="flex size-11 shrink-0 items-center justify-center rounded-sm text-ink-muted hover:bg-blush hover:text-ink"
+        ><app-icon name="copy" /></button>
+      </div>
+    }
+  </dl>
+} @else {
+  <p class="text-sm text-ink-muted">Demo access on request.</p>
+}
+
+<p role="status" aria-live="polite" class="min-h-5 text-xs text-ink-muted">{{ status() }}</p>
+
+<a [href]="href()" class="btn-primary mt-auto inline-flex items-center justify-center gap-2">
+  {{ text[role()].link }} <app-icon name="arrow-right" />
+</a>
