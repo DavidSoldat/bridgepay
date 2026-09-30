@@ -11,7 +11,7 @@ import { SkeletonRows } from '../../shared/ui/skeleton-rows/skeleton-rows';
 import { SalesOverTime } from '../../shared/charts/sales-over-time/sales-over-time';
 import { Sparkline } from '../../shared/charts/sparkline/sparkline';
 import { FunnelBars, FunnelStep } from '../../shared/charts/funnel-bars/funnel-bars';
-import { Change, parseDays, pointsChange, relativeChange } from './change';
+import { Change, changeClass, parseDays, pointsChange, relativeChange } from '../../shared/charts/change';
 import { MerchantDashboard } from '../../shared/models/merchant-dashboard';
 
 export const SALE_FILTERS = ['ALL', 'APPROVED', 'MANUAL_REVIEW', 'DECLINED'] as const;
@@ -22,12 +22,6 @@ const SALE_FILTER_LABELS: Record<SaleFilter, string> = {
   APPROVED: 'Approved',
   MANUAL_REVIEW: 'In review',
   DECLINED: 'Declined',
-};
-
-const CHANGE_CLASS: Record<Change['direction'], string> = {
-  up: 'text-approved',
-  down: 'text-declined',
-  flat: 'text-ink-muted',
 };
 
 @Component({
@@ -44,6 +38,7 @@ export class SalesPage {
   private readonly tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
   protected readonly periods = [7, 30, 90] as const;
+  protected readonly changeClass = changeClass;
   protected readonly days = toSignal(this.route.queryParamMap.pipe(map((p) => parseDays(p.get('days')))), {
     initialValue: 30 as const,
   });
@@ -113,10 +108,6 @@ export class SalesPage {
 
   protected selectDays(days: number): void {
     this.router.navigate([], { relativeTo: this.route, queryParams: { days }, queryParamsHandling: 'merge' });
-  }
-
-  protected changeClass(change: Change): string {
-    return CHANGE_CLASS[change.direction];
   }
 
   protected selectFilter(status: SaleFilter): void {

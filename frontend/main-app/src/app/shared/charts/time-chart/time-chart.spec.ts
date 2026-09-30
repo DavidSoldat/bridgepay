@@ -78,6 +78,33 @@ describe('TimeChart', () => {
     expect(Array.from(el(f).querySelectorAll('[data-tick]')).map((t) => t.textContent?.trim())).toEqual(['$0']);
   });
 
+  it('draws no markers by default and a dashed labelled line at each marker boundary', () => {
+    expect(el(render('bar')).querySelectorAll('[data-marker]').length).toBe(0);
+
+    const f = TestBed.createComponent(TimeChart);
+    f.componentRef.setInput('points', Array.from({ length: 10 }, (_, i) => ({ label: `${i}`, value: i })));
+    f.componentRef.setInput('title', 'Applications by risk score');
+    f.componentRef.setInput('kind', 'bar');
+    f.componentRef.setInput('markers', [{ at: 3, label: 'Review' }, { at: 7, label: 'Decline' }]);
+    f.detectChanges();
+
+    const markers = Array.from(el(f).querySelectorAll('[data-marker]'));
+    expect(markers.length).toBe(2);
+    // 600 wide, 48 left / 8 right padding, 10 bands of 54.4: boundary 3 sits at 48 + 3 × 54.4
+    expect(parseFloat(markers[0].getAttribute('x1')!)).toBeCloseTo(211.2, 1);
+    expect(markers[0].getAttribute('stroke-dasharray')).toBeTruthy();
+    expect(el(f).textContent).toContain('Review');
+    expect(el(f).textContent).toContain('Decline');
+  });
+
+  it('names the category column of the hidden table', () => {
+    const f = render('bar');
+    expect(el(f).querySelector('table thead th')?.textContent?.trim()).toBe('Period');
+    f.componentRef.setInput('categoryLabel', 'Risk score');
+    f.detectChanges();
+    expect(el(f).querySelector('table thead th')?.textContent?.trim()).toBe('Risk score');
+  });
+
   it('uses its rendered width as the coordinate system, so labels stay at their real pixel size', () => {
     let resize: (entries: { contentRect: { width: number } }[]) => void = () => {};
     vi.stubGlobal('ResizeObserver', class {

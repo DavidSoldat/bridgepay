@@ -24,3 +24,15 @@ export function pointsChange(current: number | null, previous: number | null, da
 export function parseDays(value: string | null): 7 | 30 | 90 {
   return value === '7' ? 7 : value === '90' ? 90 : 30;
 }
+
+const TONE: Record<Change['direction'], string> = {
+  up: 'text-approved',
+  down: 'text-declined',
+  flat: 'text-ink-muted',
+};
+
+/** Colour of a change line. For lower-is-better numbers (review time) a fall is the good news. */
+export function changeClass(change: Change, lowerIsBetter = false): string {
+  if (!lowerIsBetter || change.direction === 'flat') return TONE[change.direction];
+  return TONE[change.direction === 'up' ? 'down' : 'up'];
+}

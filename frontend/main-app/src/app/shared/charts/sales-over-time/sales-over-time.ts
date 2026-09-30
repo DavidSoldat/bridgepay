@@ -3,13 +3,8 @@ import { formatDate } from '@angular/common';
 import { TimeChart, ChartPoint } from '../time-chart/time-chart';
 import { CHART, bandCenterPercent, formatValue } from '../scale';
 import { observeWidth } from '../observe-width';
+import { localDate } from '../local-date';
 import { SeriesPoint } from '../../models/merchant-dashboard';
-
-/** yyyy-MM-dd as a local date (new Date('2026-09-29') would be UTC midnight and can show the day before). */
-function localDate(iso: string): Date {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
 
 @Component({
   selector: 'app-sales-over-time',

@@ -9,6 +9,12 @@ export interface ChartPoint {
   value: number;
 }
 
+/** A dashed vertical line at a bar boundary: at 3 sits between the 3rd and 4th bar. */
+export interface ChartMarker {
+  at: number;
+  label: string;
+}
+
 /** One single-series panel over time. Two panels can share activeIndex for a common crosshair. */
 @Component({
   selector: 'app-time-chart',
@@ -22,6 +28,9 @@ export class TimeChart {
   title = input.required<string>();
   kind = input<'area' | 'bar'>('area');
   format = input<'money' | 'count'>('count');
+  markers = input<ChartMarker[]>([]);
+  /** Header of the hidden table's first column. */
+  categoryLabel = input('Period');
   activeIndex = model<number | null>(null);
 
   /** Names the hidden data table too; two charts share a page, so each needs its own id. */
@@ -54,6 +63,10 @@ export class TimeChart {
   });
   /** Show about six x labels whatever the number of points. */
   protected readonly labelEvery = computed(() => Math.max(1, Math.ceil(this.points().length / 6)));
+
+  protected markerX(at: number): number {
+    return CHART.padLeft + this.band() * at;
+  }
 
   protected fmt(value: number, precise = false): string {
     return formatValue(value, this.format(), precise);

@@ -1,4 +1,4 @@
-import { parseDays, pointsChange, relativeChange } from './change';
+import { changeClass, parseDays, pointsChange, relativeChange } from './change';
 
 describe('change lines', () => {
   it('states the relative change against the previous period', () => {
@@ -17,6 +17,18 @@ describe('change lines', () => {
     expect(pointsChange(0.8, 0.76, 90)).toEqual({ direction: 'up', text: '▲ 4 pts vs previous 90 days' });
     expect(pointsChange(null, 0.8, 30).direction).toBe('flat');
     expect(pointsChange(0.8, null, 30).direction).toBe('flat');
+  });
+
+  it('colours a rise as good and a fall as bad, or the other way round when lower is better', () => {
+    const up = relativeChange(120, 100, 30);
+    const down = relativeChange(80, 100, 30);
+    const flat = relativeChange(100, 100, 30);
+    expect(changeClass(up)).toBe('text-approved');
+    expect(changeClass(down)).toBe('text-declined');
+    expect(changeClass(flat)).toBe('text-ink-muted');
+    expect(changeClass(up, true)).toBe('text-declined');
+    expect(changeClass(down, true)).toBe('text-approved');
+    expect(changeClass(flat, true)).toBe('text-ink-muted');
   });
 
   it('reads the period from the URL, defaulting to 30', () => {

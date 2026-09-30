@@ -24,6 +24,16 @@
       }
     }
 
+    @for (m of markers(); track m.at) {
+      <line
+        data-marker
+        [attr.x1]="markerX(m.at)" [attr.x2]="markerX(m.at)"
+        [attr.y1]="C.padTop" [attr.y2]="baseline"
+        class="stroke-ink-muted" stroke-width="1" stroke-dasharray="4 3"
+      />
+      <text [attr.x]="markerX(m.at) + 4" [attr.y]="C.padTop + 10" class="fill-ink-muted text-[11px]">{{ m.label }}</text>
+    }
+
     @if (activeIndex() !== null) {
       <line
         data-testid="crosshair"
@@ -50,7 +60,7 @@
     }
   </svg>
   <table class="sr-only" [attr.aria-labelledby]="titleId">
-    <thead><tr><th scope="col">Period</th><th scope="col">{{ title() }}</th></tr></thead>
+    <thead><tr><th scope="col">{{ categoryLabel() }}</th><th scope="col">{{ title() }}</th></tr></thead>
     <tbody>
       @for (p of points(); track $index) {
         <tr><th scope="row">{{ p.label }}</th><td>{{ fmt(p.value, true) }}</td></tr>
