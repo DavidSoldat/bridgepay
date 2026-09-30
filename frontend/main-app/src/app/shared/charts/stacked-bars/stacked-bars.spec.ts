@@ -76,6 +76,13 @@ describe('StackedBars', () => {
     expect(rows).toEqual(['Sep 27 4 1 1 6', 'Sep 28 0 0 0 0', 'Sep 29 2 2 0 4']);
   });
 
+  it('hides the data table inside a block, since a table ignores width: 1px and would widen a phone page', () => {
+    const table = el(render()).querySelector('table')!;
+    expect(table.classList).not.toContain('sr-only');
+    expect(table.parentElement!.tagName).toBe('DIV');
+    expect(table.parentElement!.classList).toContain('sr-only');
+  });
+
   it('draws an all-zero period without NaN', () => {
     const f = render(BUCKETS.map((b) => ({ ...b, values: [0, 0, 0] })));
     expect(el(f).innerHTML).not.toContain('NaN');

@@ -59,12 +59,15 @@
       />
     }
   </svg>
-  <table class="sr-only" [attr.aria-labelledby]="titleId">
-    <thead><tr><th scope="col">{{ categoryLabel() }}</th><th scope="col">{{ title() }}</th></tr></thead>
-    <tbody>
-      @for (p of points(); track $index) {
-        <tr><th scope="row">{{ p.label }}</th><td>{{ fmt(p.value, true) }}</td></tr>
-      }
-    </tbody>
-  </table>
+  <!-- sr-only on a div, not the table: a table ignores width: 1px and would widen the page on phones -->
+  <div class="sr-only">
+    <table [attr.aria-labelledby]="titleId">
+      <thead><tr><th scope="col">{{ categoryLabel() }}</th><th scope="col">{{ title() }}</th></tr></thead>
+      <tbody>
+        @for (p of points(); track $index) {
+          <tr><th scope="row">{{ p.label }}</th><td>{{ fmt(p.value, true) }}</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
 </figure>

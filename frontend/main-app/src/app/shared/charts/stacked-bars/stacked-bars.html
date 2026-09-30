@@ -67,26 +67,29 @@
     </div>
   }
 
-  <table class="sr-only" [attr.aria-labelledby]="titleId">
-    <thead>
-      <tr>
-        <th scope="col">Period</th>
-        @for (s of series(); track s.label) {
-          <th scope="col">{{ s.label }}</th>
-        }
-        <th scope="col">Total</th>
-      </tr>
-    </thead>
-    <tbody>
-      @for (b of buckets(); track $index) {
+  <!-- sr-only on a div, not the table: a table ignores width: 1px and would widen the page on phones -->
+  <div class="sr-only">
+    <table [attr.aria-labelledby]="titleId">
+      <thead>
         <tr>
-          <th scope="row">{{ b.label }}</th>
-          @for (v of b.values; track $index) {
-            <td>{{ fmt(v) }}</td>
+          <th scope="col">Period</th>
+          @for (s of series(); track s.label) {
+            <th scope="col">{{ s.label }}</th>
           }
-          <td>{{ fmt(totals()[$index]) }}</td>
+          <th scope="col">Total</th>
         </tr>
-      }
-    </tbody>
-  </table>
+      </thead>
+      <tbody>
+        @for (b of buckets(); track $index) {
+          <tr>
+            <th scope="row">{{ b.label }}</th>
+            @for (v of b.values; track $index) {
+              <td>{{ fmt(v) }}</td>
+            }
+            <td>{{ fmt(totals()[$index]) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
 </figure>

@@ -97,6 +97,13 @@ describe('TimeChart', () => {
     expect(el(f).textContent).toContain('Decline');
   });
 
+  it('hides the data table inside a block, since a table ignores width: 1px and would widen a phone page', () => {
+    const table = el(render('bar')).querySelector('table')!;
+    expect(table.classList).not.toContain('sr-only');
+    expect(table.parentElement!.tagName).toBe('DIV');
+    expect(table.parentElement!.classList).toContain('sr-only');
+  });
+
   it('names the category column of the hidden table', () => {
     const f = render('bar');
     expect(el(f).querySelector('table thead th')?.textContent?.trim()).toBe('Period');
