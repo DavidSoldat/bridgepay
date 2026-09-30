@@ -174,5 +174,10 @@ services:
     ports:
       - "4201:80"
 
+  landing:
+    build: ./frontend/landing
+    ports:
+      - "4202:80"
+
 volumes:
   postgres_data:

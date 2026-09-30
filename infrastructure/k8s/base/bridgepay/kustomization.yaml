@@ -12,6 +12,7 @@ resources:
   - api-gateway.yaml
   - main-app.yaml
   - storefront.yaml
+  - landing.yaml
   - ingress.yaml
 configMapGenerator:
   # Shared by every service via envFrom. Services ignore the keys they don't use.
@@ -27,3 +28,7 @@ configMapGenerator:
   - name: frontend-config
     literals:
       - 'config.json={"keycloakUrl": "http://auth.localhost", "paddleClientToken": "test_964bb547230bc1dd3ca093a9dfe"}'
+  # Public home page. No demo logins here: overlays/local adds them, so a production overlay can't inherit them.
+  - name: landing-config
+    literals:
+      - 'config.json={"storefrontUrl": "http://shop.localhost", "appUrl": "http://app.localhost", "githubUrl": null, "demoLogins": []}'

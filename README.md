@@ -33,6 +33,7 @@ flowchart LR
 
 | Component | What it does |
 |---|---|
+| **Landing** | Public home page: what BridgePay is, a guided demo with the demo logins, and the architecture |
 | **API Gateway** | Spring Cloud Gateway: path routing, JWT validation, rate limiting, correlation IDs |
 | **Applicant Service** | Shopper signup and identity profile. No Kafka, by design |
 | **Application Service** | Checkout flow, decision finalization, ops review, merchant sales/payouts. Publishes decisions through a transactional outbox |
@@ -63,6 +64,7 @@ docker compose up --build
 
 | URL | What |
 |---|---|
+| http://localhost:4202 | Start here: landing page with the demo guide |
 | http://localhost:4201 | Storefront (shopper) |
 | http://localhost:4200 | Main app (ops / merchant) |
 | http://localhost:8086 | API gateway |

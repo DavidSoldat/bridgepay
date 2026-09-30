@@ -44,10 +44,13 @@ jobs:
         app:
           - main-app
           - storefront
+          - landing
     steps:
       - uses: actions/checkout@v4
-      - name: Brand tokens identical in both apps
-        run: cmp frontend/main-app/src/brand.css frontend/storefront/src/brand.css
+      - name: Brand tokens identical in all apps
+        run: |
+          cmp frontend/main-app/src/brand.css frontend/storefront/src/brand.css
+          cmp frontend/main-app/src/brand.css frontend/landing/src/brand.css
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -90,6 +93,8 @@ jobs:
             image: bridgepay-main-app
           - directory: frontend/storefront
             image: bridgepay-storefront
+          - directory: frontend/landing
+            image: bridgepay-landing
     steps:
       - uses: actions/checkout@v4
       # No QEMU: the Dockerfiles' build stages run on the runner's own amd64

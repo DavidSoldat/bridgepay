@@ -29,6 +29,7 @@ for s in applicant-service application-service credit-risk-engine mock-credit-bu
 done
 docker build -t bridgepay-main-app:local frontend/main-app
 docker build -t bridgepay-storefront:local frontend/storefront
+docker build -t bridgepay-landing:local frontend/landing
 k3d image import -c bridgepay $(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^bridgepay-.*:local$')
 
 # Paddle keys come from the repo-root .env (gitignored). Placeholders are fine;
@@ -46,6 +47,7 @@ restart until Postgres and Kafka are up.
 
 | URL | What |
 |---|---|
+| http://localhost | Landing page (demo logins are shown only by `overlays/local`) |
 | http://shop.localhost | Storefront |
 | http://app.localhost | Main app |
 | http://auth.localhost | Keycloak (admin: `admin` / `admin`) |
@@ -59,6 +61,7 @@ contexts. A plain-HTTP hostname like `app.localtest.me` fails with "Web Crypto
 API is not available". The production overlay uses real HTTPS instead. For
 non-browser tools that don't resolve `*.localhost` themselves, add this to
 your hosts file: `127.0.0.1 app.localhost shop.localhost auth.localhost`
+(plain `localhost`, the landing page, already resolves everywhere)
 
 Tear down: `k3d cluster delete bridgepay`.
 

@@ -36,3 +36,13 @@ spec:
                 name: storefront
                 port:
                   number: 80
+    - host: localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: landing
+                port:
+                  number: 80
