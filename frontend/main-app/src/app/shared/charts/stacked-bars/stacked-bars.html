@@ -1,0 +1,92 @@
+<figure class="m-0">
+  <figcaption [id]="titleId" class="sr-only">{{ title() }}</figcaption>
+  <ul data-legend class="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink-muted">
+    @for (s of series(); track s.label) {
+      <li class="flex items-center gap-1.5"><span class="size-2.5 rounded-sm" [class]="swatch[s.tone]"></span>{{ s.label }}</li>
+    }
+  </ul>
+  <svg
+    [attr.viewBox]="'0 0 ' + width() + ' ' + C.height"
+    class="block h-auto w-full overflow-visible rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral"
+    tabindex="0"
+    role="group"
+    [attr.aria-label]="title() + ' chart. Use the left and right arrow keys to read each period.'"
+    (keydown)="onKey($event)"
+    (pointerleave)="activeIndex.set(null)"
+    (blur)="activeIndex.set(null)"
+  >
+    @for (t of ticks(); track t) {
+      <line [attr.x1]="C.padLeft" [attr.x2]="width() - C.padRight" [attr.y1]="y()(t)" [attr.y2]="y()(t)" class="stroke-hairline" stroke-width="1" />
+      <text [attr.x]="C.padLeft - 6" [attr.y]="y()(t)" text-anchor="end" dominant-baseline="middle" class="fill-ink-muted text-[11px]">{{ fmt(t) }}</text>
+    }
+
+    @for (seg of segments(); track seg.i + '-' + seg.s) {
+      <rect
+        data-segment [attr.data-bucket]="seg.i" [attr.data-series]="seg.s"
+        [attr.x]="seg.x" [attr.y]="seg.y" [attr.width]="seg.width" [attr.height]="seg.height"
+        [class]="fill[series()[seg.s].tone]"
+        [attr.opacity]="activeIndex() === null || activeIndex() === seg.i ? 1 : 0.45"
+      />
+    }
+
+    @if (activeIndex() !== null) {
+      <line
+        data-testid="crosshair"
+        [attr.x1]="xs()[activeIndex()!]" [attr.x2]="xs()[activeIndex()!]"
+        [attr.y1]="C.padTop" [attr.y2]="baseline"
+        class="stroke-ink-muted" stroke-width="1" stroke-dasharray="3 3"
+      />
+    }
+
+    @for (b of buckets(); track $index) {
+      @if ($index % labelEvery() === 0) {
+        <text [attr.x]="xs()[$index]" [attr.y]="C.height - 4" text-anchor="middle" class="fill-ink-muted text-[11px]">{{ b.label }}</text>
+      }
+      <rect
+        data-hit
+        [attr.x]="xs()[$index] - band() / 2" [attr.y]="C.padTop"
+        [attr.width]="band()" [attr.height]="baseline - C.padTop"
+        fill="transparent"
+        (pointerenter)="activeIndex.set($index)"
+      />
+    }
+  </svg>
+
+  @if (tooltip(); as t) {
+    <div
+      data-testid="chart-tooltip"
+      role="status"
+      class="pointer-events-none absolute top-8 z-10 -translate-x-1/2 whitespace-nowrap rounded-sm bg-ink px-3 py-2 text-xs text-white shadow-raised"
+      [style.left.%]="t.left"
+    >
+      <p class="font-semibold">{{ t.label }}</p>
+      @for (r of t.rows; track r.label) {
+        <p>{{ r.label }} {{ r.value }}</p>
+      }
+      <p class="font-semibold">Total {{ t.total }}</p>
+    </div>
+  }
+
+  <table class="sr-only" [attr.aria-labelledby]="titleId">
+    <thead>
+      <tr>
+        <th scope="col">Period</th>
+        @for (s of series(); track s.label) {
+          <th scope="col">{{ s.label }}</th>
+        }
+        <th scope="col">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (b of buckets(); track $index) {
+        <tr>
+          <th scope="row">{{ b.label }}</th>
+          @for (v of b.values; track $index) {
+            <td>{{ fmt(v) }}</td>
+          }
+          <td>{{ fmt(totals()[$index]) }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</figure>
