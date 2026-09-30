@@ -45,6 +45,22 @@ class DemoSalesHistorySeedTest {
         long approved = count(jdbc, "SELECT count(*) FROM application.applications a WHERE " + DEMO
                 + " AND a.status IN ('APPROVED', 'CANCELLED')");
         assertThat((double) approved / total).isBetween(0.65, 0.80);
+        // manual-review history for the ops dashboard: decided by ops1/ops2, never still waiting
+        long reviewed = count(jdbc, "SELECT count(*) FROM application.applications a WHERE " + DEMO
+                + " AND a.decision_source = 'OPS'");
+        assertThat((double) reviewed / total).isBetween(0.12, 0.24);
+        assertThat(count(jdbc, "SELECT count(DISTINCT a.decided_by) FROM application.applications a WHERE " + DEMO
+                + " AND a.decision_source = 'OPS'")).isEqualTo(2);
+        assertThat(count(jdbc, "SELECT count(*) FROM application.applications a WHERE " + DEMO
+                + " AND a.decision_source = 'OPS' AND (a.decided_by NOT IN ('ops1', 'ops2')"
+                + " OR a.risk_score < 0.3 OR a.risk_score > 0.7 OR a.reviewer_note IS NULL"
+                + " OR a.decision_at - a.created_at < interval '10 minutes'"
+                + " OR a.decision_at - a.created_at > interval '20 hours' OR a.decision_at > now())")).isZero();
+        assertThat(count(jdbc, "SELECT count(*) FROM application.applications a WHERE " + DEMO
+                + " AND a.decision_source IS DISTINCT FROM 'OPS' AND a.decision_source IS DISTINCT FROM 'MODEL'")).isZero();
+        // a payout never exists before the decision that created it
+        assertThat(count(jdbc, "SELECT count(*) FROM application.merchant_payouts p JOIN application.applications a"
+                + " ON a.id = p.application_id WHERE " + DEMO + " AND p.created_at < a.decision_at")).isZero();
         // every approved (incl. later cancelled) order has exactly one payout, declined ones none
         assertThat(count(jdbc, "SELECT count(*) FROM application.applications a LEFT JOIN application.merchant_payouts p"
                 + " ON p.application_id = a.id WHERE " + DEMO
