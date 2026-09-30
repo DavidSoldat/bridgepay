@@ -19,6 +19,14 @@ describe('Applications', () => {
 
   afterEach(() => httpMock.verify());
 
+  it('asks for the ops dashboard of a period in a time zone', () => {
+    service.dashboard(7, 'Europe/Belgrade').subscribe();
+    const req = httpMock.expectOne((r) => r.url.endsWith('/api/v1/applications/dashboard'));
+    expect(req.request.params.get('days')).toBe('7');
+    expect(req.request.params.get('tz')).toBe('Europe/Belgrade');
+    req.flush({});
+  });
+
   it('defaults to manual-review applications', () => {
     let result: ApplicationResponse[] | undefined;
     service.list().subscribe((page) => (result = page.content));

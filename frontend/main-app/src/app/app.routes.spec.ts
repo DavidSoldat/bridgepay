@@ -2,6 +2,7 @@ import { routes } from './app.routes';
 import { SalesPage } from './merchant/sales-page/sales-page';
 import { PayoutLedger } from './merchant/payout-ledger/payout-ledger';
 import { FailedEventsPage } from './ops/failed-events/failed-events';
+import { OpsDashboardPage } from './ops/dashboard/ops-dashboard';
 import { merchantGuard } from './core/merchant-guard';
 import { opsGuard } from './core/ops-guard';
 
@@ -14,6 +15,16 @@ describe('routes', () => {
     expect(merchant?.canActivate).toEqual([merchantGuard]);
     expect(payouts?.component).toBe(PayoutLedger);
     expect(payouts?.canActivate).toEqual([merchantGuard]);
+  });
+
+  it('routes /ops/dashboard to the ops dashboard, not review detail', () => {
+    const index = routes.findIndex((r) => r.path === 'ops/dashboard');
+    const detailIndex = routes.findIndex((r) => r.path === 'ops/:id');
+
+    expect(index).toBeGreaterThan(-1);
+    expect(routes[index].component).toBe(OpsDashboardPage);
+    expect(routes[index].canActivate).toEqual([opsGuard]);
+    expect(index).toBeLessThan(detailIndex);
   });
 
   it('routes /ops/failed-events to the failed events page, not review detail', () => {

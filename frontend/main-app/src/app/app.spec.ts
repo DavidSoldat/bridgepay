@@ -27,6 +27,7 @@ describe('App', () => {
     fixture.detectChanges();
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('Review Queue');
+    expect(text).toContain('Dashboard');
     expect(text).not.toContain('Payouts');
     expect(text).not.toContain('Sales');
   });
@@ -41,6 +42,7 @@ describe('App', () => {
       ['Payouts', '/merchant/payouts'],
     ]);
     expect(el.textContent).not.toContain('Review Queue');
+    expect(el.textContent).not.toContain('Dashboard');
   });
 
   it('opens and closes the navigation from the menu button on small screens', () => {

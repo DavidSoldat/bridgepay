@@ -1,0 +1,123 @@
+<div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+  <h1 class="font-display text-2xl font-bold">Operations</h1>
+  <div class="flex gap-2" role="group" aria-label="Period">
+    @for (p of periods; track p) {
+      <button
+        type="button"
+        (click)="selectDays(p)"
+        [attr.aria-pressed]="days() === p"
+        class="min-h-11 rounded-full border px-4 text-sm font-semibold"
+        [class]="days() === p ? 'border-coral bg-coral text-white' : 'border-hairline bg-surface text-ink-muted hover:text-ink'"
+      >{{ p }} days</button>
+    }
+  </div>
+</div>
+
+@if (error()) {
+  <p class="mb-6 text-sm text-declined">Could not load the operations dashboard. Try refreshing.</p>
+} @else if (dashboard(); as d) {
+  <section data-testid="queue-now" aria-label="Queue now" class="card mb-4 flex flex-wrap items-center justify-between gap-3 p-5">
+    @if (d.queue.inReview > 0) {
+      <p>
+        <span class="font-display text-2xl font-bold">{{ d.queue.inReview }}</span>
+        <span class="text-ink-muted"> waiting for review · oldest {{ queueAge() }}</span>
+      </p>
+      <a routerLink="/ops" class="btn-secondary">Open queue →</a>
+    } @else {
+      <p class="text-ink-muted">Queue is clear.</p>
+    }
+  </section>
+
+  <div class="mb-3 grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div class="card p-5" data-tile="applications">
+      <p class="text-sm text-ink-muted">Applications</p>
+      <p class="mt-1 font-display text-2xl font-bold">{{ d.current.applications }}</p>
+      @if (applicationsChange(); as c) {
+        <p data-change class="mt-1 text-xs" [class]="changeClass(c)">{{ c.text }}</p>
+      }
+      <app-sparkline class="mt-2 block" [values]="applicationsTrend()" />
+    </div>
+    <div class="card p-5" data-tile="auto-decided">
+      <p class="text-sm text-ink-muted">Auto-decided</p>
+      <p class="mt-1 font-display text-2xl font-bold">{{ autoRate(d.current) === null ? '—' : (autoRate(d.current) | percent: '1.0-0') }}</p>
+      @if (autoChange(); as c) {
+        <p data-change class="mt-1 text-xs" [class]="changeClass(c)">{{ c.text }}</p>
+      }
+    </div>
+    <div class="card p-5" data-tile="approval-rate">
+      <p class="text-sm text-ink-muted">Approval rate</p>
+      <p class="mt-1 font-display text-2xl font-bold">{{ d.current.approvalRate === null ? '—' : (d.current.approvalRate | percent: '1.0-0') }}</p>
+      @if (rateChange(); as c) {
+        <p data-change class="mt-1 text-xs" [class]="changeClass(c)">{{ c.text }}</p>
+      }
+    </div>
+    <div class="card p-5" data-tile="review-time">
+      <p class="text-sm text-ink-muted">Median review time</p>
+      <p class="mt-1 font-display text-2xl font-bold">{{ formatDuration(d.current.medianReviewSeconds) }}</p>
+      @if (reviewTimeChange(); as c) {
+        <p data-change class="mt-1 text-xs" [class]="changeClass(c, true)">{{ c.text }}</p>
+      }
+    </div>
+  </div>
+  <p class="mb-6 text-sm text-ink-muted">
+    {{ d.current.autoDecided }} auto-decided · {{ d.current.reviewed }} reviewed · {{ d.current.waiting }} waiting
+    of {{ d.current.applications }} applications
+  </p>
+
+  <div class="mb-4 grid items-start gap-4 lg:grid-cols-2">
+    <section class="card p-6" aria-labelledby="mix-heading">
+      <h2 id="mix-heading" class="mb-4 font-display text-lg font-bold">Decision mix</h2>
+      <app-stacked-bars title="Decision mix" [series]="mixSeries" [buckets]="mixBuckets()" [tooltipLabels]="mixTooltips()" />
+    </section>
+    <section class="card p-6" aria-labelledby="scores-heading">
+      <h2 id="scores-heading" class="mb-4 font-display text-lg font-bold">Score distribution</h2>
+      <app-time-chart
+        title="Applications by risk score" kind="bar" format="count" categoryLabel="Risk score"
+        [points]="histogram()" [markers]="markers"
+      />
+      <p class="mt-4 text-xs text-ink-muted">
+        {{ bands().approve }} auto-approve range · {{ bands().review }} review range · {{ bands().decline }} auto-decline range
+      </p>
+    </section>
+  </div>
+
+  <section class="card overflow-x-auto" aria-labelledby="reviewers-heading" data-testid="reviewers">
+    <h2 id="reviewers-heading" class="px-6 pt-6 font-display text-lg font-bold">Reviewers</h2>
+    @if (d.reviewers.length === 0) {
+      <app-empty-state icon="user" heading="No manual reviews in this period." />
+    } @else {
+      <table class="mt-2 w-full text-sm">
+        <thead>
+          <tr class="border-b border-hairline text-left text-ink-muted">
+            <th class="px-6 py-3 font-medium">Reviewer</th>
+            <th class="px-6 py-3 text-right font-medium">Decisions</th>
+            <th class="px-6 py-3 text-right font-medium">Approved</th>
+            <th class="px-6 py-3 text-right font-medium">Declined</th>
+            <th class="px-6 py-3 text-right font-medium">Median review time</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of d.reviewers; track r.name) {
+            <tr class="border-b border-hairline last:border-0">
+              <td class="break-all px-6 py-3 font-mono">{{ r.name }}</td>
+              <td class="px-6 py-3 text-right font-mono">{{ r.decisions }}</td>
+              <td class="px-6 py-3 text-right font-mono">{{ r.approved }}</td>
+              <td class="px-6 py-3 text-right font-mono">{{ r.declined }}</td>
+              <td class="px-6 py-3 text-right font-mono">{{ formatDuration(r.medianReviewSeconds) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+  </section>
+} @else {
+  <div data-testid="tiles-skeleton" class="mb-9 grid grid-cols-2 gap-4 lg:grid-cols-4">
+    @for (i of [0, 1, 2, 3]; track i) {
+      <div class="card h-24 motion-safe:animate-pulse"></div>
+    }
+  </div>
+  <div data-testid="chart-skeleton" class="mb-8 grid gap-4 lg:grid-cols-2">
+    <div class="card h-80 motion-safe:animate-pulse"></div>
+    <div class="card h-80 motion-safe:animate-pulse"></div>
+  </div>
+}

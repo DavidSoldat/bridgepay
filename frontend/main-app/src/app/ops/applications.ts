@@ -5,6 +5,7 @@ import { environment } from '../../environments/environment';
 import { Page } from '../shared/models/page';
 import { ApplicationResponse } from '../shared/models/application';
 import { ApplicationCase } from '../shared/models/application-case';
+import { OpsDashboard } from '../shared/models/ops-dashboard';
 
 @Injectable({ providedIn: 'root' })
 export class Applications {
@@ -15,6 +16,10 @@ export class Applications {
     return this.http.get<Page<ApplicationResponse>>(this.baseUrl, {
       params: { status, page, size },
     });
+  }
+
+  dashboard(days: number, tz: string): Observable<OpsDashboard> {
+    return this.http.get<OpsDashboard>(`${this.baseUrl}/dashboard`, { params: { days, tz } });
   }
 
   getCase(id: string): Observable<ApplicationCase> {

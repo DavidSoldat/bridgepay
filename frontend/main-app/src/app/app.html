@@ -24,6 +24,14 @@
     </div>
     @if (auth.hasRole('ops')) {
       <a
+        routerLink="/ops/dashboard"
+        routerLinkActive="bg-blush text-coral-hover font-semibold"
+        #rla0="routerLinkActive"
+        [class.text-ink]="!rla0.isActive"
+        (click)="menuOpen.set(false)"
+        class="flex min-h-11 items-center gap-3 rounded-sm px-3 hover:bg-blush"
+      ><app-icon name="chart-column" />Dashboard</a>
+      <a
         routerLink="/ops"
         routerLinkActive="bg-blush text-coral-hover font-semibold"
         #rla1="routerLinkActive"
