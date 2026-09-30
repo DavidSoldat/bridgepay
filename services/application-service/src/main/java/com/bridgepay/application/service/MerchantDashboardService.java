@@ -12,11 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.time.temporal.TemporalAdjusters;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -27,7 +24,6 @@ import java.util.stream.Collectors;
 @Service
 public class MerchantDashboardService {
 
-    private static final Set<Integer> PERIODS = Set.of(7, 30, 90);
     private static final Set<String> APPROVED = Set.of("APPROVED", "COMPLETED", "DEFAULTED");
 
     private final MerchantDashboardQueries queries;
@@ -38,38 +34,17 @@ public class MerchantDashboardService {
 
     @Transactional(readOnly = true)
     public MerchantDashboardResponse dashboard(UUID merchantId, int days, String tz) {
-        ZoneId zone = parseZone(tz);
+        ZoneId zone = DashboardPeriod.parseZone(tz);
         return dashboard(merchantId, days, zone, LocalDate.now(zone));
     }
 
     MerchantDashboardResponse dashboard(UUID merchantId, int days, ZoneId zone, LocalDate today) {
-        if (!PERIODS.contains(days)) {
-            throw new IllegalArgumentException("days must be 7, 30 or 90");
-        }
-        String tz = zone.getId();
-        LocalDate from = today.minusDays(days - 1L);
-        LocalDate previousTo = from.minusDays(1);
-        LocalDate previousFrom = from.minusDays(days);
-        boolean weekly = days == 90;
-        return new MerchantDashboardResponse(days, from, today, weekly ? "WEEK" : "DAY",
-                totals(merchantId, tz, from, today),
-                totals(merchantId, tz, previousFrom, previousTo),
+        DashboardPeriod p = DashboardPeriod.of(days, zone, today);
+        return new MerchantDashboardResponse(days, p.from(), p.to(), p.bucket(),
+                totals(merchantId, p.tz(), p.from(), p.to()),
+                totals(merchantId, p.tz(), p.previousFrom(), p.previousTo()),
                 money(queries.pendingNet(merchantId)),
-                series(merchantId, tz, from, today, weekly));
-    }
-
-    /**
-     * Only tz database names: Postgres reads POSIX-style offsets ("+02:00", "GMT+2") with the sign flipped,
-     * so accepting them would silently shift every bucket. Missing means UTC.
-     */
-    static ZoneId parseZone(String tz) {
-        if (tz == null) {
-            return ZoneId.of("UTC");
-        }
-        if (!ZoneId.getAvailableZoneIds().contains(tz)) {
-            throw new IllegalArgumentException("tz must be a time zone name like Europe/Belgrade");
-        }
-        return ZoneId.of(tz);
+                series(merchantId, p));
     }
 
     private PeriodTotals totals(UUID merchantId, String tz, LocalDate from, LocalDate to) {
@@ -93,18 +68,12 @@ public class MerchantDashboardService {
                 money(payouts.fees()), money(payouts.net()));
     }
 
-    private List<SeriesPoint> series(UUID merchantId, String tz, LocalDate from, LocalDate to, boolean weekly) {
-        Map<LocalDate, BucketRow> rows = queries.buckets(merchantId, tz, from, to, weekly ? "week" : "day").stream()
+    private List<SeriesPoint> series(UUID merchantId, DashboardPeriod p) {
+        Map<LocalDate, BucketRow> rows = queries.buckets(merchantId, p.tz(), p.from(), p.to(), p.unit()).stream()
                 .collect(Collectors.toMap(BucketRow::start, Function.identity()));
-        List<SeriesPoint> series = new ArrayList<>();
-        LocalDate start = weekly ? from.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)) : from;
-        for (LocalDate bucket = start; !bucket.isAfter(to); bucket = weekly ? bucket.plusWeeks(1) : bucket.plusDays(1)) {
-            BucketRow row = rows.get(bucket);
-            series.add(new SeriesPoint(bucket.isBefore(from) ? from : bucket,
-                    row == null ? 0 : row.checkouts(),
-                    money(row == null ? BigDecimal.ZERO : row.approvedVolume())));
-        }
-        return series;
+        return p.fill(rows, (start, row) -> new SeriesPoint(start,
+                row == null ? 0 : row.checkouts(),
+                money(row == null ? BigDecimal.ZERO : row.approvedVolume())));
     }
 
     private static BigDecimal money(BigDecimal value) {

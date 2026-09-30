@@ -189,14 +189,4 @@ class MerchantDashboardServiceIntegrationTest {
         assertThatThrownBy(() -> service.dashboard(merchant, 14, UTC, TODAY))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("days");
     }
-
-    @Test
-    void acceptsOnlyNamedTimeZones() {
-        assertThat(MerchantDashboardService.parseZone(null)).isEqualTo(ZoneId.of("UTC"));
-        assertThat(MerchantDashboardService.parseZone("Europe/Belgrade")).isEqualTo(ZoneId.of("Europe/Belgrade"));
-        for (String bad : new String[] {"Mars/Base", "+02:00", "GMT+2", "Z", ""}) {
-            assertThatThrownBy(() -> MerchantDashboardService.parseZone(bad))
-                    .as(bad).isInstanceOf(IllegalArgumentException.class);
-        }
-    }
 }
