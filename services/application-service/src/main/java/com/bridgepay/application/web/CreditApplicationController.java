@@ -3,8 +3,10 @@ package com.bridgepay.application.web;
 import com.bridgepay.application.dto.ApplicationCaseResponse;
 import com.bridgepay.application.dto.ApplicationResponse;
 import com.bridgepay.application.dto.CheckoutRequest;
+import com.bridgepay.application.dto.OpsDashboardResponse;
 import com.bridgepay.application.dto.ReviewDecisionRequest;
 import com.bridgepay.application.service.CreditApplicationService;
+import com.bridgepay.application.service.OpsDashboardService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,9 +40,12 @@ import java.util.UUID;
 public class CreditApplicationController {
 
     private final CreditApplicationService applicationService;
+    private final OpsDashboardService opsDashboardService;
 
-    public CreditApplicationController(CreditApplicationService applicationService) {
+    public CreditApplicationController(CreditApplicationService applicationService,
+                                       OpsDashboardService opsDashboardService) {
         this.applicationService = applicationService;
+        this.opsDashboardService = opsDashboardService;
     }
 
     @PostMapping
@@ -56,6 +61,13 @@ public class CreditApplicationController {
     @GetMapping("/me")
     public ResponseEntity<Page<ApplicationResponse>> listMine(@AuthenticationPrincipal Jwt jwt, Pageable pageable) {
         return ResponseEntity.ok(applicationService.listForApplicant(UUID.fromString(jwt.getSubject()), pageable));
+    }
+
+    @GetMapping("/dashboard")
+    @PreAuthorize("hasRole('OPS')")
+    public ResponseEntity<OpsDashboardResponse> dashboard(@RequestParam int days,
+                                                          @RequestParam(required = false) String tz) {
+        return ResponseEntity.ok(opsDashboardService.dashboard(days, tz));
     }
 
     @GetMapping("/{id}")
