@@ -64,15 +64,33 @@
 
     <p class="mb-4 text-xs text-ink-muted">No interest. The first payment is taken today, then one every week.</p>
 
+    @if (limit(); as l) {
+      @if (l.available !== null) {
+        <p data-testid="available" class="mb-3 text-sm text-ink-muted">
+          ${{ l.available | number: '1.2-2' }} available to spend with BridgePay
+        </p>
+      }
+    }
+    @if (blocked()) {
+      <p class="mb-3 text-sm text-declined">
+        @if (overBy() > 0) {
+          This order is ${{ overBy() | number: '1.2-2' }} over your available amount.
+        } @else {
+          BridgePay isn't available for your account right now.
+        }
+        <a routerLink="/" class="font-semibold text-coral hover:text-coral-hover">Back to the store</a>
+      </p>
+    }
+
     @if (error(); as message) {
-      <p class="mb-3 text-sm text-declined">{{ message }}</p>
+      <p role="alert" class="mb-3 text-sm text-declined">{{ message }}</p>
     }
 
     <button
       type="button"
       data-testid="confirm"
       (click)="confirm()"
-      [disabled]="submitting()"
+      [disabled]="submitting() || blocked()"
       class="btn-primary w-full"
     >Confirm purchase · ${{ totals().total | number: '1.2-2' }}</button>
   </section>

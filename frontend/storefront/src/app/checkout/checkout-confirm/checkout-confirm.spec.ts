@@ -4,16 +4,26 @@ import { CheckoutConfirm } from './checkout-confirm';
 import { Applications } from '../applications';
 import { Product, findProduct } from '../../catalog/products';
 import { DeliveryAddress } from '../delivery-form/delivery-form';
+import { HttpErrorResponse } from '@angular/common/http';
+import { provideRouter } from '@angular/router';
+import { CreditLimits } from '../credit-limits';
+import { CreditLimit } from '../../shared/models/credit-limit';
 
 describe('CheckoutConfirm', () => {
   // 198 -> free shipping, 16.34 tax, 214.34 total, 53.59 per installment
   const product: Product = findProduct('basin-rain-jacket')!;
   const address: DeliveryAddress = { fullName: 'Sam Shopper', street: '12 Pine Rd', city: 'Boulder', postalCode: '80302' };
 
-  function setup(checkout: (amount: number) => any) {
+  const roomy: CreditLimit = { limit: 1500, outstanding: 0, available: 1500, band: 'LOW' };
+
+  function setup(checkout: (amount: number) => any, mine: () => any = () => of(roomy)) {
     TestBed.configureTestingModule({
       imports: [CheckoutConfirm],
-      providers: [{ provide: Applications, useValue: { checkout } }],
+      providers: [
+        provideRouter([]),
+        { provide: Applications, useValue: { checkout } },
+        { provide: CreditLimits, useValue: { mine } },
+      ],
     });
     const fixture = TestBed.createComponent(CheckoutConfirm);
     fixture.componentRef.setInput('product', product);
@@ -25,6 +35,39 @@ describe('CheckoutConfirm', () => {
   const text = (fixture: ReturnType<typeof setup>) => (fixture.nativeElement as HTMLElement).textContent ?? '';
   const confirmButton = (fixture: ReturnType<typeof setup>) =>
     (fixture.nativeElement as HTMLElement).querySelector('[data-testid="confirm"]') as HTMLButtonElement;
+
+  it('shows the available amount next to the total', () => {
+    const t = text(setup(() => of({}), () => of({ limit: 600, outstanding: 150, available: 450, band: 'LOW' })));
+    expect(t).toContain('$450.00 available');
+  });
+
+  it('allows an order exactly at the available amount', () => {
+    const fixture = setup(() => of({}), () => of({ limit: 600, outstanding: 385.66, available: 214.34, band: 'LOW' }));
+    expect(confirmButton(fixture).disabled).toBe(false);
+  });
+
+  it('blocks an order over the available amount and says by how much', () => {
+    const fixture = setup(() => of({}), () => of({ limit: 600, outstanding: 400, available: 200, band: 'LOW' }));
+    expect(confirmButton(fixture).disabled).toBe(true);
+    expect(text(fixture)).toContain('$14.34 over your available amount');
+    expect((fixture.nativeElement as HTMLElement).querySelector('a[href="/"]')).not.toBeNull();
+  });
+
+  it('does not block when the limit could not be checked', () => {
+    const fixture = setup(() => of({}), () => of({ limit: null, outstanding: 0, available: null, band: null }));
+    expect(confirmButton(fixture).disabled).toBe(false);
+  });
+
+  it("shows the server's over-limit message as an alert", () => {
+    const fixture = setup(() => throwError(() => new HttpErrorResponse({
+      status: 422,
+      error: { error: 'OVER_LIMIT', message: 'This order is $214.34; you have $100.00 available.' },
+    })));
+    confirmButton(fixture).click();
+    fixture.detectChanges();
+    const alert = (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('This order is $214.34; you have $100.00 available.');
+  });
 
   it('shows the order summary with shipping and tax', () => {
     const t = text(setup(() => of({})));

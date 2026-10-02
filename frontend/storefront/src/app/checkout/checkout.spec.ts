@@ -6,6 +6,7 @@ import { Auth } from '../core/auth';
 import { Applicants } from '../signup/applicants';
 import { RepaymentPlans } from '../account/repayment-plans';
 import { PaddleCheckout } from '../payment/paddle-checkout';
+import { CreditLimits } from './credit-limits';
 
 const KEY = 'storefront.checkout.basin-rain-jacket.address';
 const ADDRESS = { fullName: 'Sam Shopper', street: '12 Pine Rd', city: 'Boulder', postalCode: '80302' };
@@ -33,6 +34,7 @@ describe('Checkout', () => {
         { provide: Applicants, useValue: { getMyProfile: opts.profile ?? (() => of({ id: 'a-1' })), signUp: () => of({}) } },
         { provide: RepaymentPlans, useValue: { getPlan: () => of() } },
         { provide: PaddleCheckout, useValue: { enabled: false } },
+        { provide: CreditLimits, useValue: { mine: () => of({ limit: null, outstanding: 0, available: null, band: null }) } },
       ],
     });
     const fixture = TestBed.createComponent(Checkout);
