@@ -23,7 +23,21 @@ public class RepaymentEventConsumer {
     public void onInstallmentPaid(String message) {
         EventEnvelope<RepaymentEvents.InstallmentPaid> envelope = objectMapper.readValue(message,
                 objectMapper.getTypeFactory().constructParametricType(EventEnvelope.class, RepaymentEvents.InstallmentPaid.class));
-        creditApplicationService.recordFirstPaymentCleared(envelope.payload().applicationId());
+        creditApplicationService.recordInstallmentPaid(envelope.payload().applicationId(), envelope.payload().sequenceNumber());
+    }
+
+    @KafkaListener(topics = "repayments.plan-completed")
+    public void onPlanCompleted(String message) {
+        EventEnvelope<RepaymentEvents.PlanCompleted> envelope = objectMapper.readValue(message,
+                objectMapper.getTypeFactory().constructParametricType(EventEnvelope.class, RepaymentEvents.PlanCompleted.class));
+        creditApplicationService.completePlan(envelope.payload().applicationId());
+    }
+
+    @KafkaListener(topics = "repayments.plan-defaulted")
+    public void onPlanDefaulted(String message) {
+        EventEnvelope<RepaymentEvents.PlanDefaulted> envelope = objectMapper.readValue(message,
+                objectMapper.getTypeFactory().constructParametricType(EventEnvelope.class, RepaymentEvents.PlanDefaulted.class));
+        creditApplicationService.defaultPlan(envelope.payload().applicationId());
     }
 
     @KafkaListener(topics = "repayments.plan-cancelled")

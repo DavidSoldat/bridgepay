@@ -15,4 +15,10 @@ public final class RepaymentEvents {
 
     public record PlanCancelled(UUID applicantId, UUID applicationId) {
     }
+
+    public record PlanCompleted(UUID applicantId, UUID applicationId) {
+    }
+
+    public record PlanDefaulted(UUID applicantId, UUID applicationId) {
+    }
 }

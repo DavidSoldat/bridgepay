@@ -7,6 +7,7 @@ import com.bridgepay.application.client.CreditRiskClient;
 import com.bridgepay.application.client.ScoreDecision;
 import com.bridgepay.application.client.ScoreResult;
 import com.bridgepay.application.domain.ApplicationStatus;
+import com.bridgepay.application.domain.CreditApplication;
 import com.bridgepay.application.domain.Merchant;
 import com.bridgepay.application.domain.MerchantPayout;
 import com.bridgepay.application.domain.PayoutStatus;
@@ -107,8 +108,68 @@ class RepaymentEventConsumerIntegrationTest {
     }
 
     private void installmentPaid(UUID applicationId) {
+        installmentPaid(applicationId, 1);
+    }
+
+    private void installmentPaid(UUID applicationId, int sequenceNumber) {
         publish("repayments.installment-paid", new RepaymentEvents.InstallmentPaid(
-                UUID.randomUUID(), applicationId, UUID.randomUUID(), 1, new BigDecimal("25.00")));
+                UUID.randomUUID(), applicationId, UUID.randomUUID(), sequenceNumber, new BigDecimal("25.00")));
+    }
+
+    private CreditApplication application(UUID applicationId) {
+        return applicationRepository.findById(applicationId).orElseThrow();
+    }
+
+    @Test
+    void installmentPaid_recordsHowManyAreDone_andRedeliveryOrLateEventsDontChangeIt() throws Exception {
+        UUID applicationId = approvedCheckout();   // 100.00 -> 4 x 25.00
+
+        installmentPaid(applicationId, 2);
+        await().atMost(Duration.ofSeconds(20)).until(() -> application(applicationId).getInstallmentsPaid() == 2);
+
+        installmentPaid(applicationId, 2);
+        installmentPaid(applicationId, 1);
+        await().pollDelay(Duration.ofSeconds(3)).atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            assertThat(application(applicationId).getInstallmentsPaid()).isEqualTo(2);
+            assertThat(application(applicationId).outstanding()).isEqualByComparingTo("50.00");
+        });
+    }
+
+    @Test
+    void planCompleted_completesTheApplication() throws Exception {
+        UUID applicationId = approvedCheckout();
+
+        publish("repayments.plan-completed", new RepaymentEvents.PlanCompleted(UUID.randomUUID(), applicationId));
+
+        await().atMost(Duration.ofSeconds(20)).untilAsserted(() ->
+                assertThat(application(applicationId).getStatus()).isEqualTo(ApplicationStatus.COMPLETED));
+    }
+
+    @Test
+    void planDefaulted_defaultsTheApplication_andLeavesAPaidPayoutAlone() throws Exception {
+        UUID applicationId = approvedCheckout();
+        installmentPaid(applicationId);
+        await().atMost(Duration.ofSeconds(20)).until(() -> payout(applicationId).getStatus() == PayoutStatus.PAID);
+
+        publish("repayments.plan-defaulted", new RepaymentEvents.PlanDefaulted(UUID.randomUUID(), applicationId));
+
+        await().atMost(Duration.ofSeconds(20)).untilAsserted(() -> {
+            assertThat(application(applicationId).getStatus()).isEqualTo(ApplicationStatus.DEFAULTED);
+            assertThat(payout(applicationId).getStatus()).isEqualTo(PayoutStatus.PAID);
+        });
+    }
+
+    @Test
+    void planCompleted_afterCancellation_changesNothing() throws Exception {
+        UUID applicationId = approvedCheckout();
+        publish("repayments.plan-cancelled", new RepaymentEvents.PlanCancelled(UUID.randomUUID(), applicationId));
+        await().atMost(Duration.ofSeconds(20))
+                .until(() -> application(applicationId).getStatus() == ApplicationStatus.CANCELLED);
+
+        publish("repayments.plan-completed", new RepaymentEvents.PlanCompleted(UUID.randomUUID(), applicationId));
+
+        await().pollDelay(Duration.ofSeconds(3)).atMost(Duration.ofSeconds(10)).untilAsserted(() ->
+                assertThat(application(applicationId).getStatus()).isEqualTo(ApplicationStatus.CANCELLED));
     }
 
     @Test

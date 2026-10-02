@@ -42,6 +42,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Predicate;
 
 @Service
 public class CreditApplicationService {
@@ -233,15 +234,43 @@ public class CreditApplicationService {
         ));
     }
 
-    /** Installment 1 cleared, so the order is confirmed and the merchant is paid. Safe to call repeatedly. */
+    /**
+     * Installment 1 confirms the order and pays the merchant; every installment frees up some of the
+     * shopper's spending limit. Safe to call repeatedly.
+     */
     @Transactional
-    public void recordFirstPaymentCleared(UUID applicationId) {
+    public void recordInstallmentPaid(UUID applicationId, int sequenceNumber) {
         if (applicationId == null) {
             log.warn("installment-paid without applicationId (published before that field existed), skipping");
             return;
         }
         merchantPayoutRepository.findByApplicationId(applicationId).ifPresentOrElse(MerchantPayout::markPaid,
                 () -> log.warn("No payout for application {} on installment-paid, skipping", applicationId));
+        applicationRepository.findById(applicationId)
+                .ifPresent(application -> application.recordInstallmentPaid(sequenceNumber));
+    }
+
+    @Transactional
+    public void completePlan(UUID applicationId) {
+        moveFromApproved(applicationId, CreditApplication::complete, "plan-completed");
+    }
+
+    /** A default never claws back a merchant payout - BridgePay carries that risk. */
+    @Transactional
+    public void defaultPlan(UUID applicationId) {
+        moveFromApproved(applicationId, CreditApplication::markDefaulted, "plan-defaulted");
+    }
+
+    private void moveFromApproved(UUID applicationId, Predicate<CreditApplication> move, String event) {
+        if (applicationId == null) {
+            log.warn("{} without applicationId, skipping", event);
+            return;
+        }
+        applicationRepository.findById(applicationId).ifPresentOrElse(application -> {
+            if (!move.test(application)) {
+                log.warn("{} for application {} in status {}, ignoring", event, applicationId, application.getStatus());
+            }
+        }, () -> log.warn("No application {} on {}, skipping", applicationId, event));
     }
 
     /** The first installment was never paid: the order is off. A payout that was already paid is never reversed. */
