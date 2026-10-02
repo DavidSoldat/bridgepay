@@ -36,6 +36,7 @@ const FEATURE_LABELS: Record<string, string> = {
   latePayments: 'Late BridgePay payments',
   completedPlans: 'Completed BridgePay plans',
   amountToIncome: 'Amount vs. monthly income',
+  creditLimitUnavailable: "Spending limit couldn't be checked",
 };
 
 /** One card's data: loading first, then its value, "none" on a 404, or an error - independent of the other cards. */

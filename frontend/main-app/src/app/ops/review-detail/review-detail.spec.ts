@@ -84,6 +84,7 @@ describe('ReviewDetail', () => {
           { feature: 'latePayments', contribution: 0.6 },
           { feature: 'completedPlans', contribution: -0.4 },
           { feature: 'amountToIncome', contribution: 1 },
+          { feature: 'creditLimitUnavailable', contribution: 0 },
         ],
       }),
     }).nativeElement as HTMLElement;
@@ -91,6 +92,7 @@ describe('ReviewDetail', () => {
     expect(el.textContent).toContain('Late BridgePay payments');
     expect(el.textContent).toContain('Completed BridgePay plans');
     expect(el.textContent).toContain('Amount vs. monthly income');
+    expect(el.textContent).toContain("Spending limit couldn't be checked");
   });
 
   it('draws risk-raising factors in coral and risk-lowering factors in green', () => {
