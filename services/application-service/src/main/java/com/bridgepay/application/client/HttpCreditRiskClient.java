@@ -6,6 +6,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -31,7 +32,12 @@ public class HttpCreditRiskClient implements CreditRiskClient, CreditLimitClient
 
     public HttpCreditRiskClient(RestClient.Builder restClientBuilder,
                                  @Value("${bridgepay.credit-risk-engine.base-url}") String baseUrl) {
-        this.restClient = restClientBuilder.baseUrl(baseUrl).build();
+        // A hung engine must fail fast: every signed-in product page asks for a limit, and a timeout lands
+        // on the same safe path as any other failure (no limit -> never auto-approve; score -> MANUAL_REVIEW).
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(2));
+        requestFactory.setReadTimeout(Duration.ofSeconds(3));
+        this.restClient = restClientBuilder.baseUrl(baseUrl).requestFactory(requestFactory).build();
 
         CircuitBreakerConfig config = CircuitBreakerConfig.custom()
                 .failureRateThreshold(50)

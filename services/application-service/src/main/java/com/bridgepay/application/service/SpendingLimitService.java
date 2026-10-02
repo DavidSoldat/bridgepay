@@ -6,7 +6,6 @@ import com.bridgepay.application.domain.CreditApplication;
 import com.bridgepay.application.dto.CreditLimitResponse;
 import com.bridgepay.application.repository.CreditApplicationRepository;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.EnumSet;
@@ -27,7 +26,11 @@ public class SpendingLimitService {
         this.applicationRepository = applicationRepository;
     }
 
-    @Transactional(readOnly = true)
+    /**
+     * Deliberately not @Transactional: the engine call is HTTP, and a database connection held across it
+     * would let a slow engine drain the pool. The query runs in its own read transaction; checkout still
+     * calls this inside its own transaction, as it always held one across the score call.
+     */
     public CreditLimitResponse forApplicant(UUID applicantId) {
         BigDecimal outstanding = applicationRepository.findByApplicantIdAndStatusIn(applicantId, HOLDING_LIMIT).stream()
                 .map(CreditApplication::outstanding)

@@ -21,6 +21,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -44,6 +45,7 @@ class SpendingLimitIntegrationTest {
 
     static final AtomicReference<Optional<CreditLimit>> LIMIT = new AtomicReference<>();
     static final AtomicReference<ScoreDecision> DECISION = new AtomicReference<>();
+    static final AtomicReference<Boolean> TX_DURING_LIMIT_CALL = new AtomicReference<>();
 
     @TestConfiguration
     static class TestOverrides {
@@ -62,7 +64,10 @@ class SpendingLimitIntegrationTest {
         @Bean
         @Primary
         CreditLimitClient switchableLimit() {
-            return applicantId -> LIMIT.get();
+            return applicantId -> {
+                TX_DURING_LIMIT_CALL.set(TransactionSynchronizationManager.isActualTransactionActive());
+                return LIMIT.get();
+            };
         }
     }
 
@@ -109,6 +114,14 @@ class SpendingLimitIntegrationTest {
                 .andExpect(jsonPath("$.outstanding").value(0.00))
                 .andExpect(jsonPath("$.available").value(600.00))
                 .andExpect(jsonPath("$.band").value("LOW"));
+    }
+
+    /** The engine call is HTTP; holding a DB connection across it lets a slow engine drain the pool. */
+    @Test
+    void creditLimit_asksTheEngineOutsideADatabaseTransaction() throws Exception {
+        limitOf(shopper).andExpect(status().isOk());
+
+        assertThat(TX_DURING_LIMIT_CALL.get()).isFalse();
     }
 
     @Test
