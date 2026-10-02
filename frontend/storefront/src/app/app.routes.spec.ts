@@ -6,11 +6,17 @@ import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from './app.routes';
 import { routerProviders } from './app.config';
 import { Auth } from './core/auth';
+import { of } from 'rxjs';
+import { CreditLimits } from './checkout/credit-limits';
 
 describe('routes', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
-      providers: [routerProviders, { provide: Auth, useValue: { authenticated: () => true, login: () => {} } }],
+      providers: [
+        routerProviders,
+        { provide: Auth, useValue: { authenticated: () => true, login: () => {} } },
+        { provide: CreditLimits, useValue: { mine: () => of({ limit: null, outstanding: 0, available: null, band: null }) } },
+      ],
     });
   });
   afterEach(() => vi.restoreAllMocks());

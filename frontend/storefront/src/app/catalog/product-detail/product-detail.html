@@ -33,8 +33,25 @@
           </p>
           <p class="mt-1 text-xs text-ink-muted">No interest. First payment today, then weekly.</p>
           @if (auth.authenticated()) {
-            <a [routerLink]="['/checkout', p.id]" data-testid="checkout" class="btn-primary mt-4 w-full">Check out with Pay in 4</a>
+            @if (limit(); as l) {
+              @if (noCredit()) {
+                <p class="mt-3 text-sm text-ink-muted">BridgePay isn't available for your account right now.</p>
+              } @else if (l.available !== null) {
+                <p data-testid="spending-power" class="mt-3 text-sm">
+                  You have <strong class="font-semibold">${{ l.available | number: '1.2-2' }}</strong> available to spend with BridgePay.
+                </p>
+                @if (blocked()) {
+                  <p class="mt-1 text-sm text-declined">This order is over your available amount.</p>
+                }
+              }
+            }
+            @if (blocked()) {
+              <button type="button" data-testid="checkout" disabled class="btn-primary mt-4 w-full">Check out with Pay in 4</button>
+            } @else {
+              <a [routerLink]="['/checkout', p.id]" data-testid="checkout" class="btn-primary mt-4 w-full">Check out with Pay in 4</a>
+            }
           } @else {
+            <p class="mt-3 text-sm text-ink-muted">Sign in to see how much you can spend.</p>
             <button type="button" data-testid="checkout" (click)="signInToCheckout()" class="btn-primary mt-4 w-full">Check out with Pay in 4</button>
           }
         </section>

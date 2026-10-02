@@ -2,18 +2,72 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { ProductDetail } from './product-detail';
 import { Auth } from '../../core/auth';
+import { of, throwError } from 'rxjs';
+import { CreditLimits } from '../../checkout/credit-limits';
+import { CreditLimit } from '../../shared/models/credit-limit';
 
 describe('ProductDetail', () => {
-  function render(id: string, auth: { authenticated: () => boolean; login?: (uri: string) => void } = { authenticated: () => true }) {
+  function render(
+    id: string,
+    auth: { authenticated: () => boolean; login?: (uri: string) => void } = { authenticated: () => true },
+    mine: () => any = () => of({ limit: 1500, outstanding: 0, available: 1500, band: 'LOW' } as CreditLimit),
+  ) {
     TestBed.configureTestingModule({
       imports: [ProductDetail],
-      providers: [provideRouter([]), { provide: Auth, useValue: { login: () => {}, ...auth } }],
+      providers: [
+        provideRouter([]),
+        { provide: Auth, useValue: { login: () => {}, ...auth } },
+        { provide: CreditLimits, useValue: { mine } },
+      ],
     });
     const fixture = TestBed.createComponent(ProductDetail);
     fixture.componentRef.setInput('id', id);
     fixture.detectChanges();
     return fixture.nativeElement as HTMLElement;
   }
+
+  const checkoutButton = (el: HTMLElement) => el.querySelector('[data-testid="checkout"]') as HTMLElement;
+  const spendLine = (el: HTMLElement) =>
+    el.querySelector('[data-testid="spending-power"]')?.textContent?.replace(/\s+/g, ' ').trim();
+
+  it('tells a signed-in shopper how much they can spend', () => {
+    const el = render('basin-rain-jacket', undefined, () => of({ limit: 600, outstanding: 150, available: 450, band: 'LOW' }));
+    expect(spendLine(el)).toBe('You have $450.00 available to spend with BridgePay.');
+    expect(checkoutButton(el).hasAttribute('disabled')).toBe(false);
+  });
+
+  it('disables Pay in 4 when the order total is over the available amount', () => {
+    // basin-rain-jacket finances 214.34
+    const el = render('basin-rain-jacket', undefined, () => of({ limit: 600, outstanding: 400, available: 200, band: 'LOW' }));
+    expect(el.textContent).toContain('This order is over your available amount.');
+    expect(checkoutButton(el).tagName).toBe('BUTTON');
+    expect(checkoutButton(el).hasAttribute('disabled')).toBe(true);
+  });
+
+  it('says BridgePay is not available when the limit is zero', () => {
+    const el = render('basin-rain-jacket', undefined, () => of({ limit: 0, outstanding: 0, available: 0, band: 'HIGH' }));
+    expect(el.textContent).toContain("BridgePay isn't available for your account right now.");
+    expect(el.textContent).not.toContain('over your available amount');
+    expect(checkoutButton(el).hasAttribute('disabled')).toBe(true);
+  });
+
+  it('keeps Pay in 4 enabled when the limit could not be checked', () => {
+    const el = render('basin-rain-jacket', undefined, () => of({ limit: null, outstanding: 0, available: null, band: null }));
+    expect(spendLine(el)).toBeUndefined();
+    expect(checkoutButton(el).hasAttribute('disabled')).toBe(false);
+  });
+
+  it('keeps Pay in 4 enabled when the limit request fails', () => {
+    const el = render('basin-rain-jacket', undefined, () => throwError(() => new Error('boom')));
+    expect(checkoutButton(el).hasAttribute('disabled')).toBe(false);
+  });
+
+  it('does not ask for a limit when signed out, and invites the shopper to sign in', () => {
+    const mine = vi.fn(() => of({} as CreditLimit));
+    const el = render('basin-rain-jacket', { authenticated: () => false }, mine);
+    expect(mine).not.toHaveBeenCalled();
+    expect(el.textContent).toContain('Sign in to see how much you can spend.');
+  });
 
   it('shows the product with its photo, copy and features', () => {
     const el = render('basin-rain-jacket');
