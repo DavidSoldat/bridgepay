@@ -97,4 +97,12 @@ class PolicyOverlayTest {
         assertThat(r.logit()).isCloseTo(3.0 + 0.6 - 0.4 + 1.0, within(1e-9));
         assertThat(r.forceDecline()).isTrue();
     }
+
+    @Test
+    void noAmount_skipsTheAmountToIncomeRule_evenWithNoIncome() {
+        PolicyOverlay.Result r = PolicyOverlay.apply(-1.5, CLEAN, 0.0, null);
+
+        assertThat(r.factors()).isEmpty();
+        assertThat(r.logit()).isEqualTo(-1.5);
+    }
 }

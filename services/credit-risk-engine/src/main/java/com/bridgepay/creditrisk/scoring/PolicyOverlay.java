@@ -14,7 +14,8 @@ import java.util.List;
  * history (spec section 6's one genuinely real input) can't be trained on
  * from the Kaggle data.
  * <p>
- * A rule that doesn't fire emits no factor.
+ * A rule that doesn't fire emits no factor. A null amount (credit-limit
+ * check, no order yet) skips amountToIncome.
  */
 final class PolicyOverlay {
 
@@ -47,7 +48,8 @@ final class PolicyOverlay {
             factors.add(new ScoreFactor("completedPlans",
                     Math.max(COMPLETED_PLANS_CAP, PER_COMPLETED_PLAN * history.completedPlans())));
         }
-        if (monthlyIncome <= 0 || amount.doubleValue() / monthlyIncome > AMOUNT_TO_INCOME_THRESHOLD) {
+        if (amount != null
+                && (monthlyIncome <= 0 || amount.doubleValue() / monthlyIncome > AMOUNT_TO_INCOME_THRESHOLD)) {
             factors.add(new ScoreFactor("amountToIncome", AMOUNT_TO_INCOME));
         }
         double adjusted = logit + factors.stream().mapToDouble(ScoreFactor::contribution).sum();

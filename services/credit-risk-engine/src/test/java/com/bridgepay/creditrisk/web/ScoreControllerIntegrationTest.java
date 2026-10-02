@@ -1,5 +1,6 @@
 package com.bridgepay.creditrisk.web;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import com.bridgepay.creditrisk.client.BureauClient;
 import com.bridgepay.creditrisk.client.BureauProfile;
 import com.bridgepay.creditrisk.client.RepaymentHistory;
@@ -117,5 +118,23 @@ class ScoreControllerIntegrationTest {
         mockMvc.perform(post("/internal/score").contentType("application/json").content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void creditLimit_returnsTheLimitAndBand_usingTheRealOnnxModel() throws Exception {
+        // the same stub profile scores APPROVE at 199.99 above, so it is LOW: min(5000 / 2, 1500)
+        mockMvc.perform(get("/internal/credit-limit/{id}", UUID.randomUUID()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.limit").value(1500.00))
+                .andExpect(jsonPath("$.band").value("LOW"));
+    }
+
+    @Test
+    void creditLimit_isCachedPerApplicant() throws Exception {
+        UUID applicant = UUID.randomUUID();
+        mockMvc.perform(get("/internal/credit-limit/{id}", applicant)).andExpect(status().isOk());
+        mockMvc.perform(get("/internal/credit-limit/{id}", applicant)).andExpect(status().isOk());
+
+        assertThat(TestOverrides.bureauCallCount.get()).isEqualTo(1);
     }
 }

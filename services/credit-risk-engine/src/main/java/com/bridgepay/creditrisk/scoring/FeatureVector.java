@@ -24,6 +24,14 @@ public final class FeatureVector {
     }
 
     public static Map<String, Double> from(BureauProfile bureau, RepaymentHistory history, ScoreRequest request) {
+        Map<String, Double> features = from(bureau, history);
+        features.put("requestedAmount", request.amount().doubleValue());
+        features.put("hourOfDay", (double) request.requestedAt().atZone(ZoneOffset.UTC).getHour());
+        return features;
+    }
+
+    /** Everything except checkout context - used by the credit-limit check, which has no order yet. */
+    public static Map<String, Double> from(BureauProfile bureau, RepaymentHistory history) {
         Map<String, Double> features = new LinkedHashMap<>();
         features.put("revolvingUtilization", bureau.revolvingUtilizationOfUnsecuredLines());
         features.put("age", (double) bureau.age());
@@ -39,8 +47,6 @@ public final class FeatureVector {
         features.put("defaultedPlans", (double) history.defaultedPlans());
         features.put("latePaymentCount", (double) history.latePaymentCount());
         features.put("onTimeRate", history.onTimeRate());
-        features.put("requestedAmount", request.amount().doubleValue());
-        features.put("hourOfDay", (double) request.requestedAt().atZone(ZoneOffset.UTC).getHour());
         return features;
     }
 }

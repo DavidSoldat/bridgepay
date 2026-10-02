@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Assembles what's needed and scores it, then applies PolicyOverlay's
@@ -24,7 +25,8 @@ import java.util.Map;
  * Fail-safe rule: any failure anywhere in this pipeline - bureau call,
  * repayment history call, or the ONNX inference itself - routes to
  * MANUAL_REVIEW. Never auto-approve or hard-fail the checkout on incomplete
- * data.
+ * data. The credit-limit check is the exception: it throws, so the caller can
+ * tell "no limit" from "couldn't check".
  */
 @Service
 public class ScoringService {
@@ -61,13 +63,30 @@ public class ScoringService {
         }
     }
 
+    @Cacheable(cacheNames = CacheConfig.CREDIT_LIMIT_CACHE, key = "#root.args[0].toString()")
+    public CreditLimitResponse creditLimit(UUID applicantId) {
+        BureauProfile profile = bureauClient.fetchProfile(applicantId);
+        RepaymentHistory history = repaymentHistoryClient.fetchHistory(applicantId);
+        ScoreOutcome outcome = modelScorer.score(FeatureVector.from(profile, history));
+        PolicyOverlay.Result overlay = PolicyOverlay.apply(
+                logit(outcome.probability()), history, profile.monthlyIncome(), null);
+        ScoreDecision decision = overlay.forceDecline()
+                ? ScoreDecision.DECLINE
+                : ScoreDecision.forProbability(probability(outcome, overlay));
+        return CreditLimitResponse.of(decision, profile.monthlyIncome());
+    }
+
     private ScoreResponse toResponse(ScoreOutcome outcome, PolicyOverlay.Result overlay) {
-        // No rule fired -> return the model's probability untouched, avoiding logit/sigmoid round-trip drift.
-        double probability = overlay.factors().isEmpty() ? outcome.probability() : sigmoid(overlay.logit());
-        ScoreDecision decision = overlay.forceDecline() ? ScoreDecision.DECLINE : decisionFor(probability);
+        double probability = probability(outcome, overlay);
+        ScoreDecision decision = overlay.forceDecline() ? ScoreDecision.DECLINE : ScoreDecision.forProbability(probability);
         List<ScoreFactor> factors = new ArrayList<>(outcome.factors());
         factors.addAll(overlay.factors());
         return new ScoreResponse(probability, decision, List.copyOf(factors));
+    }
+
+    // No rule fired -> return the model's probability untouched, avoiding logit/sigmoid round-trip drift.
+    private static double probability(ScoreOutcome outcome, PolicyOverlay.Result overlay) {
+        return overlay.factors().isEmpty() ? outcome.probability() : sigmoid(overlay.logit());
     }
 
     private static double logit(double probability) {
@@ -77,15 +96,5 @@ public class ScoringService {
 
     private static double sigmoid(double logit) {
         return 1 / (1 + Math.exp(-logit));
-    }
-
-    private ScoreDecision decisionFor(double probability) {
-        if (probability < 0.3) {
-            return ScoreDecision.APPROVE;
-        }
-        if (probability < 0.7) {
-            return ScoreDecision.MANUAL_REVIEW;
-        }
-        return ScoreDecision.DECLINE;
     }
 }
