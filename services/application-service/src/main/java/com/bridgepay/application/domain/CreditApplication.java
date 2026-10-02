@@ -69,6 +69,9 @@ public class CreditApplication {
     @Column(name = "installment_amount", precision = 12, scale = 2)
     private BigDecimal installmentAmount;
 
+    @Column(name = "installments_paid", nullable = false)
+    private int installmentsPaid;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "decision_source", length = 8)
     private DecisionSource decisionSource;
@@ -122,6 +125,43 @@ public class CreditApplication {
         if (status == ApplicationStatus.APPROVED) {
             status = ApplicationStatus.CANCELLED;
         }
+    }
+
+    /** Max, not +1: a redelivered or late event can't double-count or move the count backwards. */
+    public void recordInstallmentPaid(int sequenceNumber) {
+        installmentsPaid = Math.max(installmentsPaid, sequenceNumber);
+    }
+
+    public boolean complete() {
+        return moveFromApproved(ApplicationStatus.COMPLETED);
+    }
+
+    public boolean markDefaulted() {
+        return moveFromApproved(ApplicationStatus.DEFAULTED);
+    }
+
+    private boolean moveFromApproved(ApplicationStatus next) {
+        if (status != ApplicationStatus.APPROVED) {
+            return false;
+        }
+        status = next;
+        return true;
+    }
+
+    /** What this order still holds of the shopper's spending limit. */
+    public BigDecimal outstanding() {
+        BigDecimal owed = switch (status) {
+            case MANUAL_REVIEW -> amount;
+            case APPROVED -> amount.subtract(
+                    (installmentAmount != null ? installmentAmount : BigDecimal.ZERO)
+                            .multiply(BigDecimal.valueOf(installmentsPaid)));
+            default -> BigDecimal.ZERO;
+        };
+        return owed.max(BigDecimal.ZERO).setScale(2);
+    }
+
+    public int getInstallmentsPaid() {
+        return installmentsPaid;
     }
 
     public void overrideDecision(ApplicationStatus decision) {
