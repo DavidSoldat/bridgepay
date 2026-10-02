@@ -1,5 +1,7 @@
 package com.bridgepay.application.service;
 
+import static org.mockito.Mockito.lenient;
+import com.bridgepay.application.dto.CreditLimitResponse;
 import com.bridgepay.application.client.CreditRiskClient;
 import com.bridgepay.application.client.ScoreDecision;
 import com.bridgepay.application.client.ScoreResult;
@@ -58,6 +60,8 @@ class CreditApplicationServiceTest {
     private OutboxEventRepository outboxEventRepository;
     @Mock
     private CreditRiskClient creditRiskClient;
+    @Mock
+    private SpendingLimitService spendingLimitService;
 
     private ObjectMapper objectMapper;
     private CreditApplicationService service;
@@ -72,8 +76,10 @@ class CreditApplicationServiceTest {
                 .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
                 .build();
         service = new CreditApplicationService(applicationRepository, merchantRepository, merchantPayoutRepository,
-                idempotencyKeyRepository, outboxEventRepository, creditRiskClient, objectMapper);
+                idempotencyKeyRepository, outboxEventRepository, creditRiskClient, objectMapper, spendingLimitService);
         merchant = new Merchant("Test Merchant", new BigDecimal("3.50"));
+        lenient().when(spendingLimitService.forApplicant(any())).thenReturn(
+                new CreditLimitResponse(new BigDecimal("100000.00"), BigDecimal.ZERO, new BigDecimal("100000.00"), "LOW"));
     }
 
     @Test

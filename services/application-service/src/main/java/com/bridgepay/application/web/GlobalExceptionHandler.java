@@ -1,5 +1,6 @@
 package com.bridgepay.application.web;
 
+import com.bridgepay.application.service.OverLimitException;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +45,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ApiError> handleConflict(IllegalStateException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error("CONFLICT", ex.getMessage()));
+    }
+
+    @ExceptionHandler(OverLimitException.class)
+    public ResponseEntity<ApiError> handleOverLimit(OverLimitException ex) {
+        return ResponseEntity.status(422).body(error("OVER_LIMIT", ex.getMessage()));
     }
 
     @ExceptionHandler(NoSuchElementException.class)

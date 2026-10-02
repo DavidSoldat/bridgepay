@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
 import java.time.Duration;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.function.Supplier;
 
 /**
@@ -20,7 +22,7 @@ import java.util.function.Supplier;
  * this defaults to MANUAL_REVIEW rather than guessing in either direction.
  */
 @Component
-public class HttpCreditRiskClient implements CreditRiskClient {
+public class HttpCreditRiskClient implements CreditRiskClient, CreditLimitClient {
 
     private static final Logger log = LoggerFactory.getLogger(HttpCreditRiskClient.class);
 
@@ -52,6 +54,21 @@ public class HttpCreditRiskClient implements CreditRiskClient {
         } catch (Exception ex) {
             log.warn("Credit Risk Engine call failed, defaulting to MANUAL_REVIEW: {}", ex.getMessage());
             return ScoreResult.unavailableFallback();
+        }
+    }
+
+    /** Shares the score call's circuit breaker: same downstream, one health view. */
+    @Override
+    public Optional<CreditLimit> creditLimit(UUID applicantId) {
+        Supplier<CreditLimit> call = () -> restClient.get()
+                .uri("/internal/credit-limit/{applicantId}", applicantId)
+                .retrieve()
+                .body(CreditLimit.class);
+        try {
+            return Optional.ofNullable(circuitBreaker.executeSupplier(call));
+        } catch (Exception ex) {
+            log.warn("Credit limit lookup failed for applicant {}: {}", applicantId, ex.getMessage());
+            return Optional.empty();
         }
     }
 }

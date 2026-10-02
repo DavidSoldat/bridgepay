@@ -6,6 +6,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,6 +19,8 @@ public interface CreditApplicationRepository extends JpaRepository<CreditApplica
     Page<CreditApplication> findByStatusAndDemoFalse(ApplicationStatus status, Pageable pageable);
 
     Optional<CreditApplication> findByIdAndApplicantId(UUID id, UUID applicantId);
+
+    List<CreditApplication> findByApplicantIdAndStatusIn(UUID applicantId, Collection<ApplicationStatus> statuses);
 
     Page<CreditApplication> findByApplicantIdOrderByCreatedAtDesc(UUID applicantId, Pageable pageable);
 

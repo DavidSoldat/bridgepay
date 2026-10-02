@@ -1,5 +1,8 @@
 package com.bridgepay.application;
 
+import java.util.Optional;
+import com.bridgepay.application.client.CreditLimitClient;
+import com.bridgepay.application.client.CreditLimit;
 import com.bridgepay.application.client.CreditRiskClient;
 import com.bridgepay.application.client.ScoreDecision;
 import com.bridgepay.application.client.ScoreResult;
@@ -52,6 +55,12 @@ class RepaymentEventConsumerIntegrationTest {
         JwtDecoder jwtDecoder() {
             return token -> Jwt.withTokenValue(token).header("alg", "none").claim("sub", "unused")
                     .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(60)).build();
+        }
+
+        @Bean
+        @Primary
+        CreditLimitClient roomyLimit() {
+            return applicantId -> Optional.of(new CreditLimit(new BigDecimal("100000.00"), "LOW"));
         }
 
         @Bean

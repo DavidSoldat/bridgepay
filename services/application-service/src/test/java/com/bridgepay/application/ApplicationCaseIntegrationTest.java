@@ -1,5 +1,8 @@
 package com.bridgepay.application;
 
+import java.util.Optional;
+import com.bridgepay.application.client.CreditLimitClient;
+import com.bridgepay.application.client.CreditLimit;
 import com.bridgepay.application.client.CreditRiskClient;
 import com.bridgepay.application.client.ScoreDecision;
 import com.bridgepay.application.client.ScoreResult;
@@ -70,6 +73,12 @@ class ApplicationCaseIntegrationTest {
         }
 
         /** 100.00 goes to manual review (with factors, like the real model); anything else is approved. */
+        @Bean
+        @Primary
+        CreditLimitClient roomyLimit() {
+            return applicantId -> Optional.of(new CreditLimit(new BigDecimal("100000.00"), "LOW"));
+        }
+
         @Bean
         @Primary
         CreditRiskClient stubCreditRiskClient() {

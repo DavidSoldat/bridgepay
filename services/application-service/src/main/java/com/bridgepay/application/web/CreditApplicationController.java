@@ -3,10 +3,12 @@ package com.bridgepay.application.web;
 import com.bridgepay.application.dto.ApplicationCaseResponse;
 import com.bridgepay.application.dto.ApplicationResponse;
 import com.bridgepay.application.dto.CheckoutRequest;
+import com.bridgepay.application.dto.CreditLimitResponse;
 import com.bridgepay.application.dto.OpsDashboardResponse;
 import com.bridgepay.application.dto.ReviewDecisionRequest;
 import com.bridgepay.application.service.CreditApplicationService;
 import com.bridgepay.application.service.OpsDashboardService;
+import com.bridgepay.application.service.SpendingLimitService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -41,11 +43,14 @@ public class CreditApplicationController {
 
     private final CreditApplicationService applicationService;
     private final OpsDashboardService opsDashboardService;
+    private final SpendingLimitService spendingLimitService;
 
     public CreditApplicationController(CreditApplicationService applicationService,
-                                       OpsDashboardService opsDashboardService) {
+                                       OpsDashboardService opsDashboardService,
+                                       SpendingLimitService spendingLimitService) {
         this.applicationService = applicationService;
         this.opsDashboardService = opsDashboardService;
+        this.spendingLimitService = spendingLimitService;
     }
 
     @PostMapping
@@ -61,6 +66,11 @@ public class CreditApplicationController {
     @GetMapping("/me")
     public ResponseEntity<Page<ApplicationResponse>> listMine(@AuthenticationPrincipal Jwt jwt, Pageable pageable) {
         return ResponseEntity.ok(applicationService.listForApplicant(UUID.fromString(jwt.getSubject()), pageable));
+    }
+
+    @GetMapping("/me/credit-limit")
+    public ResponseEntity<CreditLimitResponse> myCreditLimit(@AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(spendingLimitService.forApplicant(UUID.fromString(jwt.getSubject())));
     }
 
     @GetMapping("/dashboard")

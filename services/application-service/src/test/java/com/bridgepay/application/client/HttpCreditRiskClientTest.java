@@ -21,4 +21,11 @@ class HttpCreditRiskClientTest {
 
         assertThat(result.decision()).isEqualTo(ScoreDecision.MANUAL_REVIEW);
     }
+
+    @Test
+    void creditLimit_isEmpty_whenCreditRiskEngineIsUnreachable() {
+        HttpCreditRiskClient client = new HttpCreditRiskClient(RestClient.builder(), "http://localhost:1");
+
+        assertThat(client.creditLimit(UUID.randomUUID())).isEmpty();
+    }
 }

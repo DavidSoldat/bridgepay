@@ -1,5 +1,8 @@
 package com.bridgepay.application;
 
+import java.util.Optional;
+import com.bridgepay.application.client.CreditLimitClient;
+import com.bridgepay.application.client.CreditLimit;
 import com.bridgepay.application.client.CreditRiskClient;
 import com.bridgepay.application.client.ScoreDecision;
 import com.bridgepay.application.client.ScoreResult;
@@ -70,6 +73,12 @@ class CreditApplicationControllerIntegrationTest {
         // Real Credit Risk Engine doesn't exist yet - this stub always
         // approves, so the integration test can exercise the full happy path
         // (payout + outbox event creation) deterministically.
+        @Bean
+        @Primary
+        CreditLimitClient roomyLimit() {
+            return applicantId -> Optional.of(new CreditLimit(new BigDecimal("100000.00"), "LOW"));
+        }
+
         @Bean
         @Primary
         CreditRiskClient stubCreditRiskClient() {

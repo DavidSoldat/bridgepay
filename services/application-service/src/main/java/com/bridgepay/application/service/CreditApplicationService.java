@@ -15,6 +15,7 @@ import com.bridgepay.application.domain.OutboxEvent;
 import com.bridgepay.application.dto.ApplicationCaseResponse;
 import com.bridgepay.application.dto.ApplicationResponse;
 import com.bridgepay.application.dto.CheckoutRequest;
+import com.bridgepay.application.dto.CreditLimitResponse;
 import com.bridgepay.application.dto.MerchantPayoutResponse;
 import com.bridgepay.application.dto.MerchantSaleResponse;
 import com.bridgepay.application.dto.ReviewDecisionRequest;
@@ -58,6 +59,7 @@ public class CreditApplicationService {
     private final OutboxEventRepository outboxEventRepository;
     private final CreditRiskClient creditRiskClient;
     private final ObjectMapper objectMapper;
+    private final SpendingLimitService spendingLimitService;
 
     public CreditApplicationService(CreditApplicationRepository applicationRepository,
                                      MerchantRepository merchantRepository,
@@ -65,7 +67,8 @@ public class CreditApplicationService {
                                      IdempotencyKeyRepository idempotencyKeyRepository,
                                      OutboxEventRepository outboxEventRepository,
                                      CreditRiskClient creditRiskClient,
-                                     ObjectMapper objectMapper) {
+                                     ObjectMapper objectMapper,
+                                     SpendingLimitService spendingLimitService) {
         this.applicationRepository = applicationRepository;
         this.merchantRepository = merchantRepository;
         this.merchantPayoutRepository = merchantPayoutRepository;
@@ -73,6 +76,7 @@ public class CreditApplicationService {
         this.outboxEventRepository = outboxEventRepository;
         this.creditRiskClient = creditRiskClient;
         this.objectMapper = objectMapper;
+        this.spendingLimitService = spendingLimitService;
     }
 
     @Transactional
@@ -85,8 +89,19 @@ public class CreditApplicationService {
         Merchant merchant = merchantRepository.findById(request.merchantId())
                 .orElseThrow(() -> new NoSuchElementException("Merchant not found"));
 
+        CreditLimitResponse spending = spendingLimitService.forApplicant(applicantId);
+        // ponytail: two concurrent checkouts by one shopper can both pass this check; lock the applicant's
+        // application rows (SELECT ... FOR UPDATE) here if that ever matters. Double-submits are covered by
+        // the idempotency key above.
+        if (spending.available() != null && request.amount().compareTo(spending.available()) > 0) {
+            throw new OverLimitException(request.amount(), spending.available());
+        }
+
         ScoreResult scoreResult = creditRiskClient.score(new ScoreRequest(
                 applicantId, request.amount(), "general", Instant.now()));
+        if (spending.limit() == null) {
+            scoreResult = scoreResult.withCreditLimitUnavailable();
+        }
 
         CreditApplication application = new CreditApplication(applicantId, merchant, request.amount());
         applicationRepository.save(application);
