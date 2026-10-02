@@ -1,0 +1,26 @@
+<h2 class="mb-2 font-display text-lg font-bold">Spending power</h2>
+@if (loadError()) {
+  <p class="text-sm text-declined">Could not load your spending limit.</p>
+} @else if (limit() === undefined) {
+  <app-skeleton-rows [rows]="2" />
+} @else if (limit(); as l) {
+  @if (noCredit()) {
+    <p class="text-sm text-ink-muted">BridgePay isn't available for your account right now.</p>
+  } @else if (l.limit === null) {
+    <p class="text-sm text-ink-muted">We couldn't check your spending limit right now.</p>
+  } @else {
+    <p class="font-display text-3xl font-bold">${{ l.available | number: '1.2-2' }} <span class="text-base font-normal text-ink-muted">available</span></p>
+    <div
+      role="meter"
+      aria-label="Spending limit used"
+      aria-valuemin="0"
+      [attr.aria-valuemax]="l.limit"
+      [attr.aria-valuenow]="l.outstanding"
+      class="mt-3 h-2 overflow-hidden rounded-full bg-hairline"
+    >
+      <div data-testid="used-bar" class="h-full bg-coral" [style.width.%]="usedPercent()"></div>
+    </div>
+    <p class="mt-2 text-sm text-ink-muted">${{ l.outstanding | number: '1.2-2' }} used of ${{ l.limit | number: '1.2-2' }}</p>
+    <p class="mt-1 text-xs text-ink-muted">Your limit can grow as you pay plans off on time.</p>
+  }
+}

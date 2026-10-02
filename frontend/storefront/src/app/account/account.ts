@@ -12,10 +12,11 @@ import { StatusBadge } from '../shared/ui/status-badge/status-badge';
 import { EmptyState } from '../shared/ui/empty-state/empty-state';
 import { SkeletonRows } from '../shared/ui/skeleton-rows/skeleton-rows';
 import { Icon } from '../shared/ui/icon/icon';
+import { SpendingPower } from './spending-power/spending-power';
 
 @Component({
   selector: 'app-account',
-  imports: [DecimalPipe, RouterLink, InstallmentSchedule, FirstPayment, StatusBadge, EmptyState, SkeletonRows, Icon],
+  imports: [DecimalPipe, RouterLink, InstallmentSchedule, FirstPayment, StatusBadge, EmptyState, SkeletonRows, Icon, SpendingPower],
   templateUrl: './account.html',
   styleUrl: './account.css',
 })
@@ -44,6 +45,11 @@ export class Account {
     ),
     { initialValue: [] as ApplicationResponse[] },
   );
+
+  /** Orders that have (or had) a repayment plan worth showing. */
+  protected hasSchedule(status: string): boolean {
+    return status === 'APPROVED' || status === 'COMPLETED' || status === 'DEFAULTED';
+  }
 
   protected toggle(applicationId: string): void {
     this.expandedId.set(this.expandedId() === applicationId ? null : applicationId);

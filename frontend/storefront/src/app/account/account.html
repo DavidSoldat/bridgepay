@@ -3,6 +3,7 @@
     <app-icon name="arrow-left" /> Back to shop
   </a>
   <h1 class="mb-6 font-display text-3xl font-bold">My Account</h1>
+  <app-spending-power />
 
   @if (loadError()) {
     <p class="text-declined">Could not load your purchases.</p>
@@ -23,7 +24,7 @@
               <app-status-badge [status]="app.status" />
               <span class="font-display text-xl font-bold">${{ app.amount | number: '1.2-2' }}</span>
             </div>
-            @if (app.status === 'APPROVED') {
+            @if (hasSchedule(app.status)) {
               <button
                 type="button"
                 (click)="toggle(app.applicationId)"
