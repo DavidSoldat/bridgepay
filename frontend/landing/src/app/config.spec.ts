@@ -47,6 +47,13 @@ describe('parseConfig', () => {
   });
 });
 
+describe('parseConfig trimming', () => {
+  it('trims padding around usernames and passwords so a pasted login works', () => {
+    const c = parseConfig({ demoLogins: [{ role: 'ops', username: ' ops1 ', password: ' ops1	' }] });
+    expect(c.demoLogins).toEqual([{ role: 'ops', username: 'ops1', password: 'ops1' }]);
+  });
+});
+
 describe('loadConfig', () => {
   it('parses /config.json', async () => {
     const fetchFn = vi.fn(() => response(JSON.stringify(full)));

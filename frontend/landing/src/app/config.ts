@@ -29,7 +29,7 @@ export const LANDING_CONFIG = new InjectionToken<LandingConfig>('LANDING_CONFIG'
 
 const ROLES: readonly string[] = ['shopper', 'ops', 'merchant'];
 
-const text = (value: unknown): string | null => (typeof value === 'string' && value.trim() ? value : null);
+const text = (value: unknown): string | null => (typeof value === 'string' && value.trim() ? value.trim() : null);
 
 export function parseConfig(raw: unknown): LandingConfig {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;

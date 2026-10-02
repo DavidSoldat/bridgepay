@@ -23,11 +23,11 @@ export class RoleCard {
   protected readonly status = signal('');
   private clearTimer?: ReturnType<typeof setTimeout>;
 
-  protected async copy(value: string): Promise<void> {
+  protected async copy(value: string, label: string): Promise<void> {
     try {
       if (!navigator.clipboard) throw new Error('no clipboard');
       await navigator.clipboard.writeText(value);
-      this.announce('Copied');
+      this.announce(`${label} copied`);
     } catch {
       this.announce('Copy failed — select the text instead');
     }

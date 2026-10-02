@@ -54,6 +54,20 @@ describe('TryDemo', () => {
     expect(s[4]).toContain('as the merchant');
   });
 
+  it('uses the first login for a role', () => {
+    const s = steps(render(config({ demoLogins: [
+      { role: 'shopper', username: 'first.shopper', password: 'a' },
+      { role: 'shopper', username: 'second.shopper', password: 'b' },
+    ] })));
+    expect(s[0]).toContain('first.shopper');
+    expect(s[0]).not.toContain('second.shopper');
+  });
+
+  it('lets a long login name in the walkthrough wrap instead of widening the page', () => {
+    const el = render(config());
+    expect(el.querySelector('[data-testid="walkthrough"] strong')!.className).toContain('break-all');
+  });
+
   it('is the #demo section', () => {
     expect(render(config()).querySelector('section#demo')).not.toBeNull();
   });

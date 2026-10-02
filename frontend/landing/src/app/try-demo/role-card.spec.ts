@@ -47,7 +47,7 @@ describe('RoleCard', () => {
     f.detectChanges();
 
     expect(writeText).toHaveBeenCalledWith('secret-pw');
-    expect(el.querySelector('[role="status"]')!.textContent).toContain('Copied');
+    expect(el.querySelector('[role="status"]')!.textContent).toContain('Password copied');
   });
 
   it('tells the user to select the text when the clipboard is missing or refuses', async () => {
