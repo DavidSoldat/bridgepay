@@ -43,6 +43,10 @@ spring:
               uri: ${bridgepay.repayment-reconciliation-service.base-url}
               predicates:
                 - Path=/api/v1/ops/**
+            - id: notifications
+              uri: ${bridgepay.notifications-service.base-url}
+              predicates:
+                - Path=/api/v1/notifications/**
 
 bridgepay:
   applicant-service:
@@ -51,6 +55,8 @@ bridgepay:
     base-url: ${APPLICATION_SERVICE_URL:http://localhost:8081}
   repayment-reconciliation-service:
     base-url: ${REPAYMENT_RECONCILIATION_SERVICE_URL:http://localhost:8084}
+  notifications-service:
+    base-url: ${NOTIFICATIONS_SERVICE_URL:http://localhost:8085}
 
 management:
   endpoints:

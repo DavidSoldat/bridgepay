@@ -45,6 +45,7 @@ class RoutingIntegrationTest {
         registry.add("bridgepay.applicant-service.base-url", wireMock::baseUrl);
         registry.add("bridgepay.application-service.base-url", wireMock::baseUrl);
         registry.add("bridgepay.repayment-reconciliation-service.base-url", wireMock::baseUrl);
+        registry.add("bridgepay.notifications-service.base-url", wireMock::baseUrl);
     }
 
     @Autowired
@@ -122,6 +123,15 @@ class RoutingIntegrationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("NOT_FOUND"))
                 .andExpect(jsonPath("$.traceId").exists());
+    }
+
+    @Test
+    void routesNotificationPaths_toNotificationsService() throws Exception {
+        wireMock.stubFor(WireMock.post(urlPathEqualTo("/api/v1/notifications/read"))
+                .willReturn(WireMock.status(204)));
+
+        mockMvc.perform(post("/api/v1/notifications/read"))
+                .andExpect(status().isNoContent());
     }
 
     @Test
