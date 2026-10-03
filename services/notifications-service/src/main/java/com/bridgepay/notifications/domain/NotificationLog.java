@@ -8,6 +8,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -35,6 +36,24 @@ public class NotificationLog {
     @Column(name = "type", nullable = false, length = 64)
     private NotificationType type;
 
+    @Column(name = "title", nullable = false, length = 200)
+    private String title;
+
+    @Column(name = "body", nullable = false, length = 500)
+    private String body;
+
+    @Column(name = "application_id")
+    private UUID applicationId;
+
+    @Column(name = "group_key", length = 64)
+    private String groupKey;
+
+    @Column(name = "sequence_number")
+    private Integer sequenceNumber;
+
+    @Column(name = "amount", precision = 12, scale = 2)
+    private BigDecimal amount;
+
     @Column(name = "sent_at", nullable = false)
     private Instant sentAt;
 
@@ -42,11 +61,17 @@ public class NotificationLog {
         // required by JPA
     }
 
-    public NotificationLog(UUID eventId, UUID applicantId, NotificationType type) {
+    public NotificationLog(UUID eventId, NotificationDraft draft) {
         this.id = UuidCreator.getTimeOrderedEpoch();
         this.eventId = eventId;
-        this.applicantId = applicantId;
-        this.type = type;
+        this.applicantId = draft.applicantId();
+        this.type = draft.type();
+        this.title = draft.title();
+        this.body = draft.body();
+        this.applicationId = draft.applicationId();
+        this.groupKey = draft.groupKey();
+        this.sequenceNumber = draft.sequenceNumber();
+        this.amount = draft.amount();
         this.sentAt = Instant.now();
     }
 
@@ -68,5 +93,29 @@ public class NotificationLog {
 
     public Instant getSentAt() {
         return sentAt;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getBody() {
+        return body;
+    }
+
+    public UUID getApplicationId() {
+        return applicationId;
+    }
+
+    public String getGroupKey() {
+        return groupKey;
+    }
+
+    public Integer getSequenceNumber() {
+        return sequenceNumber;
+    }
+
+    public BigDecimal getAmount() {
+        return amount;
     }
 }

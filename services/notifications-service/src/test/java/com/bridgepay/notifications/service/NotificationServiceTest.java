@@ -1,6 +1,7 @@
 package com.bridgepay.notifications.service;
 
 import com.bridgepay.notifications.AbstractKafkaIntegrationTest;
+import com.bridgepay.notifications.domain.NotificationDraft;
 import com.bridgepay.notifications.domain.NotificationType;
 import com.bridgepay.notifications.repository.NotificationLogRepository;
 import com.github.f4b6a3.uuid.UuidCreator;
@@ -23,12 +24,15 @@ class NotificationServiceTest extends AbstractKafkaIntegrationTest {
         UUID eventId = UuidCreator.getTimeOrderedEpoch();
         UUID applicantId = UuidCreator.getTimeOrderedEpoch();
 
-        notificationService.recordAndSend(eventId, applicantId, NotificationType.APPLICATION_APPROVED, "test message");
+        notificationService.recordAndSend(eventId, NotificationDraft.simple(applicantId,
+                NotificationType.APPLICATION_APPROVED, "You're approved", "body text", null));
 
         var saved = repository.findAll().stream().filter(row -> row.getEventId().equals(eventId)).findFirst();
         assertThat(saved).isPresent();
         assertThat(saved.get().getApplicantId()).isEqualTo(applicantId);
         assertThat(saved.get().getType()).isEqualTo(NotificationType.APPLICATION_APPROVED);
+        assertThat(saved.get().getTitle()).isEqualTo("You're approved");
+        assertThat(saved.get().getBody()).isEqualTo("body text");
     }
 
     @Test
@@ -36,8 +40,10 @@ class NotificationServiceTest extends AbstractKafkaIntegrationTest {
         UUID eventId = UuidCreator.getTimeOrderedEpoch();
         UUID applicantId = UuidCreator.getTimeOrderedEpoch();
 
-        notificationService.recordAndSend(eventId, applicantId, NotificationType.APPLICATION_DECLINED, "first delivery");
-        notificationService.recordAndSend(eventId, applicantId, NotificationType.APPLICATION_DECLINED, "redelivered");
+        notificationService.recordAndSend(eventId, NotificationDraft.simple(applicantId,
+                NotificationType.APPLICATION_DECLINED, "t", "first delivery", null));
+        notificationService.recordAndSend(eventId, NotificationDraft.simple(applicantId,
+                NotificationType.APPLICATION_DECLINED, "t", "redelivered", null));
 
         long matching = repository.findAll().stream().filter(row -> row.getEventId().equals(eventId)).count();
         assertThat(matching).isEqualTo(1);

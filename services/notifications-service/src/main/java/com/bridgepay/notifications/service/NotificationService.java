@@ -1,7 +1,7 @@
 package com.bridgepay.notifications.service;
 
 import com.bridgepay.notifications.domain.NotificationLog;
-import com.bridgepay.notifications.domain.NotificationType;
+import com.bridgepay.notifications.domain.NotificationDraft;
 import com.bridgepay.notifications.repository.NotificationLogRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,13 +35,13 @@ public class NotificationService {
         this.repository = repository;
     }
 
-    public void recordAndSend(UUID eventId, UUID applicantId, NotificationType type, String message) {
+    public void recordAndSend(UUID eventId, NotificationDraft draft) {
         try {
-            repository.saveAndFlush(new NotificationLog(eventId, applicantId, type));
+            repository.saveAndFlush(new NotificationLog(eventId, draft));
         } catch (DataIntegrityViolationException ex) {
             log.debug("Duplicate delivery for event {}, skipping", eventId);
             return;
         }
-        log.info("would send: {} to applicant {}: {}", type, applicantId, message);
+        log.info("would send: {} to applicant {}: {} — {}", draft.type(), draft.applicantId(), draft.title(), draft.body());
     }
 }

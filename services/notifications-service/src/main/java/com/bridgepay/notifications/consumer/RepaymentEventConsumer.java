@@ -1,8 +1,8 @@
 package com.bridgepay.notifications.consumer;
 
-import com.bridgepay.notifications.domain.NotificationType;
 import com.bridgepay.notifications.event.EventEnvelope;
 import com.bridgepay.notifications.event.RepaymentEvents;
+import com.bridgepay.notifications.service.NotificationCopy;
 import com.bridgepay.notifications.service.NotificationService;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -24,8 +24,7 @@ public class RepaymentEventConsumer {
         EventEnvelope<RepaymentEvents.InstallmentPaid> envelope = objectMapper.readValue(message,
                 objectMapper.getTypeFactory().constructParametricType(EventEnvelope.class, RepaymentEvents.InstallmentPaid.class));
         RepaymentEvents.InstallmentPaid payload = envelope.payload();
-        notificationService.recordAndSend(envelope.eventId(), payload.applicantId(), NotificationType.INSTALLMENT_PAID,
-                "installment #" + payload.sequenceNumber() + " (" + payload.amount() + ") received");
+        notificationService.recordAndSend(envelope.eventId(), NotificationCopy.installmentPaid(payload));
     }
 
     @KafkaListener(topics = "repayments.installment-missed")
@@ -33,8 +32,7 @@ public class RepaymentEventConsumer {
         EventEnvelope<RepaymentEvents.InstallmentMissed> envelope = objectMapper.readValue(message,
                 objectMapper.getTypeFactory().constructParametricType(EventEnvelope.class, RepaymentEvents.InstallmentMissed.class));
         RepaymentEvents.InstallmentMissed payload = envelope.payload();
-        notificationService.recordAndSend(envelope.eventId(), payload.applicantId(), NotificationType.INSTALLMENT_MISSED,
-                "installment #" + payload.sequenceNumber() + " missed, was due " + payload.dueDate());
+        notificationService.recordAndSend(envelope.eventId(), NotificationCopy.installmentMissed(payload));
     }
 
     @KafkaListener(topics = "repayments.plan-completed")
@@ -42,8 +40,7 @@ public class RepaymentEventConsumer {
         EventEnvelope<RepaymentEvents.PlanCompleted> envelope = objectMapper.readValue(message,
                 objectMapper.getTypeFactory().constructParametricType(EventEnvelope.class, RepaymentEvents.PlanCompleted.class));
         RepaymentEvents.PlanCompleted payload = envelope.payload();
-        notificationService.recordAndSend(envelope.eventId(), payload.applicantId(), NotificationType.PLAN_COMPLETED,
-                "your repayment plan is fully paid off");
+        notificationService.recordAndSend(envelope.eventId(), NotificationCopy.planCompleted(payload));
     }
 
     @KafkaListener(topics = "repayments.plan-defaulted")
@@ -51,7 +48,14 @@ public class RepaymentEventConsumer {
         EventEnvelope<RepaymentEvents.PlanDefaulted> envelope = objectMapper.readValue(message,
                 objectMapper.getTypeFactory().constructParametricType(EventEnvelope.class, RepaymentEvents.PlanDefaulted.class));
         RepaymentEvents.PlanDefaulted payload = envelope.payload();
-        notificationService.recordAndSend(envelope.eventId(), payload.applicantId(), NotificationType.PLAN_DEFAULTED,
-                "your repayment plan has defaulted");
+        notificationService.recordAndSend(envelope.eventId(), NotificationCopy.planDefaulted(payload));
+    }
+
+    @KafkaListener(topics = "repayments.plan-cancelled")
+    public void onPlanCancelled(String message) {
+        EventEnvelope<RepaymentEvents.PlanCancelled> envelope = objectMapper.readValue(message,
+                objectMapper.getTypeFactory().constructParametricType(EventEnvelope.class, RepaymentEvents.PlanCancelled.class));
+        RepaymentEvents.PlanCancelled payload = envelope.payload();
+        notificationService.recordAndSend(envelope.eventId(), NotificationCopy.planCancelled(payload));
     }
 }

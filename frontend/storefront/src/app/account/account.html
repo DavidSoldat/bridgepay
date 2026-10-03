@@ -18,7 +18,7 @@
   } @else {
     <ul class="flex flex-col gap-4">
       @for (app of rows(); track app.applicationId) {
-        <li class="card p-5">
+        <li class="card p-5" [id]="'order-' + app.applicationId">
           <div class="flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center gap-3">
               <app-status-badge [status]="app.status" />
@@ -45,4 +45,6 @@
       }
     </ul>
   }
+
+  <app-activity [orderIds]="orderIds()" [ordersLoaded]="!loading()" (viewOrder)="viewOrder($event)" />
 </div>

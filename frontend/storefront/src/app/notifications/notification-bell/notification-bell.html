@@ -1,0 +1,56 @@
+<button
+  #bell
+  type="button"
+  (click)="toggle()"
+  [attr.aria-label]="label()"
+  [attr.aria-expanded]="open()"
+  aria-controls="notifications-panel"
+  class="relative inline-flex size-11 items-center justify-center rounded-full text-xl text-ink hover:text-coral"
+>
+  <app-icon name="bell" />
+  @if (notifications.unreadCount() > 0) {
+    <span
+      data-testid="badge"
+      aria-hidden="true"
+      class="absolute right-0.5 top-0.5 min-w-5 rounded-full bg-coral px-1 text-center text-xs font-semibold leading-5 text-white"
+      >{{ badge() }}</span
+    >
+  }
+</button>
+@if (open()) {
+  <div
+    id="notifications-panel"
+    role="region"
+    aria-label="Notifications"
+    class="z-20 rounded-xl border max-sm:fixed max-sm:inset-x-4 max-sm:top-[4.5rem] sm:absolute sm:right-0 sm:mt-2 sm:w-[22rem] border-hairline bg-surface p-2 shadow-lg"
+  >
+    @if (notifications.latest().length === 0) {
+      <p class="px-3 py-4 text-sm text-ink-muted">No notifications yet.</p>
+    } @else {
+      <ul class="flex flex-col">
+        @for (item of notifications.latest(); track item.id) {
+          <li class="flex gap-3 rounded-lg px-3 py-2">
+            <span class="mt-1.5 size-2 shrink-0 rounded-full" [class.bg-coral]="item.unread"></span>
+            <div class="min-w-0">
+              <p class="text-sm font-semibold">
+                @if (item.unread) {
+                  <span class="sr-only">Unread: </span>
+                }
+                {{ item.title }}
+              </p>
+              <p class="text-sm text-ink-muted">{{ item.body }}</p>
+              <p class="text-xs text-ink-muted">{{ relativeTime(item.createdAt) }}</p>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+    <a
+      routerLink="/account"
+      fragment="activity"
+      (click)="close(false)"
+      class="block rounded-lg px-3 py-2 text-sm font-semibold text-coral hover:text-coral-hover"
+      >See all activity</a
+    >
+  </div>
+}

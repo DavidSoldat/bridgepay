@@ -1,13 +1,16 @@
 <header class="border-b border-hairline bg-surface">
-  <div class="mx-auto flex max-w-5xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-8">
-    <span class="mr-auto font-display text-xl font-bold">Ridgeline Supply Co.</span>
-    <nav class="flex items-center gap-5 text-sm font-medium" aria-label="Store">
-      <a routerLink="/" class="text-ink hover:text-coral">Shop</a>
+  <div class="mx-auto flex max-w-5xl items-center gap-3 px-4 py-2 sm:px-8">
+    <a routerLink="/" class="mr-auto flex min-h-11 min-w-11 items-center justify-center gap-2 font-display text-xl font-bold">
+      <app-icon name="mountain" class="text-2xl text-coral" />
+      <span class="max-sm:sr-only">Ridgeline Supply Co.</span>
+    </a>
+    <nav class="flex items-center gap-2 text-sm font-medium" aria-label="Store">
+      <a routerLink="/" class="inline-flex min-h-11 items-center px-2 text-ink hover:text-coral">Shop</a>
       @if (auth.authenticated()) {
-        <a routerLink="/account" class="text-ink hover:text-coral">My Account</a>
-        <button type="button" (click)="auth.logout()" class="btn-secondary">Sign out</button>
+        <app-notification-bell />
+        <app-account-menu />
       } @else {
-        <button type="button" (click)="signIn()" class="btn-secondary">Sign in</button>
+        <button type="button" (click)="signIn()" class="min-h-11 px-2 text-sm font-medium text-ink hover:text-coral">Sign in</button>
       }
     </nav>
   </div>

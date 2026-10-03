@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -13,10 +13,11 @@ import { EmptyState } from '../shared/ui/empty-state/empty-state';
 import { SkeletonRows } from '../shared/ui/skeleton-rows/skeleton-rows';
 import { Icon } from '../shared/ui/icon/icon';
 import { SpendingPower } from './spending-power/spending-power';
+import { Activity } from './activity/activity';
 
 @Component({
   selector: 'app-account',
-  imports: [DecimalPipe, RouterLink, InstallmentSchedule, FirstPayment, StatusBadge, EmptyState, SkeletonRows, Icon, SpendingPower],
+  imports: [DecimalPipe, RouterLink, InstallmentSchedule, FirstPayment, StatusBadge, EmptyState, SkeletonRows, Icon, SpendingPower, Activity],
   templateUrl: './account.html',
   styleUrl: './account.css',
 })
@@ -46,6 +47,16 @@ export class Account {
     ),
     { initialValue: [] as ApplicationResponse[] },
   );
+
+  protected readonly orderIds = computed(() => this.rows().map((row) => row.applicationId));
+
+  protected viewOrder(applicationId: string): void {
+    const order = this.rows().find((row) => row.applicationId === applicationId);
+    if (order && this.hasSchedule(order.status)) {
+      this.expandedId.set(applicationId);
+    }
+    document.getElementById(`order-${applicationId}`)?.scrollIntoView?.({ block: 'start' });
+  }
 
   /** Orders that have (or had) a repayment plan worth showing. */
   protected hasSchedule(status: string): boolean {
