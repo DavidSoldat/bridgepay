@@ -27,6 +27,7 @@ export class Account {
   protected readonly loadError = signal(false);
   protected readonly loading = signal(true);
   protected readonly expandedId = signal<string | null>(null);
+  protected readonly limitRefresh = signal(0);
 
   constructor() {
     if (!this.auth.authenticated()) {

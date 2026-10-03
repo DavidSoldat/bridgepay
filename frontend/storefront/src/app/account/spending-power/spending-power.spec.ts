@@ -43,6 +43,22 @@ describe('SpendingPower', () => {
     expect(text(el)).toContain('Could not load your spending limit.');
   });
 
+  it('fetches again when asked to refresh', () => {
+    const mine = vi.fn()
+      .mockReturnValueOnce(of({ limit: 600, outstanding: 150, available: 450, band: 'LOW' }))
+      .mockReturnValueOnce(of({ limit: 600, outstanding: 0, available: 600, band: 'LOW' }));
+    TestBed.configureTestingModule({ imports: [SpendingPower], providers: [{ provide: CreditLimits, useValue: { mine } }] });
+    const fixture = TestBed.createComponent(SpendingPower);
+    fixture.detectChanges();
+    expect(text(fixture.nativeElement)).toContain('$450.00 available');
+
+    fixture.componentRef.setInput('refresh', 1);
+    fixture.detectChanges();
+
+    expect(mine).toHaveBeenCalledTimes(2);
+    expect(text(fixture.nativeElement)).toContain('$600.00 available');
+  });
+
   it('shows a skeleton while loading', () => {
     const el = render(() => NEVER);
     expect(el.querySelector('app-skeleton-rows')).not.toBeNull();

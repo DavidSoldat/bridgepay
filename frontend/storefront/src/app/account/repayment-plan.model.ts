@@ -1,3 +1,5 @@
+export type EarlyPaymentScope = 'NEXT' | 'REMAINING';
+
 export interface Installment {
   sequenceNumber: number;
   dueDate: string;

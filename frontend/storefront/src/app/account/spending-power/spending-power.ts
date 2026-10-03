@@ -1,7 +1,7 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, of } from 'rxjs';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { catchError, of, switchMap } from 'rxjs';
 import { CreditLimits, noCredit } from '../../checkout/credit-limits';
 import { CreditLimit } from '../../shared/models/credit-limit';
 import { SkeletonRows } from '../../shared/ui/skeleton-rows/skeleton-rows';
@@ -15,13 +15,21 @@ import { SkeletonRows } from '../../shared/ui/skeleton-rows/skeleton-rows';
 export class SpendingPower {
   private readonly creditLimits = inject(CreditLimits);
 
+  /** Bump to fetch the limit again (e.g. after an early payment). */
+  readonly refresh = input(0);
+
   protected readonly loadError = signal(false);
   /** undefined while loading. */
   protected readonly limit = toSignal<CreditLimit | null | undefined>(
-    this.creditLimits.mine().pipe(
-      catchError(() => {
-        this.loadError.set(true);
-        return of(null);
+    toObservable(this.refresh).pipe(
+      switchMap(() => {
+        this.loadError.set(false);
+        return this.creditLimits.mine().pipe(
+          catchError(() => {
+            this.loadError.set(true);
+            return of(null);
+          }),
+        );
       }),
     ),
     { initialValue: undefined },
