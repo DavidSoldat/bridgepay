@@ -23,4 +23,15 @@ public interface PaddleClient {
 
     /** The transaction's id and subscription id if Paddle reports it completed - what transaction.completed carries. */
     Optional<PaddleWebhookData> findCompletedTransaction(String transactionId);
+
+    /**
+     * Charges the subscription's saved card now for {@code quantity} installments, as one item so the
+     * transaction's quantity tells webhook handling how many installments it pays.
+     *
+     * @throws PaddlePaymentRefusedException Paddle answered 4xx - nothing was charged
+     */
+    void chargeNow(String subscriptionId, BigDecimal installmentAmount, int quantity);
+
+    /** The newest completed one-time-charge transaction on the subscription, if any. */
+    Optional<PaddleWebhookData> findLatestChargeTransaction(String subscriptionId);
 }
