@@ -1,0 +1,47 @@
+<section id="activity" class="mt-10 scroll-mt-4" aria-labelledby="activity-heading">
+  <h2 id="activity-heading" class="mb-4 font-display text-2xl font-bold">Activity</h2>
+  @if (loadError() && items().length === 0) {
+    <p class="text-declined">Could not load your activity.</p>
+  } @else if (loading() && items().length === 0) {
+    <div class="card px-6"><app-skeleton-rows [rows]="3" /></div>
+  } @else if (items().length === 0) {
+    <div class="card">
+      <app-empty-state icon="inbox" heading="No activity yet." text="Updates about your orders and payments show up here." />
+    </div>
+  } @else {
+    <ul class="card divide-y divide-hairline">
+      @for (item of items(); track item.id) {
+        <li class="flex gap-3 px-5 py-4">
+          <span class="mt-2 size-2 shrink-0 rounded-full" [class.bg-coral]="item.unread"></span>
+          <div class="min-w-0 flex-1">
+            <p class="font-semibold">
+              @if (item.unread) {
+                <span class="sr-only">Unread: </span>
+              }
+              {{ item.title }}
+            </p>
+            @if (item.body) {
+              <p class="text-sm text-ink-muted">{{ item.body }}</p>
+            }
+            <p class="mt-1 text-xs text-ink-muted">{{ relativeTime(item.createdAt) }}</p>
+          </div>
+          @if (item.applicationId && orderIds().includes(item.applicationId)) {
+            <button
+              type="button"
+              (click)="viewOrder.emit(item.applicationId)"
+              class="min-h-11 shrink-0 px-2 text-sm font-semibold text-coral hover:text-coral-hover"
+            >
+              View order
+            </button>
+          }
+        </li>
+      }
+    </ul>
+    @if (loadError()) {
+      <p class="mt-3 text-sm text-declined" role="alert">Could not load more activity.</p>
+    }
+    @if (hasMore()) {
+      <button type="button" class="btn-secondary mt-4" [disabled]="loading()" (click)="loadMore()">Load more</button>
+    }
+  }
+</section>

@@ -1,4 +1,8 @@
+import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { Notifications } from '../notifications/notifications';
+import { Activity } from './activity/activity';
 import { provideRouter } from '@angular/router';
 import { Subject, of, throwError } from 'rxjs';
 import { Account } from './account';
@@ -21,6 +25,7 @@ describe('Account', () => {
         { provide: RepaymentPlans, useValue: { getPlan: () => of() } },
         { provide: PaddleCheckout, useValue: { enabled: false } },
         { provide: CreditLimits, useValue: { mine: () => of({ limit: 600, outstanding: 0, available: 600, band: 'LOW' }) } },
+        { provide: Notifications, useValue: { page: () => of({ items: [], unreadCount: 0, page: 0, hasMore: false }), readVersion: signal(0) } },
       ],
     });
     return TestBed.createComponent(Account);
@@ -41,6 +46,18 @@ describe('Account', () => {
     const card = el.querySelector('app-spending-power');
     expect(card).not.toBeNull();
     expect(card!.compareDocumentPosition(el.querySelector('ul')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('View order from Activity expands that order', () => {
+    const fixture = setup(true, () => of(pageOf(row('app-1', 'APPROVED'), row('app-2', 'APPROVED'))));
+    fixture.detectChanges();
+
+    fixture.debugElement.query(By.directive(Activity)).componentInstance.viewOrder.emit('app-2');
+    fixture.detectChanges();
+
+    const toggles = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button[aria-expanded]'));
+    expect(toggles.map((b) => b.getAttribute('aria-expanded'))).toEqual(['false', 'true']);
+    expect((fixture.nativeElement as HTMLElement).querySelector('#order-app-2')).not.toBeNull();
   });
 
   it('offers the schedule for completed and defaulted orders too', () => {
