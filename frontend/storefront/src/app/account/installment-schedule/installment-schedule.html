@@ -12,7 +12,7 @@
     <table class="mt-3 w-full text-sm">
       <thead>
         <tr class="border-b border-hairline text-left text-ink-muted">
-          <th class="py-2 font-medium">Due</th>
+          <th class="py-2 font-medium">Date</th>
           <th class="py-2 font-medium">Amount</th>
           <th class="py-2 font-medium">Status</th>
         </tr>
@@ -20,7 +20,7 @@
       <tbody>
         @for (installment of installments(); track installment.sequenceNumber) {
           <tr class="border-b border-hairline last:border-0">
-            <td class="py-2">{{ installment.dueDate | date: 'mediumDate' }}</td>
+            <td class="py-2">{{ (installment.status === 'PAID' && installment.paidAt ? installment.paidAt : installment.dueDate) | date: 'mediumDate' }}</td>
             <td class="py-2 font-mono">${{ installment.amount | number: '1.2-2' }}</td>
             <td class="py-2"><app-status-badge [status]="installment.status" /></td>
           </tr>

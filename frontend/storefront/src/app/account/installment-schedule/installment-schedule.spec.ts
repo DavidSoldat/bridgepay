@@ -263,4 +263,31 @@ describe('InstallmentSchedule', () => {
       "We couldn't confirm your payment. Check this page again in a few minutes before trying again.",
     );
   });
+
+  it('shows paid dates for PAID installments and due dates for unpaid ones', () => {
+    const plan: RepaymentPlanResponse = {
+      planId: 'plan-1', applicationId: 'app-1', status: 'ACTIVE',
+      totalAmount: 200, installmentCount: 3, installmentAmount: 66.67,
+      installments: [
+        { sequenceNumber: 1, dueDate: '2026-10-03', amount: 66.67, status: 'PAID', paidAt: '2026-10-03T12:51:11Z' },
+        { sequenceNumber: 2, dueDate: '2026-10-10', amount: 66.67, status: 'PAID', paidAt: '2026-10-03T12:52:00Z' },
+        { sequenceNumber: 3, dueDate: '2026-10-10', amount: 66.66, status: 'SCHEDULED', paidAt: null },
+      ],
+      checkoutTransactionId: null,
+    };
+    const fixture = setup(() => of(plan));
+    fixture.componentRef.setInput('application', app('app-1'));
+    fixture.detectChanges();
+
+    const rows = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('tbody tr')).map((r) =>
+      Array.from(r.querySelectorAll('td')).map((td) => td.textContent?.trim()),
+    );
+    expect(rows).toEqual([
+      ['Oct 3, 2026', '$66.67', 'Paid'],
+      ['Oct 3, 2026', '$66.67', 'Paid'],
+      ['Oct 10, 2026', '$66.66', 'Scheduled'],
+    ]);
+    const header = (fixture.nativeElement as HTMLElement).querySelector('thead th');
+    expect(header?.textContent?.trim()).toBe('Date');
+  });
 });
