@@ -1,6 +1,7 @@
 package com.bridgepay.notifications.consumer;
 
 import com.bridgepay.notifications.AbstractKafkaIntegrationTest;
+import com.bridgepay.notifications.domain.NotificationLog;
 import com.bridgepay.notifications.domain.NotificationType;
 import com.bridgepay.notifications.event.ApplicationEvents;
 import com.bridgepay.notifications.event.EventEnvelope;
@@ -14,6 +15,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -29,13 +31,17 @@ class ApplicationEventConsumerIntegrationTest extends AbstractKafkaIntegrationTe
     void approvedEvent_isRecorded() {
         UUID eventId = UuidCreator.getTimeOrderedEpoch();
         UUID applicantId = UuidCreator.getTimeOrderedEpoch();
-        var envelope = new EventEnvelope<>(eventId, "application.approved", Instant.now(), applicantId, 1,
+        UUID applicationId = UuidCreator.getTimeOrderedEpoch();
+        var envelope = new EventEnvelope<>(eventId, "application.approved", Instant.now(), applicationId, 1,
                 new ApplicationEvents.Approved(applicantId, UuidCreator.getTimeOrderedEpoch(),
                         new BigDecimal("200.00"), 4, new BigDecimal("50.00")));
 
         publish("applications.approved", applicantId.toString(), objectMapper.writeValueAsString(envelope));
 
-        awaitNotificationLogged(eventId, applicantId, NotificationType.APPLICATION_APPROVED);
+        NotificationLog row = awaitNotificationLogged(eventId, applicantId, NotificationType.APPLICATION_APPROVED);
+        assertThat(row.getTitle()).isEqualTo("You're approved");
+        assertThat(row.getBody()).isEqualTo("4 payments of $50.00 for your $200.00 order.");
+        assertThat(row.getApplicationId()).isEqualTo(applicationId);
     }
 
     @Test
@@ -79,12 +85,15 @@ class ApplicationEventConsumerIntegrationTest extends AbstractKafkaIntegrationTe
                 assertThat(repository.findAll().stream().filter(row -> row.getEventId().equals(eventId)).count()).isEqualTo(1));
     }
 
-    private void awaitNotificationLogged(UUID eventId, UUID applicantId, NotificationType type) {
+    private NotificationLog awaitNotificationLogged(UUID eventId, UUID applicantId, NotificationType type) {
+        AtomicReference<NotificationLog> found = new AtomicReference<>();
         await().atMost(Duration.ofSeconds(15)).untilAsserted(() -> {
             var saved = repository.findAll().stream().filter(row -> row.getEventId().equals(eventId)).findFirst();
             assertThat(saved).isPresent();
             assertThat(saved.get().getApplicantId()).isEqualTo(applicantId);
             assertThat(saved.get().getType()).isEqualTo(type);
+            found.set(saved.get());
         });
+        return found.get();
     }
 }

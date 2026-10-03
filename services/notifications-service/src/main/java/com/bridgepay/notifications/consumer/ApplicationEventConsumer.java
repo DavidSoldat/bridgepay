@@ -1,8 +1,8 @@
 package com.bridgepay.notifications.consumer;
 
-import com.bridgepay.notifications.domain.NotificationType;
 import com.bridgepay.notifications.event.ApplicationEvents;
 import com.bridgepay.notifications.event.EventEnvelope;
+import com.bridgepay.notifications.service.NotificationCopy;
 import com.bridgepay.notifications.service.NotificationService;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -24,9 +24,7 @@ public class ApplicationEventConsumer {
         EventEnvelope<ApplicationEvents.Approved> envelope = objectMapper.readValue(message,
                 objectMapper.getTypeFactory().constructParametricType(EventEnvelope.class, ApplicationEvents.Approved.class));
         ApplicationEvents.Approved payload = envelope.payload();
-        notificationService.recordAndSend(envelope.eventId(), payload.applicantId(), NotificationType.APPLICATION_APPROVED,
-                "your application for " + payload.amount() + " was approved (" + payload.installmentCount() + " installments of "
-                        + payload.installmentAmount() + ")");
+        notificationService.recordAndSend(envelope.eventId(), NotificationCopy.approved(envelope.aggregateId(), payload));
     }
 
     @KafkaListener(topics = "applications.manual-review")
@@ -34,8 +32,7 @@ public class ApplicationEventConsumer {
         EventEnvelope<ApplicationEvents.ManualReview> envelope = objectMapper.readValue(message,
                 objectMapper.getTypeFactory().constructParametricType(EventEnvelope.class, ApplicationEvents.ManualReview.class));
         ApplicationEvents.ManualReview payload = envelope.payload();
-        notificationService.recordAndSend(envelope.eventId(), payload.applicantId(), NotificationType.APPLICATION_MANUAL_REVIEW,
-                "your application is under manual review");
+        notificationService.recordAndSend(envelope.eventId(), NotificationCopy.manualReview(envelope.aggregateId(), payload));
     }
 
     @KafkaListener(topics = "applications.declined")
@@ -43,7 +40,6 @@ public class ApplicationEventConsumer {
         EventEnvelope<ApplicationEvents.Declined> envelope = objectMapper.readValue(message,
                 objectMapper.getTypeFactory().constructParametricType(EventEnvelope.class, ApplicationEvents.Declined.class));
         ApplicationEvents.Declined payload = envelope.payload();
-        notificationService.recordAndSend(envelope.eventId(), payload.applicantId(), NotificationType.APPLICATION_DECLINED,
-                "your application was declined");
+        notificationService.recordAndSend(envelope.eventId(), NotificationCopy.declined(envelope.aggregateId(), payload));
     }
 }

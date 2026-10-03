@@ -5,9 +5,10 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 /**
- * Must match Notifications Service's own copy of these same 4 payload
- * shapes (com.bridgepay.notifications.event.RepaymentEvents) byte-for-byte,
- * including applicantId on all four - that service's own stated assumption
+ * Must match Notifications Service's own copy of these payload shapes
+ * (com.bridgepay.notifications.event.RepaymentEvents) field-for-field - both
+ * gained paddleTransactionId and applicationId together - including
+ * applicantId on all of them - that service's own stated assumption
  * about this contract, confirmed correct by this design. Application Service
  * keeps its own copy of InstallmentPaid and PlanCancelled, which must match too.
  * InstallmentPaid also carries paddleTransactionId for grouping; InstallmentMissed
