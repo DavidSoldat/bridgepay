@@ -3,7 +3,7 @@
     <app-icon name="arrow-left" /> Back to shop
   </a>
   <h1 class="mb-6 font-display text-3xl font-bold">My Account</h1>
-  <app-spending-power />
+  <app-spending-power [refresh]="limitRefresh()" />
 
   @if (loadError()) {
     <p class="text-declined">Could not load your purchases.</p>
@@ -39,7 +39,7 @@
             <app-first-payment [applicationId]="app.applicationId" />
           }
           @if (expandedId() === app.applicationId) {
-            <app-installment-schedule [application]="app" />
+            <app-installment-schedule [application]="app" (paid)="limitRefresh.update((n) => n + 1)" />
           }
         </li>
       }

@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpErrorResponse } from '@angular/common/http';
-import { Observable, Subject, of, throwError } from 'rxjs';
+import { HttpErrorResponse, HttpResponse } from '@angular/common/http';
+import { NEVER, Observable, Subject, of, throwError } from 'rxjs';
 import { InstallmentSchedule } from './installment-schedule';
 import { RepaymentPlans } from '../repayment-plans';
 import { RepaymentPlanResponse } from '../repayment-plan.model';
@@ -15,10 +15,13 @@ describe('InstallmentSchedule', () => {
     };
   }
 
-  function setup(getPlan: (id: string) => Observable<RepaymentPlanResponse>) {
+  function setup(
+    getPlan: (id: string) => Observable<RepaymentPlanResponse>,
+    payEarly: (id: string, scope: string) => Observable<HttpResponse<RepaymentPlanResponse>> = () => NEVER,
+  ) {
     TestBed.configureTestingModule({
       imports: [InstallmentSchedule],
-      providers: [{ provide: RepaymentPlans, useValue: { getPlan } }],
+      providers: [{ provide: RepaymentPlans, useValue: { getPlan, payEarly } }],
     });
     return TestBed.createComponent(InstallmentSchedule);
   }
@@ -91,11 +94,200 @@ describe('InstallmentSchedule', () => {
     expect(text(fixture)).toContain('Feb 1, 2026');
   });
 
+  function activePlan(statuses: string[], extra: Partial<RepaymentPlanResponse> = {}): RepaymentPlanResponse {
+    return {
+      planId: 'plan-1', applicationId: 'app-1', status: 'ACTIVE',
+      totalAmount: 69.76, installmentCount: statuses.length, installmentAmount: 17.44,
+      installments: statuses.map((status, i) => ({
+        sequenceNumber: i + 1, dueDate: `2026-10-0${i + 1}`, amount: 17.44, status,
+        paidAt: status === 'PAID' ? '2026-10-01T00:00:00Z' : null,
+      })),
+      checkoutTransactionId: null,
+      ...extra,
+    };
+  }
+
+  function render(plan: RepaymentPlanResponse, payEarly?: Parameters<typeof setup>[1]) {
+    const fixture = setup(() => of(plan), payEarly);
+    fixture.componentRef.setInput('application', app('app-1'));
+    fixture.detectChanges();
+    return fixture;
+  }
+
+  const button = (fixture: { nativeElement: HTMLElement }, label: string) =>
+    Array.from(fixture.nativeElement.querySelectorAll('button')).find((b) => b.textContent!.includes(label)) as
+      | HTMLButtonElement
+      | undefined;
+
+  it('offers paying the next payment and paying off the rest once the first payment is made', () => {
+    const fixture = render(activePlan(['PAID', 'SCHEDULED', 'SCHEDULED', 'SCHEDULED']));
+    expect(button(fixture, 'Pay next payment now — $17.44')).toBeDefined();
+    expect(button(fixture, 'Pay off $52.32 remaining')).toBeDefined();
+  });
+
+  it('offers only the next payment when one is left', () => {
+    const fixture = render(activePlan(['PAID', 'PAID', 'PAID', 'SCHEDULED']));
+    expect(button(fixture, 'Pay next payment now')).toBeDefined();
+    expect(button(fixture, 'Pay off')).toBeUndefined();
+  });
+
+  it('offers nothing before the first payment, for a finished plan, or for a projected schedule', () => {
+    expect(button(render(activePlan(['SCHEDULED', 'SCHEDULED'], { checkoutTransactionId: 'txn_1' })), 'Pay')).toBeUndefined();
+    TestBed.resetTestingModule();
+    expect(button(render(activePlan(['PAID', 'PAID'], { status: 'COMPLETED' })), 'Pay')).toBeUndefined();
+    TestBed.resetTestingModule();
+    const projected = setup(notFound);
+    projected.componentRef.setInput('application', app('app-1'));
+    projected.detectChanges();
+    expect(button(projected, 'Pay')).toBeUndefined();
+  });
+
+  it('explains instead of offering payments while a payment is missed', () => {
+    const fixture = render(activePlan(['PAID', 'LATE', 'SCHEDULED', 'SCHEDULED']));
+    expect(button(fixture, 'Pay')).toBeUndefined();
+    expect(text(fixture)).toContain('You have a missed payment that is being retried.');
+  });
+
+  it('asks for confirmation, and Cancel charges nothing', () => {
+    const payEarly = vi.fn(() => NEVER);
+    const fixture = render(activePlan(['PAID', 'SCHEDULED', 'SCHEDULED', 'SCHEDULED']), payEarly);
+    button(fixture, 'Pay off')!.click();
+    fixture.detectChanges();
+    expect(text(fixture)).toContain('Charge $52.32 to your saved card?');
+    button(fixture, 'Cancel')!.click();
+    fixture.detectChanges();
+    expect(payEarly).not.toHaveBeenCalled();
+    expect(button(fixture, 'Pay off')).toBeDefined();
+  });
+
+  it('pays on confirm, shows the updated schedule, and tells the account page', () => {
+    const paidOff = activePlan(['PAID', 'PAID', 'PAID', 'PAID'], { status: 'COMPLETED' });
+    const payEarly = vi.fn(() => of(new HttpResponse({ status: 200, body: paidOff })));
+    const fixture = render(activePlan(['PAID', 'SCHEDULED', 'SCHEDULED', 'SCHEDULED']), payEarly);
+    let paid = 0;
+    fixture.componentInstance.paid.subscribe(() => paid++);
+
+    button(fixture, 'Pay off')!.click();
+    fixture.detectChanges();
+    button(fixture, 'Confirm')!.click();
+    fixture.detectChanges();
+
+    expect(payEarly).toHaveBeenCalledWith('app-1', 'REMAINING');
+    expect(text(fixture)).toContain('Plan paid off.');
+    expect(text(fixture)).not.toContain('Scheduled');
+    expect(button(fixture, 'Pay')).toBeUndefined();
+    expect(paid).toBe(1);
+  });
+
+  it('says the payment is processing on 202 and stops offering payments', () => {
+    const plan = activePlan(['PAID', 'SCHEDULED', 'SCHEDULED']);
+    const payEarly = vi.fn(() => of(new HttpResponse({ status: 202, body: plan })));
+    const fixture = render(plan, payEarly);
+    let paid = 0;
+    fixture.componentInstance.paid.subscribe(() => paid++);
+
+    button(fixture, 'Pay next payment now')!.click();
+    fixture.detectChanges();
+    button(fixture, 'Confirm')!.click();
+    fixture.detectChanges();
+
+    expect(text(fixture)).toContain('Payment is processing — it will show here shortly.');
+    expect(button(fixture, 'Pay')).toBeUndefined();
+    expect(paid).toBe(0);
+  });
+
+  it("shows the server's message when the payment fails, and lets the shopper try again", () => {
+    const payEarly = vi.fn(() =>
+      throwError(() => new HttpErrorResponse({
+        status: 422,
+        error: { error: 'PAYMENT_REFUSED', message: "Your payment couldn't be taken right now. Nothing was charged. Please try again later." },
+      })),
+    );
+    const fixture = render(activePlan(['PAID', 'SCHEDULED', 'SCHEDULED']), payEarly);
+
+    button(fixture, 'Pay next payment now')!.click();
+    fixture.detectChanges();
+    button(fixture, 'Confirm')!.click();
+    fixture.detectChanges();
+
+    const alert = (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain("Your payment couldn't be taken right now.");
+    expect(button(fixture, 'Pay next payment now')!.disabled).toBe(false);
+  });
+
+  it('disables Confirm and Cancel while the payment is in flight', () => {
+    const fixture = render(activePlan(['PAID', 'SCHEDULED', 'SCHEDULED']), () => NEVER);
+    button(fixture, 'Pay next payment now')!.click();
+    fixture.detectChanges();
+    button(fixture, 'Confirm')!.click();
+    fixture.detectChanges();
+    expect(button(fixture, 'Confirm')!.disabled).toBe(true);
+    expect(button(fixture, 'Cancel')!.disabled).toBe(true);
+  });
+
   it('shows a skeleton until the plan request settles', () => {
     const fixture = setup(() => new Subject<RepaymentPlanResponse>());
     fixture.componentRef.setInput('application', app('app-1'));
     fixture.detectChanges();
 
     expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="skeleton"]')).not.toBeNull();
+  });
+  it('says paying the next payment early finishes the plan sooner, but not when paying it off', () => {
+    const fixture = render(activePlan(['PAID', 'SCHEDULED', 'SCHEDULED', 'SCHEDULED']), () => NEVER);
+    const sooner = 'Your remaining payments still come out weekly, so your plan finishes sooner.';
+
+    button(fixture, 'Pay next payment now')!.click();
+    fixture.detectChanges();
+    expect(text(fixture)).toContain(sooner);
+
+    button(fixture, 'Cancel')!.click();
+    fixture.detectChanges();
+    button(fixture, 'Pay off')!.click();
+    fixture.detectChanges();
+    expect(text(fixture)).not.toContain(sooner);
+  });
+
+  it("doesn't claim nothing was charged when the failure has no message (gateway error, timeout)", () => {
+    const payEarly = vi.fn(() =>
+      throwError(() => new HttpErrorResponse({ status: 504, error: '<html>Gateway Timeout</html>' })),
+    );
+    const fixture = render(activePlan(['PAID', 'SCHEDULED', 'SCHEDULED']), payEarly);
+
+    button(fixture, 'Pay next payment now')!.click();
+    fixture.detectChanges();
+    button(fixture, 'Confirm')!.click();
+    fixture.detectChanges();
+
+    const alert = (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]');
+    expect(alert?.textContent?.trim()).toBe(
+      "We couldn't confirm your payment. Check this page again in a few minutes before trying again.",
+    );
+  });
+
+  it('shows paid dates for PAID installments and due dates for unpaid ones', () => {
+    const plan: RepaymentPlanResponse = {
+      planId: 'plan-1', applicationId: 'app-1', status: 'ACTIVE',
+      totalAmount: 200, installmentCount: 3, installmentAmount: 66.67,
+      installments: [
+        { sequenceNumber: 1, dueDate: '2026-10-03', amount: 66.67, status: 'PAID', paidAt: '2026-10-03T12:51:11Z' },
+        { sequenceNumber: 2, dueDate: '2026-10-10', amount: 66.67, status: 'PAID', paidAt: '2026-10-03T12:52:00Z' },
+        { sequenceNumber: 3, dueDate: '2026-10-10', amount: 66.66, status: 'SCHEDULED', paidAt: null },
+      ],
+      checkoutTransactionId: null,
+    };
+    const fixture = setup(() => of(plan));
+    fixture.componentRef.setInput('application', app('app-1'));
+    fixture.detectChanges();
+
+    const rows = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('tbody tr')).map((r) =>
+      Array.from(r.querySelectorAll('td')).map((td) => td.textContent?.trim()),
+    );
+    expect(rows).toEqual([
+      ['Oct 3, 2026', '$66.67', 'Paid'],
+      ['Oct 3, 2026', '$66.67', 'Paid'],
+      ['Oct 10, 2026', '$66.66', 'Scheduled'],
+    ]);
+    const header = (fixture.nativeElement as HTMLElement).querySelector('thead th');
+    expect(header?.textContent?.trim()).toBe('Date');
   });
 });

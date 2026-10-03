@@ -148,4 +148,68 @@ class HttpPaddleClientWireMockTest {
 
         assertThat(client(wm).findCompletedTransaction("txn_1")).isEmpty();
     }
+
+    @Test
+    void chargeNow_chargesTheSavedCardImmediately_forQuantityInstallments(WireMockRuntimeInfo wm) {
+        stubFor(post(urlPathEqualTo("/subscriptions/sub_1/charge"))
+                .withRequestBody(matchingJsonPath("$.effective_from", equalTo("immediately")))
+                .withRequestBody(matchingJsonPath("$.on_payment_failure", equalTo("prevent_change")))
+                .withRequestBody(matchingJsonPath("$.items[0].quantity", equalTo("3")))
+                .withRequestBody(matchingJsonPath("$.items[0].price.unit_price.amount", equalTo("1744")))
+                .withRequestBody(matchingJsonPath("$.items[0].price.unit_price.currency_code", equalTo("USD")))
+                .withRequestBody(matchingJsonPath("$.items[0].price.tax_mode", equalTo("account_setting")))
+                .withRequestBody(matchingJsonPath("$.items[0].price.product.name", equalTo("BridgePay installment plan")))
+                .withRequestBody(matchingJsonPath("$.items[0].price.product.tax_category", equalTo("standard")))
+                .willReturn(okJson("{ \"data\": { \"id\": \"sub_1\", \"status\": \"active\" } }")));
+
+        client(wm).chargeNow("sub_1", new BigDecimal("17.44"), 3);
+
+        verify(1, postRequestedFor(urlPathEqualTo("/subscriptions/sub_1/charge")));
+    }
+
+    @Test
+    void chargeNow_turnsAPaddleRefusalIntoPaymentRefused(WireMockRuntimeInfo wm) {
+        stubFor(post(urlPathEqualTo("/subscriptions/sub_1/charge"))
+                .willReturn(aResponse().withStatus(400).withHeader("Content-Type", "application/json")
+                        .withBody("{ \"error\": { \"code\": \"subscription_update_when_past_due\" } }")));
+
+        assertThatThrownBy(() -> client(wm).chargeNow("sub_1", new BigDecimal("17.44"), 1))
+                .isInstanceOf(PaddlePaymentRefusedException.class)
+                .hasMessageContaining("subscription_update_when_past_due");
+    }
+
+    @Test
+    void chargeNow_reportsPaddleBeingDown_asUnavailable(WireMockRuntimeInfo wm) {
+        stubFor(post(urlPathEqualTo("/subscriptions/sub_1/charge")).willReturn(aResponse().withStatus(503)));
+
+        assertThatThrownBy(() -> client(wm).chargeNow("sub_1", new BigDecimal("17.44"), 1))
+                .isInstanceOf(PaddleUnavailableException.class);
+    }
+
+    @Test
+    void findLatestChargeTransaction_asksForCompletedOneTimeCharges_andReadsTheQuantity(WireMockRuntimeInfo wm) {
+        stubFor(get(urlPathEqualTo("/transactions"))
+                .withQueryParam("subscription_id", equalTo("sub_1"))
+                .withQueryParam("origin", equalTo("subscription_charge"))
+                .withQueryParam("status", equalTo("completed"))
+                .withQueryParam("order_by", equalTo("created_at[DESC]"))
+                .willReturn(okJson("""
+                        { "data": [
+                          { "id": "txn_new", "status": "completed", "subscription_id": "sub_1", "origin": "subscription_charge",
+                            "items": [ { "quantity": 3, "price": { "id": "pri_1" } } ] },
+                          { "id": "txn_old", "status": "completed", "subscription_id": "sub_1",
+                            "items": [ { "quantity": 1 } ] } ] }
+                        """)));
+
+        assertThat(client(wm).findLatestChargeTransaction("sub_1"))
+                .contains(new PaddleWebhookData("txn_new", "sub_1", java.util.List.of(new PaddleWebhookData.Item(3)),
+                        "subscription_charge"));
+    }
+
+    @Test
+    void findLatestChargeTransaction_isEmpty_whenThereAreNone(WireMockRuntimeInfo wm) {
+        stubFor(get(urlPathEqualTo("/transactions")).willReturn(okJson("{ \"data\": [] }")));
+
+        assertThat(client(wm).findLatestChargeTransaction("sub_1")).isEmpty();
+    }
 }

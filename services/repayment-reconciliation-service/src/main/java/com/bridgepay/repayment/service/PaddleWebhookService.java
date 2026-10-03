@@ -63,11 +63,14 @@ public class PaddleWebhookService {
     }
 
     private void handleTransactionCompleted(PaddleWebhookData data) {
-        RepaymentPlan plan = findPlanByTransactionEvent(data);
-        if (plan == null) {
+        RepaymentPlan found = findPlanByTransactionEvent(data);
+        if (found == null) {
             log.warn("No repayment plan found for completed transaction {}", data.id());
             return;
         }
+        // Row lock: the synchronous early-payment apply, Paddle's webhook and reconcile-on-read can all deliver the
+        // same transaction at once; serialising here makes the dedupe check below reliable.
+        RepaymentPlan plan = repaymentPlanRepository.findByIdForUpdate(found.getId()).orElse(found);
         if (data.subscriptionId() != null && !data.subscriptionId().equals(plan.getPaddleSubscriptionId())) {
             plan.adoptSubscriptionId(data.subscriptionId());
         }
@@ -76,22 +79,36 @@ public class PaddleWebhookService {
             return;
         }
 
-        Installment installment = nextPending(plan).orElse(null);
-        if (installment == null) {
-            log.debug("No pending installment for plan {}, likely a duplicate webhook delivery", plan.getId());
-            return;
+        int covered = data.installmentsCovered();
+        int paid = 0;
+        for (; paid < covered; paid++) {
+            Installment installment = nextPending(plan).orElse(null);
+            if (installment == null) {
+                log.debug("No pending installment left on plan {} for transaction {} ({} of {} applied)",
+                        plan.getId(), data.id(), paid, covered);
+                break;
+            }
+
+            installment.markPaid(data.id());
+            writeOutbox("repayments.installment-paid", plan.getId(), "repayments.installment-paid", installment.getId(),
+                    new RepaymentEvents.InstallmentPaid(plan.getApplicantId(), plan.getApplicationId(), installment.getId(),
+                            installment.getSequenceNumber(), installment.getAmount()));
+
+            if (installment.getSequenceNumber() == plan.getInstallmentCount()) {
+                plan.markCompleted();
+                writeOutbox("repayments.plan-completed", plan.getId(), "repayments.plan-completed", plan.getId(),
+                        new RepaymentEvents.PlanCompleted(plan.getApplicantId(), plan.getApplicationId()));
+                paddleClient.cancelSubscription(plan.getPaddleSubscriptionId());
+                return;
+            }
         }
-
-        installment.markPaid(data.id());
-        writeOutbox("repayments.installment-paid", plan.getId(), "repayments.installment-paid", installment.getId(),
-                new RepaymentEvents.InstallmentPaid(plan.getApplicantId(), plan.getApplicationId(), installment.getId(),
-                        installment.getSequenceNumber(), installment.getAmount()));
-
-        if (installment.getSequenceNumber() == plan.getInstallmentCount()) {
-            plan.markCompleted();
-            writeOutbox("repayments.plan-completed", plan.getId(), "repayments.plan-completed", plan.getId(),
-                    new RepaymentEvents.PlanCompleted(plan.getApplicantId(), plan.getApplicationId()));
-            paddleClient.cancelSubscription(plan.getPaddleSubscriptionId());
+        if (data.isSubscriptionCharge() && paid > 0) {
+            // Paddle's weekly renewals keep their original cadence after a pay-early charge, so each later renewal
+            // pays the next pending installment `paid` weeks sooner than first scheduled: show the dates it will.
+            int weeks = paid;
+            installmentRepository.findByRepaymentPlanOrderBySequenceNumberAsc(plan).stream()
+                    .filter(i -> i.getStatus() == InstallmentStatus.SCHEDULED)
+                    .forEach(i -> i.moveDueDateEarlier(weeks));
         }
     }
 

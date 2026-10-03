@@ -12,7 +12,7 @@
     <table class="mt-3 w-full text-sm">
       <thead>
         <tr class="border-b border-hairline text-left text-ink-muted">
-          <th class="py-2 font-medium">Due</th>
+          <th class="py-2 font-medium">Date</th>
           <th class="py-2 font-medium">Amount</th>
           <th class="py-2 font-medium">Status</th>
         </tr>
@@ -20,12 +20,50 @@
       <tbody>
         @for (installment of installments(); track installment.sequenceNumber) {
           <tr class="border-b border-hairline last:border-0">
-            <td class="py-2">{{ installment.dueDate | date: 'mediumDate' }}</td>
+            <td class="py-2">{{ (installment.status === 'PAID' && installment.paidAt ? installment.paidAt : installment.dueDate) | date: 'mediumDate' }}</td>
             <td class="py-2 font-mono">${{ installment.amount | number: '1.2-2' }}</td>
             <td class="py-2"><app-status-badge [status]="installment.status" /></td>
           </tr>
         }
       </tbody>
     </table>
+    @if (hasMissed()) {
+      <p class="mt-3 text-sm text-ink-muted">
+        You have a missed payment that is being retried. Pay-early is available once it clears.
+      </p>
+    }
+    @if (payNotice(); as notice) {
+      <p class="mt-3 text-sm text-approved" role="status">{{ notice }}</p>
+    }
+    @if (canPayEarly()) {
+      @if (confirming(); as scope) {
+        <div class="mt-4 flex flex-wrap items-center gap-3">
+          <p class="text-sm">
+            Charge ${{ (scope === 'NEXT' ? nextAmount() : remainingAmount()) | number: '1.2-2' }} to your saved card?
+          </p>
+          <button type="button" class="btn-primary" [disabled]="paying()" (click)="pay(scope)">Confirm</button>
+          <button type="button" class="btn-secondary" [disabled]="paying()" (click)="confirming.set(null)">Cancel</button>
+          @if (scope === 'NEXT') {
+            <p class="basis-full text-xs text-ink-muted">
+              Your remaining payments still come out weekly, so your plan finishes sooner.
+            </p>
+          }
+        </div>
+      } @else {
+        <div class="mt-4 flex flex-wrap gap-3">
+          <button type="button" class="btn-secondary" (click)="confirming.set('NEXT')">
+            Pay next payment now — ${{ nextAmount() | number: '1.2-2' }}
+          </button>
+          @if (scheduledCount() > 1) {
+            <button type="button" class="btn-secondary" (click)="confirming.set('REMAINING')">
+              Pay off ${{ remainingAmount() | number: '1.2-2' }} remaining
+            </button>
+          }
+        </div>
+      }
+    }
+    @if (payError(); as message) {
+      <p class="mt-3 text-sm text-declined" role="alert">{{ message }}</p>
+    }
   }
 }

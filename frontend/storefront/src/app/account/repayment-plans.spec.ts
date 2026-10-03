@@ -32,4 +32,14 @@ describe('RepaymentPlans', () => {
     expect(req.request.method).toBe('GET');
     req.flush(plan);
   });
+
+  it('posts the scope to the early-payment endpoint and exposes the status', () => {
+    let status = 0;
+    service.payEarly('app-1', 'REMAINING').subscribe((res) => (status = res.status));
+    const req = httpMock.expectOne((r) => r.url.endsWith('/api/v1/repayment-plans/app-1/early-payment'));
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ scope: 'REMAINING' });
+    req.flush({}, { status: 202, statusText: 'Accepted' });
+    expect(status).toBe(202);
+  });
 });

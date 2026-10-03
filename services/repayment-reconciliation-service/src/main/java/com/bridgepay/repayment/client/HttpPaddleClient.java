@@ -131,9 +131,57 @@ public class HttpPaddleClient implements PaddleClient {
                     .body(TransactionEnvelope.class)
                     .data();
             return "completed".equals(data.status())
-                    ? Optional.of(new PaddleWebhookData(data.id(), data.subscriptionId()))
+                    ? Optional.of(toWebhookData(data))
                     : Optional.<PaddleWebhookData>empty();
         }, "get transaction " + transactionId);
+    }
+
+    @Override
+    public void chargeNow(String subscriptionId, BigDecimal installmentAmount, int quantity) {
+        try {
+            execute(() -> {
+                restClient.post()
+                        .uri("/subscriptions/{id}/charge", subscriptionId)
+                        .body(new OneTimeChargeRequest("immediately", "prevent_change", List.of(
+                                new ChargeItem(quantity, new ChargePrice(
+                                        "BridgePay installment plan",
+                                        "account_setting",
+                                        new UnitPrice(toMinorUnits(installmentAmount), CURRENCY_CODE),
+                                        new InlineProduct("BridgePay installment plan", "standard"))))))
+                        .retrieve()
+                        .toBodilessEntity();
+                return null;
+            }, "charge " + quantity + " installment(s) on subscription " + subscriptionId);
+        } catch (PaddleUnavailableException ex) {
+            if (ex.getCause() instanceof HttpClientErrorException refusal) {
+                throw new PaddlePaymentRefusedException("Paddle refused the charge on " + subscriptionId + ": "
+                        + refusal.getResponseBodyAsString(), refusal);
+            }
+            throw ex;
+        }
+    }
+
+    @Override
+    public Optional<PaddleWebhookData> findLatestChargeTransaction(String subscriptionId) {
+        return execute(() -> {
+            // Ask for newest first explicitly rather than relying on Paddle's default list order.
+            TransactionListEnvelope page = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/transactions")
+                            .queryParam("subscription_id", subscriptionId)
+                            .queryParam("origin", "subscription_charge")
+                            .queryParam("status", "completed")
+                            .queryParam("order_by", "created_at[DESC]")
+                            .build())
+                    .retrieve()
+                    .body(TransactionListEnvelope.class);
+            return page == null || page.data() == null || page.data().isEmpty()
+                    ? Optional.<PaddleWebhookData>empty()
+                    : Optional.of(toWebhookData(page.data().get(0)));
+        }, "find latest charge on subscription " + subscriptionId);
+    }
+
+    private static PaddleWebhookData toWebhookData(TransactionData data) {
+        return new PaddleWebhookData(data.id(), data.subscriptionId(), data.items(), data.origin());
     }
 
     private <T> T execute(Supplier<T> call, String description) {
@@ -188,7 +236,26 @@ public class HttpPaddleClient implements PaddleClient {
 
     private record TransactionData(String id, String status,
                                     @JsonProperty("subscription_id") String subscriptionId,
-                                    Checkout checkout) {
+                                    Checkout checkout,
+                                    List<PaddleWebhookData.Item> items,
+                                    String origin) {
+    }
+
+    private record TransactionListEnvelope(List<TransactionData> data) {
+    }
+
+    private record OneTimeChargeRequest(@JsonProperty("effective_from") String effectiveFrom,
+                                         @JsonProperty("on_payment_failure") String onPaymentFailure,
+                                         List<ChargeItem> items) {
+    }
+
+    private record ChargeItem(int quantity, ChargePrice price) {
+    }
+
+    private record ChargePrice(String description,
+                                @JsonProperty("tax_mode") String taxMode,
+                                @JsonProperty("unit_price") UnitPrice unitPrice,
+                                InlineProduct product) {
     }
 
     private record Checkout(String url) {

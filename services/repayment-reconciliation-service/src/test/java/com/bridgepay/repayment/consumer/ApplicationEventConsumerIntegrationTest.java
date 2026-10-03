@@ -128,6 +128,17 @@ class ApplicationEventConsumerIntegrationTest {
                 String transactionId) {
             return java.util.Optional.empty();
         }
+
+        @Override
+        public void chargeNow(String subscriptionId, java.math.BigDecimal installmentAmount, int quantity) {
+            throw new UnsupportedOperationException("early payments are not used by this test");
+        }
+
+        @Override
+        public java.util.Optional<com.bridgepay.repayment.client.PaddleWebhookData> findLatestChargeTransaction(
+                String subscriptionId) {
+            return java.util.Optional.empty();
+        }
     }
 
     @Autowired
