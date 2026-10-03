@@ -165,4 +165,72 @@ class PaddleWebhookServiceTest {
         verify(installmentRepository, never()).findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(any(), any());
         verifyNoInteractions(outboxEventRepository);
     }
+
+    private static PaddleWebhookData charge(String txn, String sub, int quantity) {
+        return new PaddleWebhookData(txn, sub, List.of(new PaddleWebhookData.Item(quantity)));
+    }
+
+    @Test
+    void transactionCompleted_withQuantityTwo_paysTheNextTwoInstallments_andKeepsThePlanActive() {
+        RepaymentPlan plan = newPlan(4);
+        Installment second = newInstallment(plan, 2);
+        Installment third = newInstallment(plan, 3);
+        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan));
+        when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
+                eq(plan), eq(List.of(InstallmentStatus.SCHEDULED, InstallmentStatus.LATE))))
+                .thenReturn(Optional.of(second), Optional.of(third));
+
+        service.handle("transaction.completed", charge("txn_charge", "sub_1", 2));
+
+        assertThat(second.getStatus()).isEqualTo(InstallmentStatus.PAID);
+        assertThat(third.getStatus()).isEqualTo(InstallmentStatus.PAID);
+        assertThat(third.getPaddleTransactionId()).isEqualTo("txn_charge");
+        assertThat(plan.getStatus()).isEqualTo(PlanStatus.ACTIVE);
+        verify(outboxEventRepository, times(2)).save(argThat(e -> e.getTopic().equals("repayments.installment-paid")));
+        verify(paddleClient, never()).cancelSubscription(any());
+    }
+
+    @Test
+    void transactionCompleted_payingOffTheRest_completesThePlanOnce_andCancelsTheSubscription() {
+        RepaymentPlan plan = newPlan(4);
+        Installment second = newInstallment(plan, 2);
+        Installment third = newInstallment(plan, 3);
+        Installment fourth = newInstallment(plan, 4);
+        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan));
+        when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
+                eq(plan), eq(List.of(InstallmentStatus.SCHEDULED, InstallmentStatus.LATE))))
+                .thenReturn(Optional.of(second), Optional.of(third), Optional.of(fourth));
+
+        service.handle("transaction.completed", charge("txn_payoff", "sub_1", 3));
+
+        assertThat(fourth.getStatus()).isEqualTo(InstallmentStatus.PAID);
+        assertThat(plan.getStatus()).isEqualTo(PlanStatus.COMPLETED);
+        verify(outboxEventRepository, times(3)).save(argThat(e -> e.getTopic().equals("repayments.installment-paid")));
+        verify(outboxEventRepository, times(1)).save(argThat(e -> e.getTopic().equals("repayments.plan-completed")));
+        verify(paddleClient, times(1)).cancelSubscription(plan.getPaddleSubscriptionId());
+    }
+
+    @Test
+    void transactionCompleted_coveringMoreThanIsLeft_paysWhatIsLeft_andCompletesOnce() {
+        RepaymentPlan plan = newPlan(4);
+        Installment fourth = newInstallment(plan, 4);
+        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan));
+        when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
+                eq(plan), eq(List.of(InstallmentStatus.SCHEDULED, InstallmentStatus.LATE))))
+                .thenReturn(Optional.of(fourth));
+
+        service.handle("transaction.completed", charge("txn_payoff", "sub_1", 3));
+
+        assertThat(fourth.getStatus()).isEqualTo(InstallmentStatus.PAID);
+        assertThat(plan.getStatus()).isEqualTo(PlanStatus.COMPLETED);
+        verify(outboxEventRepository, times(1)).save(argThat(e -> e.getTopic().equals("repayments.installment-paid")));
+        verify(paddleClient, times(1)).cancelSubscription(plan.getPaddleSubscriptionId());
+    }
+
+    @Test
+    void installmentsCovered_isOneForARenewalWithoutItems_andTheSummedQuantityOtherwise() {
+        assertThat(new PaddleWebhookData("txn_r", "sub_1").installmentsCovered()).isEqualTo(1);
+        assertThat(new PaddleWebhookData("txn_r", "sub_1", null).installmentsCovered()).isEqualTo(1);
+        assertThat(charge("txn_c", "sub_1", 3).installmentsCovered()).isEqualTo(3);
+    }
 }

@@ -76,22 +76,27 @@ public class PaddleWebhookService {
             return;
         }
 
-        Installment installment = nextPending(plan).orElse(null);
-        if (installment == null) {
-            log.debug("No pending installment for plan {}, likely a duplicate webhook delivery", plan.getId());
-            return;
-        }
+        int covered = data.installmentsCovered();
+        for (int paid = 0; paid < covered; paid++) {
+            Installment installment = nextPending(plan).orElse(null);
+            if (installment == null) {
+                log.debug("No pending installment left on plan {} for transaction {} ({} of {} applied)",
+                        plan.getId(), data.id(), paid, covered);
+                return;
+            }
 
-        installment.markPaid(data.id());
-        writeOutbox("repayments.installment-paid", plan.getId(), "repayments.installment-paid", installment.getId(),
-                new RepaymentEvents.InstallmentPaid(plan.getApplicantId(), plan.getApplicationId(), installment.getId(),
-                        installment.getSequenceNumber(), installment.getAmount()));
+            installment.markPaid(data.id());
+            writeOutbox("repayments.installment-paid", plan.getId(), "repayments.installment-paid", installment.getId(),
+                    new RepaymentEvents.InstallmentPaid(plan.getApplicantId(), plan.getApplicationId(), installment.getId(),
+                            installment.getSequenceNumber(), installment.getAmount()));
 
-        if (installment.getSequenceNumber() == plan.getInstallmentCount()) {
-            plan.markCompleted();
-            writeOutbox("repayments.plan-completed", plan.getId(), "repayments.plan-completed", plan.getId(),
-                    new RepaymentEvents.PlanCompleted(plan.getApplicantId(), plan.getApplicationId()));
-            paddleClient.cancelSubscription(plan.getPaddleSubscriptionId());
+            if (installment.getSequenceNumber() == plan.getInstallmentCount()) {
+                plan.markCompleted();
+                writeOutbox("repayments.plan-completed", plan.getId(), "repayments.plan-completed", plan.getId(),
+                        new RepaymentEvents.PlanCompleted(plan.getApplicantId(), plan.getApplicationId()));
+                paddleClient.cancelSubscription(plan.getPaddleSubscriptionId());
+                return;
+            }
         }
     }
 
