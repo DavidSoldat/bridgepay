@@ -16,7 +16,8 @@ type ScheduleState =
   | { kind: 'error' };
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-const PAYMENT_FAILED = "Your payment couldn't be taken right now. Nothing was charged. Please try again later.";
+// No server message (gateway 502/504, timeout, network): the charge may still have gone through.
+const PAYMENT_UNCONFIRMED = "We couldn't confirm your payment. Check this page again in a few minutes before trying again.";
 
 // Mirrors repayment-reconciliation's plan: first installment on the approval date, then weekly.
 function projectInstallments(app: ApplicationResponse): Installment[] {
@@ -118,7 +119,7 @@ export class InstallmentSchedule {
         this.paying.set(false);
         this.confirming.set(null);
         const message = err instanceof HttpErrorResponse ? err.error?.message : null;
-        this.payError.set(typeof message === 'string' && message ? message : PAYMENT_FAILED);
+        this.payError.set(typeof message === 'string' && message ? message : PAYMENT_UNCONFIRMED);
       },
     });
   }

@@ -43,6 +43,11 @@
           </p>
           <button type="button" class="btn-primary" [disabled]="paying()" (click)="pay(scope)">Confirm</button>
           <button type="button" class="btn-secondary" [disabled]="paying()" (click)="confirming.set(null)">Cancel</button>
+          @if (scope === 'NEXT') {
+            <p class="basis-full text-xs text-ink-muted">
+              Your remaining payments still come out weekly, so your plan finishes sooner.
+            </p>
+          }
         </div>
       } @else {
         <div class="mt-4 flex flex-wrap gap-3">

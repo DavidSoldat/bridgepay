@@ -232,4 +232,35 @@ describe('InstallmentSchedule', () => {
 
     expect((fixture.nativeElement as HTMLElement).querySelector('[data-testid="skeleton"]')).not.toBeNull();
   });
+  it('says paying the next payment early finishes the plan sooner, but not when paying it off', () => {
+    const fixture = render(activePlan(['PAID', 'SCHEDULED', 'SCHEDULED', 'SCHEDULED']), () => NEVER);
+    const sooner = 'Your remaining payments still come out weekly, so your plan finishes sooner.';
+
+    button(fixture, 'Pay next payment now')!.click();
+    fixture.detectChanges();
+    expect(text(fixture)).toContain(sooner);
+
+    button(fixture, 'Cancel')!.click();
+    fixture.detectChanges();
+    button(fixture, 'Pay off')!.click();
+    fixture.detectChanges();
+    expect(text(fixture)).not.toContain(sooner);
+  });
+
+  it("doesn't claim nothing was charged when the failure has no message (gateway error, timeout)", () => {
+    const payEarly = vi.fn(() =>
+      throwError(() => new HttpErrorResponse({ status: 504, error: '<html>Gateway Timeout</html>' })),
+    );
+    const fixture = render(activePlan(['PAID', 'SCHEDULED', 'SCHEDULED']), payEarly);
+
+    button(fixture, 'Pay next payment now')!.click();
+    fixture.detectChanges();
+    button(fixture, 'Confirm')!.click();
+    fixture.detectChanges();
+
+    const alert = (fixture.nativeElement as HTMLElement).querySelector('[role="alert"]');
+    expect(alert?.textContent?.trim()).toBe(
+      "We couldn't confirm your payment. Check this page again in a few minutes before trying again.",
+    );
+  });
 });

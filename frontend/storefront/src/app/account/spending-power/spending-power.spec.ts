@@ -63,4 +63,59 @@ describe('SpendingPower', () => {
     const el = render(() => NEVER);
     expect(el.querySelector('app-skeleton-rows')).not.toBeNull();
   });
+  describe('after an early payment', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    const limit = (available: number) => of({ limit: 600, outstanding: 600 - available, available, band: 'LOW' });
+
+    function setupRefresh(mine: ReturnType<typeof vi.fn>) {
+      TestBed.configureTestingModule({ imports: [SpendingPower], providers: [{ provide: CreditLimits, useValue: { mine } }] });
+      const fixture = TestBed.createComponent(SpendingPower);
+      fixture.detectChanges();
+      return fixture;
+    }
+    async function advance(fixture: { detectChanges(): void }, ms: number) {
+      await vi.advanceTimersByTimeAsync(ms);
+      fixture.detectChanges();
+    }
+
+    it('keeps polling every 2 s while the limit is unchanged, showing the current value, and stops once it changes', async () => {
+      const mine = vi.fn()
+        .mockReturnValueOnce(limit(450)) // initial load
+        .mockReturnValueOnce(limit(450))
+        .mockReturnValueOnce(limit(450))
+        .mockReturnValue(limit(600));
+      const fixture = setupRefresh(mine);
+      expect(text(fixture.nativeElement)).toContain('$450.00 available');
+
+      fixture.componentRef.setInput('refresh', 1);
+      await advance(fixture, 0);
+      expect(mine).toHaveBeenCalledTimes(2);
+      expect(text(fixture.nativeElement)).toContain('$450.00 available');
+      expect(fixture.nativeElement.querySelector('app-skeleton-rows')).toBeNull();
+
+      await advance(fixture, 2000);
+      expect(mine).toHaveBeenCalledTimes(3);
+      expect(text(fixture.nativeElement)).toContain('$450.00 available');
+
+      await advance(fixture, 2000);
+      expect(mine).toHaveBeenCalledTimes(4);
+      expect(text(fixture.nativeElement)).toContain('$600.00 available');
+
+      await advance(fixture, 20000);
+      expect(mine).toHaveBeenCalledTimes(4);
+    });
+
+    it('gives up after 6 polls when the limit never changes', async () => {
+      const mine = vi.fn().mockReturnValue(limit(450));
+      const fixture = setupRefresh(mine);
+
+      fixture.componentRef.setInput('refresh', 1);
+      await advance(fixture, 60000);
+
+      expect(mine).toHaveBeenCalledTimes(1 + 6);
+      expect(text(fixture.nativeElement)).toContain('$450.00 available');
+    });
+  });
 });
