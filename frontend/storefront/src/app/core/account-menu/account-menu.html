@@ -1,0 +1,33 @@
+<button
+  #trigger
+  type="button"
+  (click)="toggle()"
+  aria-label="Account"
+  [attr.aria-expanded]="open()"
+  aria-controls="account-menu-panel"
+  class="inline-flex size-11 items-center justify-center rounded-full text-xl text-ink hover:text-coral"
+>
+  <app-icon name="user" />
+</button>
+@if (open()) {
+  <div
+    id="account-menu-panel"
+    role="region"
+    aria-label="Account"
+    class="z-20 rounded-xl border max-sm:fixed max-sm:inset-x-4 max-sm:top-[4.5rem] sm:absolute sm:right-0 sm:mt-2 sm:w-52 border-hairline bg-surface p-2 shadow-lg"
+  >
+    <a
+      routerLink="/account"
+      (click)="close(false)"
+      class="flex min-h-11 items-center rounded-lg px-3 text-sm font-semibold text-ink hover:text-coral"
+      >My Account</a
+    >
+    <button
+      type="button"
+      (click)="auth.logout()"
+      class="flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm text-ink-muted hover:text-ink"
+    >
+      Sign out
+    </button>
+  </div>
+}

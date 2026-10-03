@@ -1,11 +1,13 @@
 import { Component, inject } from '@angular/core';
 import { RouterLink, RouterOutlet } from '@angular/router';
 import { Auth } from './core/auth';
+import { AccountMenu } from './core/account-menu/account-menu';
+import { Icon } from './shared/ui/icon/icon';
 import { NotificationBell } from './notifications/notification-bell/notification-bell';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterLink, RouterOutlet, NotificationBell],
+  imports: [RouterLink, RouterOutlet, NotificationBell, AccountMenu, Icon],
   templateUrl: './app.html',
   styleUrl: './app.css',
 })
