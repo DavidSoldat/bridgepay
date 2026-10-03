@@ -4,8 +4,10 @@ import com.bridgepay.repayment.domain.InstallmentStatus;
 import com.bridgepay.repayment.domain.PlanStatus;
 import com.bridgepay.repayment.domain.RepaymentPlan;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.List;
@@ -31,4 +33,19 @@ public interface RepaymentPlanRepository extends JpaRepository<RepaymentPlan, UU
     List<UUID> findIdsWithUnpaidFirstInstallmentCreatedBefore(@Param("cutoff") Instant cutoff,
                                                              @Param("status") PlanStatus status,
                                                              @Param("unpaid") List<InstallmentStatus> unpaid);
+
+    /** 1 if this call now holds the plan's early-payment claim; a claim older than 2 minutes counts as abandoned. */
+    @Modifying
+    @Transactional
+    @Query(value = """
+            update repayment.repayment_plans set early_payment_claimed_at = now()
+            where id = :id
+              and (early_payment_claimed_at is null or early_payment_claimed_at < now() - interval '2 minutes')""",
+            nativeQuery = true)
+    int claimEarlyPayment(@Param("id") UUID id);
+
+    @Modifying
+    @Transactional
+    @Query(value = "update repayment.repayment_plans set early_payment_claimed_at = null where id = :id", nativeQuery = true)
+    int releaseEarlyPayment(@Param("id") UUID id);
 }
