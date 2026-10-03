@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
-import { Observable, of, throwError, NEVER } from 'rxjs';
+import { ActivatedRoute } from '@angular/router';
+import { BehaviorSubject, Observable, of, throwError, NEVER } from 'rxjs';
 import { Activity } from './activity';
 import { Notifications } from '../../notifications/notifications';
 import { NotificationItem, NotificationPage } from '../../notifications/notification.model';
@@ -12,16 +13,18 @@ describe('Activity', () => {
   });
   const pageOf = (items: NotificationItem[], hasMore = false): NotificationPage => ({ items, unreadCount: 0, page: 0, hasMore });
 
-  function setup(page: (n: number) => Observable<NotificationPage>, orderIds: string[] = []) {
+  function setup(page: (n: number) => Observable<NotificationPage>, orderIds: string[] = [], fragment: string | null = null, ordersLoaded = true) {
+    const fragment$ = new BehaviorSubject<string | null>(fragment);
     const readVersion = signal(0);
     TestBed.configureTestingModule({
       imports: [Activity],
-      providers: [provideRouter([]), { provide: Notifications, useValue: { page: vi.fn(page), readVersion } }],
+      providers: [provideRouter([]), { provide: ActivatedRoute, useValue: { fragment: fragment$ } }, { provide: Notifications, useValue: { page: vi.fn(page), readVersion } }],
     });
     const fixture = TestBed.createComponent(Activity);
     fixture.componentRef.setInput('orderIds', orderIds);
+    fixture.componentRef.setInput('ordersLoaded', ordersLoaded);
     fixture.detectChanges();
-    return { fixture, readVersion, el: fixture.nativeElement as HTMLElement, service: TestBed.inject(Notifications) };
+    return { fixture, readVersion, fragment$, el: fixture.nativeElement as HTMLElement, service: TestBed.inject(Notifications) };
   }
   const button = (el: HTMLElement, label: string) =>
     Array.from(el.querySelectorAll('button')).find((b) => b.textContent!.includes(label)) as HTMLButtonElement | undefined;
@@ -82,5 +85,45 @@ describe('Activity', () => {
     readVersion.set(1);
     fixture.detectChanges();
     expect(el.textContent).not.toContain('Unread:');
+  });
+
+  describe('scrolling to #activity', () => {
+    const original = Element.prototype.scrollIntoView;
+    let scroll: ReturnType<typeof vi.fn>;
+    beforeEach(() => {
+      scroll = vi.fn();
+      Element.prototype.scrollIntoView = scroll as unknown as typeof original;
+    });
+    afterEach(() => (Element.prototype.scrollIntoView = original));
+    const twoPages = (n: number) => of(n === 0 ? pageOf([item('1', 'First')], true) : pageOf([item('2', 'Second')]));
+
+    it('scrolls once after the first page loads', () => {
+      setup(twoPages, [], 'activity');
+      expect(scroll).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not scroll again after Load more', () => {
+      const { fixture, el } = setup(twoPages, [], 'activity');
+      button(el, 'Load more')!.click();
+      fixture.detectChanges();
+      expect(scroll).toHaveBeenCalledTimes(1);
+    });
+
+    it('waits for the orders to load', () => {
+      const { fixture } = setup(twoPages, [], 'activity', false);
+      expect(scroll).not.toHaveBeenCalled();
+      fixture.componentRef.setInput('ordersLoaded', true);
+      fixture.detectChanges();
+      expect(scroll).toHaveBeenCalledTimes(1);
+    });
+
+    it('scrolls again when navigating back to #activity', () => {
+      const { fixture, fragment$ } = setup(twoPages, [], 'activity');
+      fragment$.next(null);
+      fixture.detectChanges();
+      fragment$.next('activity');
+      fixture.detectChanges();
+      expect(scroll).toHaveBeenCalledTimes(2);
+    });
   });
 });

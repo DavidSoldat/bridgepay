@@ -15,6 +15,8 @@ import { SkeletonRows } from '../../shared/ui/skeleton-rows/skeleton-rows';
 export class Activity {
   /** Orders shown on the account page — only those get a "View order" button. */
   readonly orderIds = input<readonly string[]>([]);
+  /** False while the account's orders are still loading; the scroll to #activity waits for it. */
+  readonly ordersLoaded = input(true);
   readonly viewOrder = output<string>();
 
   private readonly notifications = inject(Notifications);
@@ -26,6 +28,8 @@ export class Activity {
   protected readonly loadError = signal(false);
   protected readonly hasMore = signal(false);
   protected readonly relativeTime = relativeTime;
+  private readonly firstPageLoaded = signal(false);
+  private scrolled = false;
   private nextPage = 0;
 
   constructor() {
@@ -36,8 +40,12 @@ export class Activity {
       }
     });
     effect(() => {
-      // "See all activity" links here; content loads after navigation, so scroll once it's there.
-      if (this.fragment() === 'activity' && !this.loading()) {
+      // "See all activity" links here. Scroll once per arrival, after both this list and the orders above it
+      // have rendered (otherwise the layout shifts under the shopper); Load more must not re-scroll.
+      if (this.fragment() !== 'activity') {
+        this.scrolled = false;
+      } else if (this.firstPageLoaded() && this.ordersLoaded() && !this.scrolled) {
+        this.scrolled = true;
         untracked(() => this.host.nativeElement.scrollIntoView?.({ block: 'start' }));
       }
     });
@@ -57,10 +65,12 @@ export class Activity {
         this.items.update((list) => [...list, ...page.items.filter((item) => !list.some((shown) => shown.id === item.id))]);
         this.hasMore.set(page.hasMore);
         this.loading.set(false);
+        this.firstPageLoaded.set(true);
       },
       error: () => {
         this.loadError.set(true);
         this.loading.set(false);
+        this.firstPageLoaded.set(true);
       },
     });
   }

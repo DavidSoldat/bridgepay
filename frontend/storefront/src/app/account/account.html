@@ -46,5 +46,5 @@
     </ul>
   }
 
-  <app-activity [orderIds]="orderIds()" (viewOrder)="viewOrder($event)" />
+  <app-activity [orderIds]="orderIds()" [ordersLoaded]="!loading()" (viewOrder)="viewOrder($event)" />
 </div>
