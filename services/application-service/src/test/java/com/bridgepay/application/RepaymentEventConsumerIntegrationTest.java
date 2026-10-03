@@ -245,4 +245,19 @@ class RepaymentEventConsumerIntegrationTest {
         await().atMost(Duration.ofSeconds(20))
                 .until(() -> payout(applicationId).getStatus() == PayoutStatus.PAID);
     }
+
+    @Test
+    void installmentPaid_withAFieldThisServiceDoesNotKnow_isStillApplied() throws Exception {
+        UUID applicationId = approvedCheckout();
+
+        publish("repayments.installment-paid", Map.of(
+                "applicantId", UUID.randomUUID().toString(),
+                "applicationId", applicationId.toString(),
+                "installmentId", UUID.randomUUID().toString(),
+                "sequenceNumber", 1,
+                "amount", "25.00",
+                "paddleTransactionId", "txn_new_field"));
+
+        await().atMost(Duration.ofSeconds(20)).until(() -> application(applicationId).getInstallmentsPaid() == 1);
+    }
 }

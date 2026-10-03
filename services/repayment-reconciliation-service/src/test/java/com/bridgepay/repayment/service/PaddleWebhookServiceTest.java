@@ -289,4 +289,37 @@ class PaddleWebhookServiceTest {
         assertThat(third.getDueDate()).isEqualTo(thirdDue);
         assertThat(fourth.getDueDate()).isEqualTo(fourthDue);
     }
+
+    @Test
+    void installmentPaidEvent_carriesThePaddleTransactionId() {
+        RepaymentPlan plan = newPlan(4);
+        Installment first = newInstallment(plan, 1);
+        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_real")).thenReturn(Optional.empty());
+        when(repaymentPlanRepository.findByPaddleSubscriptionId("txn_placeholder")).thenReturn(Optional.of(plan));
+        when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
+                eq(plan), eq(List.of(InstallmentStatus.SCHEDULED, InstallmentStatus.LATE))))
+                .thenReturn(Optional.of(first));
+
+        service.handle("transaction.completed", new PaddleWebhookData("txn_placeholder", "sub_real"));
+
+        ArgumentCaptor<OutboxEvent> saved = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxEventRepository).save(saved.capture());
+        assertThat(saved.getValue().getPayload()).contains("\"paddleTransactionId\":\"txn_placeholder\"");
+    }
+
+    @Test
+    void installmentMissedEvent_carriesTheApplicationId() {
+        RepaymentPlan plan = newPlan(4);
+        Installment first = newInstallment(plan, 1);
+        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan));
+        when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
+                eq(plan), eq(List.of(InstallmentStatus.SCHEDULED))))
+                .thenReturn(Optional.of(first));
+
+        service.handle("transaction.payment_failed", new PaddleWebhookData("txn_x", "sub_1"));
+
+        ArgumentCaptor<OutboxEvent> saved = ArgumentCaptor.forClass(OutboxEvent.class);
+        verify(outboxEventRepository).save(saved.capture());
+        assertThat(saved.getValue().getPayload()).contains("\"applicationId\":\"" + plan.getApplicationId() + "\"");
+    }
 }

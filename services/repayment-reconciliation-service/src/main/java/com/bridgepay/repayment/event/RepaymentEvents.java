@@ -10,6 +10,8 @@ import java.util.UUID;
  * including applicantId on all four - that service's own stated assumption
  * about this contract, confirmed correct by this design. Application Service
  * keeps its own copy of InstallmentPaid and PlanCancelled, which must match too.
+ * InstallmentPaid also carries paddleTransactionId for grouping; InstallmentMissed
+ * carries applicationId for linking.
  */
 public final class RepaymentEvents {
 
@@ -17,10 +19,11 @@ public final class RepaymentEvents {
     }
 
     public record InstallmentPaid(UUID applicantId, UUID applicationId, UUID installmentId, int sequenceNumber,
-                                  BigDecimal amount) {
+                                  BigDecimal amount, String paddleTransactionId) {
     }
 
-    public record InstallmentMissed(UUID applicantId, UUID installmentId, int sequenceNumber, LocalDate dueDate) {
+    public record InstallmentMissed(UUID applicantId, UUID applicationId, UUID installmentId, int sequenceNumber,
+                                    LocalDate dueDate) {
     }
 
     public record PlanCompleted(UUID applicantId, UUID applicationId) {
