@@ -68,7 +68,19 @@ public class EarlyPaymentService {
         try {
             // Validated under the claim, so a request queued behind a payoff sees it paid and never charges again.
             RepaymentPlan plan = repaymentPlanRepository.findById(planId).orElseThrow();
-            int quantity = quantityFor(plan, scope);
+            List<Installment> installments = requireActiveWithFirstPaid(plan);
+
+            // A charge Paddle took but we never applied (its claim expired) still shows its installments SCHEDULED:
+            // apply it instead of charging again. A failed lookup throws (503) before any charge - we can't tell.
+            Optional<PaddleWebhookData> pending = unapplied(paddleClient.findLatestChargeTransaction(
+                    plan.getPaddleSubscriptionId()));
+            if (pending.isPresent()) {
+                paddleWebhookService.handle("transaction.completed", pending.get());
+                applied = true;
+                return new Result(true, repaymentPlanService.getForApplicant(applicationId, applicantId));
+            }
+
+            int quantity = quantityFor(installments, scope);
             try {
                 paddleClient.chargeNow(plan.getPaddleSubscriptionId(), plan.getInstallmentAmount(), quantity);
             } catch (PaddleUnavailableException ex) {
@@ -90,8 +102,8 @@ public class EarlyPaymentService {
                             planId, ex);
                 }
             } else {
-                // ponytail: without a webhook (local, no tunnel) this payment is never applied; upgrade path is
-                // reconcile-on-read also checking the subscription's latest charge transaction.
+                // ponytail: without a webhook (local, no tunnel) only the shopper's next pay-early attempt applies
+                // this payment (its pre-charge check); upgrade path is reconcile-on-read checking it too.
                 log.warn("Charged plan {} at Paddle but the charge isn't listed yet; keeping the claim until the webhook",
                         planId);
             }
@@ -104,7 +116,7 @@ public class EarlyPaymentService {
         return new Result(applied, repaymentPlanService.getForApplicant(applicationId, applicantId));
     }
 
-    private int quantityFor(RepaymentPlan plan, EarlyPaymentScope scope) {
+    private List<Installment> requireActiveWithFirstPaid(RepaymentPlan plan) {
         if (plan.getStatus() != PlanStatus.ACTIVE) {
             throw new IllegalStateException("This plan is no longer active.");
         }
@@ -112,6 +124,10 @@ public class EarlyPaymentService {
         if (installments.isEmpty() || installments.get(0).getStatus() != InstallmentStatus.PAID) {
             throw new IllegalStateException("Make your first payment before paying early.");
         }
+        return installments;
+    }
+
+    private int quantityFor(List<Installment> installments, EarlyPaymentScope scope) {
         if (installments.stream().anyMatch(i -> i.getStatus() == InstallmentStatus.LATE)) {
             throw new IllegalStateException(MISSED_PAYMENT);
         }
@@ -126,8 +142,8 @@ public class EarlyPaymentService {
     private Optional<PaddleWebhookData> findNewCharge(String subscriptionId) {
         for (int attempt = 1; attempt <= CHARGE_LOOKUP_ATTEMPTS; attempt++) {
             try {
-                Optional<PaddleWebhookData> latest = paddleClient.findLatestChargeTransaction(subscriptionId);
-                if (latest.isPresent() && !installmentRepository.existsByPaddleTransactionId(latest.get().id())) {
+                Optional<PaddleWebhookData> latest = unapplied(paddleClient.findLatestChargeTransaction(subscriptionId));
+                if (latest.isPresent()) {
                     return latest;
                 }
             } catch (RuntimeException ex) {
@@ -138,6 +154,10 @@ public class EarlyPaymentService {
             }
         }
         return Optional.empty();
+    }
+
+    private Optional<PaddleWebhookData> unapplied(Optional<PaddleWebhookData> charge) {
+        return charge.filter(c -> !installmentRepository.existsByPaddleTransactionId(c.id()));
     }
 
     private boolean pause() {

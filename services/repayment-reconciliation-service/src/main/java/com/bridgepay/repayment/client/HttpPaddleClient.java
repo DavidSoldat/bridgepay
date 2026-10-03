@@ -164,12 +164,13 @@ public class HttpPaddleClient implements PaddleClient {
     @Override
     public Optional<PaddleWebhookData> findLatestChargeTransaction(String subscriptionId) {
         return execute(() -> {
-            // Paddle's default order is id[DESC]; transaction ids are time-ordered, so the first is the newest.
+            // Ask for newest first explicitly rather than relying on Paddle's default list order.
             TransactionListEnvelope page = restClient.get()
                     .uri(uriBuilder -> uriBuilder.path("/transactions")
                             .queryParam("subscription_id", subscriptionId)
                             .queryParam("origin", "subscription_charge")
                             .queryParam("status", "completed")
+                            .queryParam("order_by", "created_at[DESC]")
                             .build())
                     .retrieve()
                     .body(TransactionListEnvelope.class);
@@ -180,7 +181,7 @@ public class HttpPaddleClient implements PaddleClient {
     }
 
     private static PaddleWebhookData toWebhookData(TransactionData data) {
-        return new PaddleWebhookData(data.id(), data.subscriptionId(), data.items());
+        return new PaddleWebhookData(data.id(), data.subscriptionId(), data.items(), data.origin());
     }
 
     private <T> T execute(Supplier<T> call, String description) {
@@ -236,7 +237,8 @@ public class HttpPaddleClient implements PaddleClient {
     private record TransactionData(String id, String status,
                                     @JsonProperty("subscription_id") String subscriptionId,
                                     Checkout checkout,
-                                    List<PaddleWebhookData.Item> items) {
+                                    List<PaddleWebhookData.Item> items,
+                                    String origin) {
     }
 
     private record TransactionListEnvelope(List<TransactionData> data) {

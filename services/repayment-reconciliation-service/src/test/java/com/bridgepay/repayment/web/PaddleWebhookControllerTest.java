@@ -75,7 +75,7 @@ class PaddleWebhookControllerTest {
     void receive_readsTheItemQuantity_soAChargeCanCoverSeveralInstallments() throws Exception {
         PaddleWebhookController controller = new PaddleWebhookController(verifier, webhookService, objectMapper);
         String body = "{\"event_id\":\"evt_2\",\"event_type\":\"transaction.completed\",\"data\":{\"id\":\"txn_2\","
-                + "\"subscription_id\":\"sub_1\",\"items\":[{\"quantity\":3,\"price\":{\"id\":\"pri_1\"}}]}}";
+                + "\"subscription_id\":\"sub_1\",\"origin\":\"subscription_charge\",\"items\":[{\"quantity\":3,\"price\":{\"id\":\"pri_1\"}}]}}";
         String signature = "ts=1700000000;h1=" + sign("1700000000", body);
 
         controller.receive(signature, body);
@@ -84,5 +84,6 @@ class PaddleWebhookControllerTest {
                 org.mockito.ArgumentCaptor.forClass(com.bridgepay.repayment.client.PaddleWebhookData.class);
         verify(webhookService).handle(org.mockito.ArgumentMatchers.eq("transaction.completed"), data.capture());
         assertThat(data.getValue().installmentsCovered()).isEqualTo(3);
+        assertThat(data.getValue().origin()).isEqualTo("subscription_charge");
     }
 }

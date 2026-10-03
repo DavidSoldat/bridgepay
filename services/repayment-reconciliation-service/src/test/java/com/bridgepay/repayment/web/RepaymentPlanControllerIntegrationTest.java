@@ -245,7 +245,7 @@ class RepaymentPlanControllerIntegrationTest {
     }
 
     private static PaddleWebhookData charge(String txn, String sub, int quantity) {
-        return new PaddleWebhookData(txn, sub, List.of(new PaddleWebhookData.Item(quantity)));
+        return new PaddleWebhookData(txn, sub, List.of(new PaddleWebhookData.Item(quantity)), "subscription_charge");
     }
 
     @Test
@@ -253,7 +253,8 @@ class RepaymentPlanControllerIntegrationTest {
         UUID applicationId = UUID.randomUUID();
         String subject = UUID.randomUUID().toString();
         activePlanWithFirstPaid(applicationId, subject, "sub_next");
-        when(paddleClient.findLatestChargeTransaction("sub_next")).thenReturn(Optional.of(charge("txn_next", "sub_next", 1)));
+        when(paddleClient.findLatestChargeTransaction("sub_next"))
+                .thenReturn(Optional.empty(), Optional.of(charge("txn_next", "sub_next", 1)));
 
         payEarly(applicationId, subject, "NEXT")
                 .andExpect(status().isOk())
@@ -268,7 +269,8 @@ class RepaymentPlanControllerIntegrationTest {
         UUID applicationId = UUID.randomUUID();
         String subject = UUID.randomUUID().toString();
         activePlanWithFirstPaid(applicationId, subject, "sub_rest");
-        when(paddleClient.findLatestChargeTransaction("sub_rest")).thenReturn(Optional.of(charge("txn_rest", "sub_rest", 3)));
+        when(paddleClient.findLatestChargeTransaction("sub_rest"))
+                .thenReturn(Optional.empty(), Optional.of(charge("txn_rest", "sub_rest", 3)));
 
         payEarly(applicationId, subject, "REMAINING")
                 .andExpect(status().isOk())
@@ -284,7 +286,7 @@ class RepaymentPlanControllerIntegrationTest {
         String subject = UUID.randomUUID().toString();
         activePlanWithFirstPaid(applicationId, subject, "sub_dup");
         PaddleWebhookData next = charge("txn_dup", "sub_dup", 1);
-        when(paddleClient.findLatestChargeTransaction("sub_dup")).thenReturn(Optional.of(next));
+        when(paddleClient.findLatestChargeTransaction("sub_dup")).thenReturn(Optional.empty(), Optional.of(next));
         payEarly(applicationId, subject, "NEXT").andExpect(status().isOk());
 
         paddleWebhookService.handle("transaction.completed", next);
@@ -316,6 +318,7 @@ class RepaymentPlanControllerIntegrationTest {
         String subject = UUID.randomUUID().toString();
         activePlanWithFirstPaid(applicationId, subject, "sub_lookup_down");
         when(paddleClient.findLatestChargeTransaction("sub_lookup_down"))
+                .thenReturn(Optional.empty()) // the pre-charge check finds nothing pending
                 .thenThrow(new PaddleUnavailableException("down", null));
 
         payEarly(applicationId, subject, "NEXT").andExpect(status().isAccepted());
@@ -342,7 +345,8 @@ class RepaymentPlanControllerIntegrationTest {
         UUID applicationId = UUID.randomUUID();
         String subject = UUID.randomUUID().toString();
         RepaymentPlan plan = activePlanWithFirstPaid(applicationId, subject, "sub_claim");
-        when(paddleClient.findLatestChargeTransaction("sub_claim")).thenReturn(Optional.of(charge("txn_claim", "sub_claim", 1)));
+        when(paddleClient.findLatestChargeTransaction("sub_claim"))
+                .thenReturn(Optional.empty(), Optional.of(charge("txn_claim", "sub_claim", 1)));
 
         jdbcTemplate.update("update repayment.repayment_plans set early_payment_claimed_at = now() where id = ?", plan.getId());
         payEarly(applicationId, subject, "NEXT").andExpect(status().isConflict());
@@ -444,7 +448,7 @@ class RepaymentPlanControllerIntegrationTest {
         String subject = UUID.randomUUID().toString();
         activePlanWithFirstPaid(applicationId, subject, "sub_apply_fail");
         when(paddleClient.findLatestChargeTransaction("sub_apply_fail"))
-                .thenReturn(Optional.of(charge("txn_apply_fail", "sub_apply_fail", 3)));
+                .thenReturn(Optional.empty(), Optional.of(charge("txn_apply_fail", "sub_apply_fail", 3)));
         doThrow(new PaddleUnavailableException("down", null)).when(paddleClient).cancelSubscription("sub_apply_fail");
 
         payEarly(applicationId, subject, "REMAINING").andExpect(status().isAccepted());
@@ -483,5 +487,53 @@ class RepaymentPlanControllerIntegrationTest {
                 "select count(*) from repayment.installments i join repayment.repayment_plans p on p.id = i.repayment_plan_id "
                         + "where p.application_id = ? and i.status = 'PAID'", Integer.class, applicationId);
         org.assertj.core.api.Assertions.assertThat(paid).isEqualTo(2);
+    }
+
+    @Test
+    void payEarly_next_movesTheRemainingDueDatesAWeekEarlier() throws Exception {
+        UUID applicationId = UUID.randomUUID();
+        String subject = UUID.randomUUID().toString();
+        activePlanWithFirstPaid(applicationId, subject, "sub_shift");
+        when(paddleClient.findLatestChargeTransaction("sub_shift"))
+                .thenReturn(Optional.empty(), Optional.of(charge("txn_shift", "sub_shift", 1)));
+        mockMvc.perform(get("/api/v1/repayment-plans/" + applicationId).with(jwt().jwt(j -> j.subject(subject))))
+                .andExpect(jsonPath("$.installments[2].dueDate").value("2026-01-15"));
+
+        payEarly(applicationId, subject, "NEXT").andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/repayment-plans/" + applicationId).with(jwt().jwt(j -> j.subject(subject))))
+                .andExpect(jsonPath("$.installments[1].status").value("PAID"))
+                .andExpect(jsonPath("$.installments[2].dueDate").value("2026-01-08"))
+                .andExpect(jsonPath("$.installments[3].dueDate").value("2026-01-15"));
+    }
+
+    @Test
+    void payEarly_appliesAnEarlierChargeThatWasNeverApplied_insteadOfChargingAgain() throws Exception {
+        UUID applicationId = UUID.randomUUID();
+        String subject = UUID.randomUUID().toString();
+        activePlanWithFirstPaid(applicationId, subject, "sub_pending");
+        when(paddleClient.findLatestChargeTransaction("sub_pending"))
+                .thenReturn(Optional.of(charge("txn_pending", "sub_pending", 1)));
+
+        payEarly(applicationId, subject, "NEXT")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.installments[1].status").value("PAID"))
+                .andExpect(jsonPath("$.installments[2].status").value("SCHEDULED"));
+        verify(paddleClient, never()).chargeNow(anyString(), any(), anyInt());
+    }
+
+    @Test
+    void payEarly_doesNotCharge_whenItCannotCheckForAnEarlierCharge_andReleasesTheClaim() throws Exception {
+        UUID applicationId = UUID.randomUUID();
+        String subject = UUID.randomUUID().toString();
+        activePlanWithFirstPaid(applicationId, subject, "sub_precheck_down");
+        when(paddleClient.findLatestChargeTransaction("sub_precheck_down"))
+                .thenThrow(new PaddleUnavailableException("down", null));
+
+        payEarly(applicationId, subject, "NEXT")
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.error").value("PAYMENT_UNAVAILABLE"));
+        payEarly(applicationId, subject, "NEXT").andExpect(status().isServiceUnavailable()); // not 409: claim released
+        verify(paddleClient, never()).chargeNow(anyString(), any(), anyInt());
     }
 }

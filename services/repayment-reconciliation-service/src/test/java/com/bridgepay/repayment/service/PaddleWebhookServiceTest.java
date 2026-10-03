@@ -239,4 +239,54 @@ class PaddleWebhookServiceTest {
         assertThat(new PaddleWebhookData("txn_r", "sub_1", null).installmentsCovered()).isEqualTo(1);
         assertThat(charge("txn_c", "sub_1", 3).installmentsCovered()).isEqualTo(3);
     }
+
+    @Test
+    void payingTheNextInstallmentEarly_movesTheRemainingDueDatesAWeekEarlier() {
+        RepaymentPlan plan = newPlan(4);
+        Installment first = newInstallment(plan, 1);
+        first.markPaid("txn_first");
+        Installment second = newInstallment(plan, 2);
+        Installment third = newInstallment(plan, 3);
+        Installment fourth = newInstallment(plan, 4);
+        LocalDate thirdDue = third.getDueDate();
+        LocalDate fourthDue = fourth.getDueDate();
+        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan));
+        when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
+                eq(plan), eq(List.of(InstallmentStatus.SCHEDULED, InstallmentStatus.LATE))))
+                .thenReturn(Optional.of(second));
+        lenient().when(installmentRepository.findByRepaymentPlanOrderBySequenceNumberAsc(plan))
+                .thenReturn(List.of(first, second, third, fourth));
+
+        service.handle("transaction.completed", new PaddleWebhookData("txn_charge", "sub_1",
+                List.of(new PaddleWebhookData.Item(1)), "subscription_charge"));
+
+        assertThat(second.getStatus()).isEqualTo(InstallmentStatus.PAID);
+        assertThat(third.getDueDate()).isEqualTo(thirdDue.minusWeeks(1));
+        assertThat(fourth.getDueDate()).isEqualTo(fourthDue.minusWeeks(1));
+    }
+
+    @Test
+    void aWeeklyRenewal_doesNotMoveAnyDueDate() {
+        RepaymentPlan plan = newPlan(4);
+        Installment first = newInstallment(plan, 1);
+        first.markPaid("txn_first");
+        Installment second = newInstallment(plan, 2);
+        Installment third = newInstallment(plan, 3);
+        Installment fourth = newInstallment(plan, 4);
+        LocalDate thirdDue = third.getDueDate();
+        LocalDate fourthDue = fourth.getDueDate();
+        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan));
+        when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
+                eq(plan), eq(List.of(InstallmentStatus.SCHEDULED, InstallmentStatus.LATE))))
+                .thenReturn(Optional.of(second));
+        lenient().when(installmentRepository.findByRepaymentPlanOrderBySequenceNumberAsc(plan))
+                .thenReturn(List.of(first, second, third, fourth));
+
+        service.handle("transaction.completed", new PaddleWebhookData("txn_renewal", "sub_1"));
+        service.handle("transaction.completed", new PaddleWebhookData("txn_renewal2", "sub_1",
+                List.of(new PaddleWebhookData.Item(1)), "subscription_recurring"));
+
+        assertThat(third.getDueDate()).isEqualTo(thirdDue);
+        assertThat(fourth.getDueDate()).isEqualTo(fourthDue);
+    }
 }

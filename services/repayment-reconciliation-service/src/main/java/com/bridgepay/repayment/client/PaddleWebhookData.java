@@ -12,7 +12,8 @@ import java.util.List;
  * transaction.completed docs), all ignored.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record PaddleWebhookData(String id, @JsonProperty("subscription_id") String subscriptionId, List<Item> items) {
+public record PaddleWebhookData(String id, @JsonProperty("subscription_id") String subscriptionId, List<Item> items,
+                                @JsonProperty("origin") String origin) {
 
     @JsonCreator
     public PaddleWebhookData {
@@ -20,7 +21,16 @@ public record PaddleWebhookData(String id, @JsonProperty("subscription_id") Stri
     }
 
     public PaddleWebhookData(String id, String subscriptionId) {
-        this(id, subscriptionId, List.of());
+        this(id, subscriptionId, List.of(), null);
+    }
+
+    public PaddleWebhookData(String id, String subscriptionId, List<Item> items) {
+        this(id, subscriptionId, items, null);
+    }
+
+    /** A one-time charge we created (pay early), as opposed to a weekly renewal ("subscription_recurring"). */
+    public boolean isSubscriptionCharge() {
+        return "subscription_charge".equals(origin);
     }
 
     /**

@@ -73,6 +73,10 @@ public class Installment {
         this.status = InstallmentStatus.LATE;
     }
 
+    public void moveDueDateEarlier(int weeks) {
+        this.dueDate = dueDate.minusWeeks(weeks);
+    }
+
     public void markMissed() {
         this.status = InstallmentStatus.MISSED;
     }

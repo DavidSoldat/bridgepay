@@ -192,16 +192,18 @@ class HttpPaddleClientWireMockTest {
                 .withQueryParam("subscription_id", equalTo("sub_1"))
                 .withQueryParam("origin", equalTo("subscription_charge"))
                 .withQueryParam("status", equalTo("completed"))
+                .withQueryParam("order_by", equalTo("created_at[DESC]"))
                 .willReturn(okJson("""
                         { "data": [
-                          { "id": "txn_new", "status": "completed", "subscription_id": "sub_1",
+                          { "id": "txn_new", "status": "completed", "subscription_id": "sub_1", "origin": "subscription_charge",
                             "items": [ { "quantity": 3, "price": { "id": "pri_1" } } ] },
                           { "id": "txn_old", "status": "completed", "subscription_id": "sub_1",
                             "items": [ { "quantity": 1 } ] } ] }
                         """)));
 
         assertThat(client(wm).findLatestChargeTransaction("sub_1"))
-                .contains(new PaddleWebhookData("txn_new", "sub_1", java.util.List.of(new PaddleWebhookData.Item(3))));
+                .contains(new PaddleWebhookData("txn_new", "sub_1", java.util.List.of(new PaddleWebhookData.Item(3)),
+                        "subscription_charge"));
     }
 
     @Test

@@ -80,12 +80,13 @@ public class PaddleWebhookService {
         }
 
         int covered = data.installmentsCovered();
-        for (int paid = 0; paid < covered; paid++) {
+        int paid = 0;
+        for (; paid < covered; paid++) {
             Installment installment = nextPending(plan).orElse(null);
             if (installment == null) {
                 log.debug("No pending installment left on plan {} for transaction {} ({} of {} applied)",
                         plan.getId(), data.id(), paid, covered);
-                return;
+                break;
             }
 
             installment.markPaid(data.id());
@@ -100,6 +101,14 @@ public class PaddleWebhookService {
                 paddleClient.cancelSubscription(plan.getPaddleSubscriptionId());
                 return;
             }
+        }
+        if (data.isSubscriptionCharge() && paid > 0) {
+            // Paddle's weekly renewals keep their original cadence after a pay-early charge, so each later renewal
+            // pays the next pending installment `paid` weeks sooner than first scheduled: show the dates it will.
+            int weeks = paid;
+            installmentRepository.findByRepaymentPlanOrderBySequenceNumberAsc(plan).stream()
+                    .filter(i -> i.getStatus() == InstallmentStatus.SCHEDULED)
+                    .forEach(i -> i.moveDueDateEarlier(weeks));
         }
     }
 
