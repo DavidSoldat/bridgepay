@@ -4,7 +4,7 @@
   (click)="toggle()"
   [attr.aria-label]="label()"
   [attr.aria-expanded]="open()"
-  aria-haspopup="true"
+  aria-controls="notifications-panel"
   class="relative inline-flex size-11 items-center justify-center rounded-full text-xl text-ink hover:text-coral"
 >
   <app-icon name="bell" />
@@ -19,9 +19,10 @@
 </button>
 @if (open()) {
   <div
+    id="notifications-panel"
     role="region"
     aria-label="Notifications"
-    class="absolute right-0 z-20 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-xl border border-hairline bg-surface p-2 shadow-lg"
+    class="z-20 rounded-xl border max-sm:fixed max-sm:inset-x-4 max-sm:top-24 sm:absolute sm:right-0 sm:mt-2 sm:w-[22rem] border-hairline bg-surface p-2 shadow-lg"
   >
     @if (notifications.latest().length === 0) {
       <p class="px-3 py-4 text-sm text-ink-muted">No notifications yet.</p>

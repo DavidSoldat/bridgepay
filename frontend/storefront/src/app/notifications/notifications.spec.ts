@@ -54,6 +54,23 @@ describe('Notifications', () => {
     expect(service.unreadCount()).toBe(2);
   });
 
+  it('ignores a refresh issued before markAllRead that resolves after it', () => {
+    service.refresh();
+    const stale = http.expectOne((r) => r.url.endsWith('/api/v1/notifications'));
+    service.unreadCount.set(2);
+    service.markAllRead();
+    http.expectOne((r) => r.url.endsWith('/read')).flush(null, { status: 204, statusText: 'No Content' });
+    stale.flush(page(2));
+    expect(service.unreadCount()).toBe(0);
+  });
+
+  it('refresh reports the unread count to its callback', () => {
+    const done = vi.fn();
+    service.refresh(done);
+    http.expectOne((r) => r.url.endsWith('/api/v1/notifications')).flush(page(3));
+    expect(done).toHaveBeenCalledWith(3);
+  });
+
   it('clearUnreadDots marks the loaded items read', () => {
     service.latest.set(page(1).items);
     service.clearUnreadDots();

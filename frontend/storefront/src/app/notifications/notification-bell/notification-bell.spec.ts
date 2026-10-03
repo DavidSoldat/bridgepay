@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
-import { signal } from '@angular/core';
+import { Router, provideRouter } from '@angular/router';
+import { Component, signal } from '@angular/core';
 import { NotificationBell } from './notification-bell';
 import { Notifications } from '../notifications';
 import { NotificationItem } from '../notification.model';
@@ -10,22 +10,36 @@ describe('NotificationBell', () => {
     id, type: 'INSTALLMENT_PAID', title, body: '$17.44', applicationId: 'a1', createdAt: new Date().toISOString(), unread,
   });
 
-  function setup(unread: number, latest: NotificationItem[] = []) {
+  @Component({ template: '' })
+  class Stub {}
+
+  /** `server` is what each refresh returns; defaults to the current state. */
+  function setup(unread: number, latest: NotificationItem[] = [], server?: { unread: number; items: NotificationItem[] }) {
+    const calls: string[] = [];
     const fake = {
       unreadCount: signal(unread),
       latest: signal(latest),
       readVersion: signal(0),
-      refresh: vi.fn(),
-      markAllRead: vi.fn(() => fake.unreadCount.set(0)),
+      refresh: vi.fn((done?: (n: number) => void) => {
+        calls.push('refresh');
+        const s = server ?? { unread: fake.unreadCount(), items: fake.latest() };
+        fake.unreadCount.set(s.unread);
+        fake.latest.set(s.items);
+        done?.(s.unread);
+      }),
+      markAllRead: vi.fn(() => {
+        calls.push('markAllRead');
+        fake.unreadCount.set(0);
+      }),
       clearUnreadDots: vi.fn(),
     };
     TestBed.configureTestingModule({
       imports: [NotificationBell],
-      providers: [provideRouter([]), { provide: Notifications, useValue: fake }],
+      providers: [provideRouter([{ path: 'x', component: Stub }]), { provide: Notifications, useValue: fake }],
     });
     const fixture = TestBed.createComponent(NotificationBell);
     fixture.detectChanges();
-    return { fixture, fake, el: fixture.nativeElement as HTMLElement };
+    return { fixture, fake, calls, el: fixture.nativeElement as HTMLElement };
   }
   const bell = (el: HTMLElement) => el.querySelector('button') as HTMLButtonElement;
 
@@ -64,6 +78,31 @@ describe('NotificationBell', () => {
     fixture.detectChanges();
     expect(fake.clearUnreadDots).toHaveBeenCalled();
     expect(el.textContent).not.toContain('See all activity');
+  });
+
+  it('shows an item that exists only on the server, and marks read only after the refresh resolved', () => {
+    const { fixture, calls, el } = setup(0, [], { unread: 1, items: [item('n9', 'Brand new payment')] });
+    calls.length = 0;
+    bell(el).click();
+    fixture.detectChanges();
+    expect(el.textContent).toContain('Brand new payment');
+    expect(calls).toEqual(['refresh', 'markAllRead']);
+  });
+
+  it('a navigation refreshes the count', async () => {
+    const { fake } = setup(0);
+    fake.refresh.mockClear();
+    await TestBed.inject(Router).navigateByUrl('/x');
+    expect(fake.refresh).toHaveBeenCalled();
+  });
+
+  it('the panel is a region controlled by the bell, not a menu', () => {
+    const { fixture, el } = setup(0);
+    bell(el).click();
+    fixture.detectChanges();
+    expect(bell(el).hasAttribute('aria-haspopup')).toBe(false);
+    const id = bell(el).getAttribute('aria-controls')!;
+    expect(el.querySelector('#' + id)?.getAttribute('role')).toBe('region');
   });
 
   it('refreshes instead of marking read when nothing is unread, and shows an empty state', () => {

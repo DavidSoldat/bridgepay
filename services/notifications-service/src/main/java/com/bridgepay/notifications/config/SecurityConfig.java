@@ -21,10 +21,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * This service has no HTTP endpoints of its own (pure Kafka consumer) - this
- * config exists only to lock down actuator beyond /health per CLAUDE.md's
- * "every service ships two security configs" convention, so a future
- * endpoint never lands without security already wired.
+ * Besides consuming Kafka, this service serves the signed-in shopper's own
+ * notification feed over HTTP (JWT-authenticated, scoped to the token's
+ * subject). Everything except /actuator/health requires authentication.
  */
 @Configuration
 @EnableMethodSecurity

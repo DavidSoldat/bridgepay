@@ -20,11 +20,15 @@ export class Notifications {
     return this.http.get<NotificationPage>(this.base, { params: { page, size } });
   }
 
-  refresh(): void {
+  /** Loads the newest entries; `done` gets the unread count once they are in. A response that predates a mark-read is dropped. */
+  refresh(done?: (unreadCount: number) => void): void {
+    const version = this.readVersion();
     this.page(0, 5).subscribe({
       next: (p) => {
+        if (this.readVersion() !== version) return;
         this.latest.set(p.items);
         this.unreadCount.set(p.unreadCount);
+        done?.(p.unreadCount);
       },
       error: () => {},
     });

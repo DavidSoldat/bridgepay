@@ -42,12 +42,10 @@ export class NotificationBell {
       return;
     }
     this.open.set(true);
-    // With something unread, the list is already fresh from the last navigation; refreshing now would race the read.
-    if (this.notifications.unreadCount() > 0) {
-      this.notifications.markAllRead();
-    } else {
-      this.notifications.refresh();
-    }
+    // Refresh first so what gets marked read is what the panel shows; mark read only once it has resolved.
+    this.notifications.refresh((unread) => {
+      if (this.open() && unread > 0) this.notifications.markAllRead();
+    });
   }
 
   protected close(returnFocus: boolean): void {
