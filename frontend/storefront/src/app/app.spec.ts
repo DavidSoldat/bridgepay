@@ -1,7 +1,9 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { App } from './app';
 import { Auth } from './core/auth';
+import { Notifications } from './notifications/notifications';
 
 describe('App', () => {
   function setup(authenticated: boolean, login: (redirectUri: string) => void = () => {}) {
@@ -9,6 +11,7 @@ describe('App', () => {
       imports: [App],
       providers: [
         provideRouter([]),
+        { provide: Notifications, useValue: { unreadCount: signal(0), latest: signal([]), readVersion: signal(0), refresh: () => {}, markAllRead: () => {}, clearUnreadDots: () => {} } },
         { provide: Auth, useValue: { authenticated: () => authenticated, logout: () => {}, login } },
       ],
     });
@@ -39,6 +42,16 @@ describe('App', () => {
 
     const link = (fixture.nativeElement as HTMLElement).querySelector('a[href="/"]');
     expect(link?.textContent?.trim()).toBe('Shop');
+  });
+
+  it('shows the notifications bell only when signed in', () => {
+    const signedIn = setup(true);
+    signedIn.detectChanges();
+    expect((signedIn.nativeElement as HTMLElement).querySelector('app-notification-bell')).not.toBeNull();
+    TestBed.resetTestingModule();
+    const signedOut = setup(false);
+    signedOut.detectChanges();
+    expect((signedOut.nativeElement as HTMLElement).querySelector('app-notification-bell')).toBeNull();
   });
 
   it('names the store and offers Sign in when signed out', () => {

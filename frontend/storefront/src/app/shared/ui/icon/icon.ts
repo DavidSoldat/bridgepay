@@ -4,6 +4,7 @@ import { Component, computed, input } from '@angular/core';
 // Circles are written as two-arc paths so every icon is a plain list of `d` strings.
 const ICONS: Record<string, string[]> = {
   check: ['M20 6 9 17l-5-5'],
+  bell: ['M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9', 'M10.3 21a1.94 1.94 0 0 0 3.4 0'],
   clock: ['M22 12a10 10 0 1 1-20 0 10 10 0 1 1 20 0', 'M12 6v6l4 2'],
   x: ['M18 6 6 18', 'm6 6 12 12'],
   'alert-triangle': ['m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3', 'M12 9v4', 'M12 17h.01'],

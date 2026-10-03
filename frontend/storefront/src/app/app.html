@@ -5,6 +5,7 @@
       <a routerLink="/" class="text-ink hover:text-coral">Shop</a>
       @if (auth.authenticated()) {
         <a routerLink="/account" class="text-ink hover:text-coral">My Account</a>
+        <app-notification-bell />
         <button type="button" (click)="auth.logout()" class="btn-secondary">Sign out</button>
       } @else {
         <button type="button" (click)="signIn()" class="btn-secondary">Sign in</button>
