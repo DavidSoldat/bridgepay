@@ -50,6 +50,12 @@ class PaddleWebhookServiceTest {
     }
 
     private RepaymentPlan newPlan(int installmentCount) {
+        RepaymentPlan plan = planOf(installmentCount);
+        lenient().when(repaymentPlanRepository.findByIdForUpdate(plan.getId())).thenReturn(Optional.of(plan));
+        return plan;
+    }
+
+    private RepaymentPlan planOf(int installmentCount) {
         return new RepaymentPlan(UUID.randomUUID(), UUID.randomUUID(), "ctm_1", "txn_placeholder",
                 new BigDecimal("200.00"), installmentCount, new BigDecimal("50.00"));
     }

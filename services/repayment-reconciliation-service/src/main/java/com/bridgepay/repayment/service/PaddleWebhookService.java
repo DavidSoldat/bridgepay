@@ -63,11 +63,14 @@ public class PaddleWebhookService {
     }
 
     private void handleTransactionCompleted(PaddleWebhookData data) {
-        RepaymentPlan plan = findPlanByTransactionEvent(data);
-        if (plan == null) {
+        RepaymentPlan found = findPlanByTransactionEvent(data);
+        if (found == null) {
             log.warn("No repayment plan found for completed transaction {}", data.id());
             return;
         }
+        // Row lock: the synchronous early-payment apply, Paddle's webhook and reconcile-on-read can all deliver the
+        // same transaction at once; serialising here makes the dedupe check below reliable.
+        RepaymentPlan plan = repaymentPlanRepository.findByIdForUpdate(found.getId()).orElse(found);
         if (data.subscriptionId() != null && !data.subscriptionId().equals(plan.getPaddleSubscriptionId())) {
             plan.adoptSubscriptionId(data.subscriptionId());
         }

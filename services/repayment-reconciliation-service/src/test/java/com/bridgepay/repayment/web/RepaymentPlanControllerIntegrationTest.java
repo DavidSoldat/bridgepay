@@ -406,6 +406,11 @@ class RepaymentPlanControllerIntegrationTest {
         payEarly(applicationId, subject, "NEXT")
                 .andExpect(status().isServiceUnavailable())
                 .andExpect(jsonPath("$.error").value("PAYMENT_UNAVAILABLE"));
+        // a 5xx/timeout does not prove nothing was charged, so the claim stays
+        payEarly(applicationId, subject, "NEXT")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("A payment for this plan is already in progress."));
+        verify(paddleClient, times(1)).chargeNow(eq("sub_down"), any(), anyInt());
     }
 
     @Test
@@ -431,5 +436,52 @@ class RepaymentPlanControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void payEarly_returns202AndKeepsTheClaim_whenApplyingTheChargeFailsAfterPaddleTookTheMoney() throws Exception {
+        UUID applicationId = UUID.randomUUID();
+        String subject = UUID.randomUUID().toString();
+        activePlanWithFirstPaid(applicationId, subject, "sub_apply_fail");
+        when(paddleClient.findLatestChargeTransaction("sub_apply_fail"))
+                .thenReturn(Optional.of(charge("txn_apply_fail", "sub_apply_fail", 3)));
+        doThrow(new PaddleUnavailableException("down", null)).when(paddleClient).cancelSubscription("sub_apply_fail");
+
+        payEarly(applicationId, subject, "REMAINING").andExpect(status().isAccepted());
+        payEarly(applicationId, subject, "REMAINING")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("A payment for this plan is already in progress."));
+        verify(paddleClient, times(1)).chargeNow(anyString(), any(), anyInt());
+    }
+
+    @Test
+    void concurrentDeliveriesOfTheSameCharge_applyItExactlyOnce() throws Exception {
+        UUID applicationId = UUID.randomUUID();
+        String subject = UUID.randomUUID().toString();
+        activePlanWithFirstPaid(applicationId, subject, "sub_race");
+        PaddleWebhookData next = charge("txn_race", "sub_race", 1);
+        java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.ExecutorService pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+        List<java.util.concurrent.Future<?>> runs = new java.util.ArrayList<>();
+        for (int i = 0; i < 2; i++) {
+            runs.add(pool.submit(() -> {
+                start.await();
+                paddleWebhookService.handle("transaction.completed", next);
+                return null;
+            }));
+        }
+        start.countDown();
+        for (var run : runs) {
+            run.get(30, java.util.concurrent.TimeUnit.SECONDS);
+        }
+        pool.shutdown();
+
+        Integer applied = jdbcTemplate.queryForObject(
+                "select count(*) from repayment.installments where paddle_transaction_id = ?", Integer.class, "txn_race");
+        org.assertj.core.api.Assertions.assertThat(applied).isEqualTo(1);
+        Integer paid = jdbcTemplate.queryForObject(
+                "select count(*) from repayment.installments i join repayment.repayment_plans p on p.id = i.repayment_plan_id "
+                        + "where p.application_id = ? and i.status = 'PAID'", Integer.class, applicationId);
+        org.assertj.core.api.Assertions.assertThat(paid).isEqualTo(2);
     }
 }

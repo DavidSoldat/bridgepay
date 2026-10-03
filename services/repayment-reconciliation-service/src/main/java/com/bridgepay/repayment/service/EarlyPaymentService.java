@@ -1,6 +1,7 @@
 package com.bridgepay.repayment.service;
 
 import com.bridgepay.repayment.client.PaddleClient;
+import com.bridgepay.repayment.client.PaddleUnavailableException;
 import com.bridgepay.repayment.client.PaddleWebhookData;
 import com.bridgepay.repayment.domain.Installment;
 import com.bridgepay.repayment.domain.InstallmentStatus;
@@ -68,13 +69,26 @@ public class EarlyPaymentService {
             // Validated under the claim, so a request queued behind a payoff sees it paid and never charges again.
             RepaymentPlan plan = repaymentPlanRepository.findById(planId).orElseThrow();
             int quantity = quantityFor(plan, scope);
-            paddleClient.chargeNow(plan.getPaddleSubscriptionId(), plan.getInstallmentAmount(), quantity);
+            try {
+                paddleClient.chargeNow(plan.getPaddleSubscriptionId(), plan.getInstallmentAmount(), quantity);
+            } catch (PaddleUnavailableException ex) {
+                // A 5xx or a timeout after the request was sent doesn't prove nothing was charged: keep the claim
+                // (it expires on its own) so a retry can't double-charge. Only a 4xx refusal proves no charge.
+                charged = true;
+                throw ex;
+            }
             charged = true;
 
             Optional<PaddleWebhookData> charge = findNewCharge(plan.getPaddleSubscriptionId());
             if (charge.isPresent()) {
-                paddleWebhookService.handle("transaction.completed", charge.get());
-                applied = true;
+                try {
+                    paddleWebhookService.handle("transaction.completed", charge.get());
+                    applied = true;
+                } catch (RuntimeException ex) {
+                    // Money is taken; the webhook (or reconcile-on-read) will apply it. Keep the claim, answer 202.
+                    log.warn("Charged plan {} but applying the charge failed; keeping the claim until the webhook",
+                            planId, ex);
+                }
             } else {
                 // ponytail: without a webhook (local, no tunnel) this payment is never applied; upgrade path is
                 // reconcile-on-read also checking the subscription's latest charge transaction.
