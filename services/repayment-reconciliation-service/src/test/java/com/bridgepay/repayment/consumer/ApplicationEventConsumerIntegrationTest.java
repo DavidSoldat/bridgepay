@@ -139,6 +139,11 @@ class ApplicationEventConsumerIntegrationTest {
                 String subscriptionId) {
             return java.util.Optional.empty();
         }
+
+        @Override
+        public String refundTransaction(String transactionId) {
+            throw new UnsupportedOperationException("refunds are not used by this test");
+        }
     }
 
     @Autowired
