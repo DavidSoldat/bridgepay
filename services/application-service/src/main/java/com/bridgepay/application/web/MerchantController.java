@@ -6,7 +6,10 @@ import com.bridgepay.application.dto.MerchantDashboardResponse;
 import com.bridgepay.application.service.CreditApplicationService;
 import com.bridgepay.application.service.MerchantDashboardService;
 import org.springframework.data.domain.Page;
+import com.bridgepay.application.service.SalesCsv;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -20,6 +23,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.UUID;
 
 @RestController
@@ -29,9 +35,13 @@ public class MerchantController {
     private final CreditApplicationService applicationService;
     private final MerchantDashboardService dashboardService;
 
-    public MerchantController(CreditApplicationService applicationService, MerchantDashboardService dashboardService) {
+    private final SalesCsv salesCsv;
+
+    public MerchantController(CreditApplicationService applicationService, MerchantDashboardService dashboardService,
+                              SalesCsv salesCsv) {
         this.applicationService = applicationService;
         this.dashboardService = dashboardService;
+        this.salesCsv = salesCsv;
     }
 
     @GetMapping("/{id}/payouts")
@@ -47,6 +57,19 @@ public class MerchantController {
                                             @RequestParam(defaultValue = "ALL") String status, Pageable pageable) {
         requireOwnMerchant(jwt, id);
         return applicationService.listSalesForMerchant(id, status, pageable);
+    }
+
+    @GetMapping("/{id}/sales/export")
+    @PreAuthorize("hasRole('MERCHANT')")
+    public ResponseEntity<String> exportSales(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
+                                              @RequestParam(defaultValue = "ALL") String status) {
+        requireOwnMerchant(jwt, id);
+        String body = salesCsv.export(id, status);
+        return ResponseEntity.ok()
+                .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"bridgepay-sales-" + LocalDate.now(ZoneOffset.UTC) + ".csv\"")
+                .body(body);
     }
 
     @PostMapping("/{id}/orders/{applicationId}/refund")

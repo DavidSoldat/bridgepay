@@ -41,6 +41,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -380,5 +381,44 @@ class MerchantControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/merchants/{id}/summary", merchant.getId())
                         .with(merchantJwt(merchant.getId())))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void merchantExportsSalesAsCsv_withPayoutColumns_andTheStatusFilter() throws Exception {
+        Merchant merchant = merchantRepository.save(new Merchant("Merchant CSV", new BigDecimal("2.90")));
+        UUID approved = checkout(merchant.getId(), "100.00");
+        UUID declined = checkout(merchant.getId(), "1500.00");
+
+        String all = mockMvc.perform(get("/api/v1/merchants/{id}/sales/export", merchant.getId())
+                        .with(merchantJwt(merchant.getId())))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", org.hamcrest.Matchers.startsWith("text/csv")))
+                .andExpect(header().string("Content-Disposition",
+                        org.hamcrest.Matchers.matchesPattern("attachment; filename=\"bridgepay-sales-\\d{4}-\\d{2}-\\d{2}\\.csv\"")))
+                .andReturn().getResponse().getContentAsString();
+
+        String[] lines = all.split("\r\n");
+        assertThat(lines[0]).isEqualTo("order_id,created_at,amount,installments,status,decided_at,fee,net,payout_status,paid_at");
+        assertThat(lines).hasSize(3);
+        assertThat(all).contains(approved + ",").contains(",100.00,4,APPROVED,").contains(",2.90,97.10,PENDING,");
+        assertThat(all).contains(declined + ",").contains(",1500.00,,DECLINED,");
+
+        String declinedOnly = mockMvc.perform(get("/api/v1/merchants/{id}/sales/export", merchant.getId())
+                        .param("status", "DECLINED").with(merchantJwt(merchant.getId())))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(declinedOnly.split("\r\n")).hasSize(2);
+    }
+
+    @Test
+    void csvExportGuardsOwnershipAndStatus() throws Exception {
+        Merchant mine = merchantRepository.save(new Merchant("Mine CSV", new BigDecimal("2.90")));
+        Merchant theirs = merchantRepository.save(new Merchant("Theirs CSV", new BigDecimal("2.90")));
+
+        mockMvc.perform(get("/api/v1/merchants/{id}/sales/export", theirs.getId()).with(merchantJwt(mine.getId())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/merchants/{id}/sales/export", mine.getId()).param("status", "BOGUS")
+                        .with(merchantJwt(mine.getId())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
     }
 }
