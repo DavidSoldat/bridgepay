@@ -6,4 +6,5 @@ export interface MerchantSaleResponse {
   installmentCount: number | null;
   installmentAmount: number | null;
   decisionAt: string | null;
+  feeAmount: number | null;
 }

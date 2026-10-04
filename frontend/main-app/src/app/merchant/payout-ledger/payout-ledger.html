@@ -24,7 +24,9 @@
       <tbody>
         @for (row of rows(); track row.id) {
           <tr class="border-b border-hairline last:border-0">
-            <td class="px-6 py-3 text-right font-mono">{{ row.amount | number: '1.2-2' }}</td>
+            <td class="px-6 py-3 text-right font-mono" [class.line-through]="row.status === 'REFUNDED'" [class.text-ink-muted]="row.status === 'REFUNDED'">
+              {{ row.amount | number: '1.2-2' }}
+            </td>
             <td class="px-6 py-3 text-right font-mono">{{ row.feeAmount | number: '1.2-2' }}</td>
             <td class="px-6 py-3"><app-status-badge [status]="row.status" /></td>
             <td class="px-6 py-3 font-mono">{{ row.paidAt ? (row.paidAt | date: 'MMM d, y') : '—' }}</td>

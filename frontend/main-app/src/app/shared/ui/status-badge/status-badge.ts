@@ -19,6 +19,8 @@ const STATUSES: Record<string, { label: string; tone: Tone }> = {
   COMPLETED: { label: 'Completed', tone: 'paid' },
   CANCELLED: { label: 'Cancelled', tone: 'neutral' },
   SCHEDULED: { label: 'Scheduled', tone: 'neutral' },
+  REFUND_PENDING: { label: 'Refund pending', tone: 'review' },
+  REFUNDED: { label: 'Refunded', tone: 'neutral' },
 };
 
 // Whole class names so Tailwind's scanner finds them.

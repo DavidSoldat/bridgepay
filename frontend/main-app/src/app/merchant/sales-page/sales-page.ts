@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe, DecimalPipe, PercentPipe } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, finalize, map, of, startWith, switchMap } from 'rxjs';
@@ -13,8 +14,10 @@ import { Sparkline } from '../../shared/charts/sparkline/sparkline';
 import { FunnelBars, FunnelStep } from '../../shared/charts/funnel-bars/funnel-bars';
 import { Change, changeClass, parseDays, pointsChange, relativeChange } from '../../shared/charts/change';
 import { MerchantDashboard } from '../../shared/models/merchant-dashboard';
+import { MerchantSaleResponse } from '../../shared/models/merchant-sale';
+import { ToastService } from '../../shared/ui/toast-service';
 
-export const SALE_FILTERS = ['ALL', 'APPROVED', 'MANUAL_REVIEW', 'DECLINED'] as const;
+export const SALE_FILTERS = ['ALL', 'APPROVED', 'MANUAL_REVIEW', 'DECLINED', 'REFUNDED'] as const;
 export type SaleFilter = (typeof SALE_FILTERS)[number];
 
 const SALE_FILTER_LABELS: Record<SaleFilter, string> = {
@@ -22,6 +25,7 @@ const SALE_FILTER_LABELS: Record<SaleFilter, string> = {
   APPROVED: 'Approved',
   MANUAL_REVIEW: 'In review',
   DECLINED: 'Declined',
+  REFUNDED: 'Refunded',
 };
 
 @Component({
@@ -83,7 +87,13 @@ export class SalesPage {
   protected readonly loading = signal(true);
 
   // filter and page change together on a filter click; one computed keeps that to a single fetch.
-  private readonly query = computed(() => ({ status: this.filter(), page: this.page() }));
+  private readonly toast = inject(ToastService);
+  /** Bumped after a refund so the list refetches the same filter and page. */
+  private readonly reload = signal(0);
+  protected readonly confirmingId = signal<string | null>(null);
+  protected readonly refundingId = signal<string | null>(null);
+
+  private readonly query = computed(() => ({ status: this.filter(), page: this.page(), reload: this.reload() }));
 
   private readonly result = toSignal(
     toObservable(this.query).pipe(
@@ -113,6 +123,49 @@ export class SalesPage {
   protected selectFilter(status: SaleFilter): void {
     this.filter.set(status);
     this.page.set(0);
+  }
+
+  protected canRefund(row: MerchantSaleResponse): boolean {
+    return row.status === 'APPROVED' || row.status === 'COMPLETED';
+  }
+
+  protected netOf(row: MerchantSaleResponse): number | null {
+    return row.feeAmount === null ? null : row.amount - row.feeAmount;
+  }
+
+  protected confirmRefund(row: MerchantSaleResponse): void {
+    this.refundingId.set(row.id);
+    this.sales
+      .refund(this.merchantId, row.id)
+      .pipe(finalize(() => this.refundingId.set(null)))
+      .subscribe({
+        next: () => {
+          this.confirmingId.set(null);
+          this.toast.show('success', 'Refund requested');
+          this.reload.update((n) => n + 1);
+        },
+        error: (err: unknown) => {
+          const message =
+            err instanceof HttpErrorResponse && err.status === 409 && err.error?.message
+              ? err.error.message
+              : 'Refund failed — try again.';
+          this.toast.show('error', message);
+        },
+      });
+  }
+
+  protected exportCsv(): void {
+    this.sales.exportCsv(this.merchantId, this.filter()).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `bridgepay-sales-${new Date().toISOString().slice(0, 10)}.csv`;
+        link.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => this.toast.show('error', 'Couldn’t export sales.'),
+    });
   }
 
   protected prevPage(): void {
