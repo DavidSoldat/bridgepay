@@ -127,6 +127,22 @@ class RepaymentEventConsumerIntegrationTest extends AbstractKafkaIntegrationTest
     }
 
     @Test
+    void planRefundedEvent_isRecorded() {
+        UUID eventId = UuidCreator.getTimeOrderedEpoch();
+        UUID applicantId = UuidCreator.getTimeOrderedEpoch();
+        UUID applicationId = UuidCreator.getTimeOrderedEpoch();
+        UUID planId = UuidCreator.getTimeOrderedEpoch();
+        var envelope = new EventEnvelope<>(eventId, "repayments.plan-refunded", Instant.now(), planId, 1,
+                new RepaymentEvents.PlanRefunded(applicantId, applicationId, planId, new BigDecimal("17.44")));
+
+        publish("repayments.plan-refunded", applicationId.toString(), objectMapper.writeValueAsString(envelope));
+
+        NotificationLog row = awaitNotificationLogged(eventId, applicantId, NotificationType.PLAN_REFUNDED);
+        assertThat(row.getTitle()).isEqualTo("Refund issued");
+        assertThat(row.getApplicationId()).isEqualTo(applicationId);
+    }
+
+    @Test
     void redeliveredEvent_doesNotInsertSecondRow() {
         UUID eventId = UuidCreator.getTimeOrderedEpoch();
         UUID applicantId = UuidCreator.getTimeOrderedEpoch();

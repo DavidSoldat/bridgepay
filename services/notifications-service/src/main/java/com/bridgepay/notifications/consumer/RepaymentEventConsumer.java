@@ -58,4 +58,11 @@ public class RepaymentEventConsumer {
         RepaymentEvents.PlanCancelled payload = envelope.payload();
         notificationService.recordAndSend(envelope.eventId(), NotificationCopy.planCancelled(payload));
     }
+
+    @KafkaListener(topics = "repayments.plan-refunded")
+    public void onPlanRefunded(String message) {
+        EventEnvelope<RepaymentEvents.PlanRefunded> envelope = objectMapper.readValue(message,
+                objectMapper.getTypeFactory().constructParametricType(EventEnvelope.class, RepaymentEvents.PlanRefunded.class));
+        notificationService.recordAndSend(envelope.eventId(), NotificationCopy.planRefunded(envelope.payload()));
+    }
 }

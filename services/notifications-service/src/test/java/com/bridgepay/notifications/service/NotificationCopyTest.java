@@ -77,4 +77,22 @@ class NotificationCopyTest {
         assertThat(cancelled.body()).isEqualTo("The first payment wasn't made within 24 hours.");
         assertThat(cancelled.applicationId()).isEqualTo(application);
     }
+
+    @Test
+    void planRefunded_saysHowMuchIsComingBack_orThatNothingWasCharged() {
+        UUID applicant = UUID.randomUUID();
+        UUID application = UUID.randomUUID();
+
+        NotificationDraft refunded = NotificationCopy.planRefunded(new RepaymentEvents.PlanRefunded(
+                applicant, application, UUID.randomUUID(), new BigDecimal("34.88")));
+        assertThat(refunded.type()).isEqualTo(NotificationType.PLAN_REFUNDED);
+        assertThat(refunded.title()).isEqualTo("Refund issued");
+        assertThat(refunded.body()).isEqualTo("$34.88 is on its way back to your card. Your remaining payments are cancelled.");
+        assertThat(refunded.applicationId()).isEqualTo(application);
+
+        NotificationDraft cancelled = NotificationCopy.planRefunded(new RepaymentEvents.PlanRefunded(
+                applicant, application, UUID.randomUUID(), new BigDecimal("0.00")));
+        assertThat(cancelled.title()).isEqualTo("Order cancelled");
+        assertThat(cancelled.body()).isEqualTo("The merchant cancelled this order. You haven't been charged.");
+    }
 }

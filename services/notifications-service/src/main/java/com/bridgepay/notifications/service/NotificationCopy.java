@@ -64,4 +64,13 @@ public final class NotificationCopy {
         return NotificationDraft.simple(e.applicantId(), PLAN_CANCELLED, "Order cancelled",
                 "The first payment wasn't made within 24 hours.", e.applicationId());
     }
+
+    public static NotificationDraft planRefunded(RepaymentEvents.PlanRefunded e) {
+        return e.refundedAmount().signum() > 0
+                ? NotificationDraft.simple(e.applicantId(), PLAN_REFUNDED, "Refund issued",
+                        money(e.refundedAmount()) + " is on its way back to your card. Your remaining payments are cancelled.",
+                        e.applicationId())
+                : NotificationDraft.simple(e.applicantId(), PLAN_REFUNDED, "Order cancelled",
+                        "The merchant cancelled this order. You haven't been charged.", e.applicationId());
+    }
 }
