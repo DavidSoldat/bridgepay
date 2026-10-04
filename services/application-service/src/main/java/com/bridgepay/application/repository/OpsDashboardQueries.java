@@ -35,7 +35,7 @@ public class OpsDashboardQueries {
     }
 
     private static final String IN_PERIOD = "(a.created_at AT TIME ZONE :tz)::date BETWEEN :from AND :to";
-    private static final String APPROVED = "a.status IN ('APPROVED', 'COMPLETED', 'DEFAULTED')";
+    private static final String APPROVED = "a.status IN ('APPROVED', 'COMPLETED', 'DEFAULTED', 'REFUND_PENDING', 'REFUNDED')";
     /** %s is an optional FILTER clause: it must sit on the aggregate itself, inside round(). */
     private static final String MEDIAN_REVIEW =
             "round(percentile_cont(0.5) WITHIN GROUP (ORDER BY extract(epoch FROM a.decision_at - a.created_at)) %s)";
