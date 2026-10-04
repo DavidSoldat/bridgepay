@@ -152,12 +152,29 @@ public class CreditApplication {
     public BigDecimal outstanding() {
         BigDecimal owed = switch (status) {
             case MANUAL_REVIEW -> amount;
-            case APPROVED -> amount.subtract(
+            case APPROVED, REFUND_PENDING -> amount.subtract(
                     (installmentAmount != null ? installmentAmount : BigDecimal.ZERO)
                             .multiply(BigDecimal.valueOf(installmentsPaid)));
             default -> BigDecimal.ZERO;
         };
         return owed.max(BigDecimal.ZERO).setScale(2);
+    }
+
+    /** A merchant refund; only a sale that went through can be refunded, and only once. */
+    public void requestRefund() {
+        if (status != ApplicationStatus.APPROVED && status != ApplicationStatus.COMPLETED) {
+            throw new IllegalStateException("Only approved or completed orders can be refunded (this one is " + status + ")");
+        }
+        status = ApplicationStatus.REFUND_PENDING;
+    }
+
+    /** The refund landed in Paddle. Idempotent; anything not waiting on a refund is left alone. */
+    public boolean markRefunded() {
+        if (status != ApplicationStatus.REFUND_PENDING) {
+            return status == ApplicationStatus.REFUNDED;
+        }
+        status = ApplicationStatus.REFUNDED;
+        return true;
     }
 
     public int getInstallmentsPaid() {

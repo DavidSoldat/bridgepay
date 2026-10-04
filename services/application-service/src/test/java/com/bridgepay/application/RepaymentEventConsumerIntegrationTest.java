@@ -120,6 +120,45 @@ class RepaymentEventConsumerIntegrationTest {
         return applicationRepository.findById(applicationId).orElseThrow();
     }
 
+    private void planRefunded(UUID applicationId, String amount) {
+        publish("repayments.plan-refunded", new RepaymentEvents.PlanRefunded(
+                UUID.randomUUID(), applicationId, UUID.randomUUID(), new BigDecimal(amount)));
+    }
+
+    @Test
+    void planRefunded_refundsTheOrder_andCancelsAnUnpaidPayout() throws Exception {
+        UUID applicationId = approvedCheckout();
+        CreditApplication app = application(applicationId);
+        app.requestRefund();
+        applicationRepository.save(app);
+
+        planRefunded(applicationId, "0.00");
+
+        await().atMost(Duration.ofSeconds(20)).untilAsserted(() -> {
+            assertThat(application(applicationId).getStatus()).isEqualTo(ApplicationStatus.REFUNDED);
+            assertThat(payout(applicationId).getStatus()).isEqualTo(PayoutStatus.CANCELLED);
+        });
+    }
+
+    @Test
+    void planRefunded_clawsBackAPaidPayout_andRedeliveryChangesNothing() throws Exception {
+        UUID applicationId = approvedCheckout();
+        installmentPaid(applicationId);
+        await().atMost(Duration.ofSeconds(20)).until(() -> payout(applicationId).getStatus() == PayoutStatus.PAID);
+        CreditApplication app = application(applicationId);
+        app.requestRefund();
+        applicationRepository.save(app);
+
+        planRefunded(applicationId, "25.00");
+        await().atMost(Duration.ofSeconds(20)).until(() -> payout(applicationId).getStatus() == PayoutStatus.REFUNDED);
+
+        planRefunded(applicationId, "25.00");
+        await().pollDelay(Duration.ofSeconds(3)).atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            assertThat(application(applicationId).getStatus()).isEqualTo(ApplicationStatus.REFUNDED);
+            assertThat(payout(applicationId).getStatus()).isEqualTo(PayoutStatus.REFUNDED);
+        });
+    }
+
     @Test
     void installmentPaid_recordsHowManyAreDone_andRedeliveryOrLateEventsDontChangeIt() throws Exception {
         UUID applicationId = approvedCheckout();   // 100.00 -> 4 x 25.00

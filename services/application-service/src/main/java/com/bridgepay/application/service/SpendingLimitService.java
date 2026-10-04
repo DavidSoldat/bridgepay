@@ -16,7 +16,8 @@ import java.util.UUID;
 public class SpendingLimitService {
 
     private static final EnumSet<ApplicationStatus> HOLDING_LIMIT =
-            EnumSet.of(ApplicationStatus.APPROVED, ApplicationStatus.MANUAL_REVIEW);
+            EnumSet.of(ApplicationStatus.APPROVED, ApplicationStatus.MANUAL_REVIEW,
+                    ApplicationStatus.REFUND_PENDING);
 
     private final CreditLimitClient creditLimitClient;
     private final CreditApplicationRepository applicationRepository;

@@ -38,11 +38,13 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 @Service
 public class CreditApplicationService {
@@ -223,15 +225,52 @@ public class CreditApplicationService {
                 ? applicationRepository.findByMerchantIdOrderByCreatedAtDesc(merchantId, pageable)
                 : applicationRepository.findByMerchantIdAndStatusOrderByCreatedAtDesc(
                         merchantId, ApplicationStatus.valueOf(status), pageable);
-        return page.map(application -> new MerchantSaleResponse(
+        Map<UUID, BigDecimal> fees = merchantPayoutRepository
+                .findByApplicationIdIn(page.getContent().stream().map(CreditApplication::getId).toList()).stream()
+                .collect(Collectors.toMap(p -> p.getApplication().getId(), MerchantPayout::getFeeAmount));
+        return page.map(application -> toSale(application, fees.get(application.getId())));
+    }
+
+    /** Queues a full refund; repayment-reconciliation does the Paddle side and answers with plan-refunded. */
+    @Transactional
+    public MerchantSaleResponse requestRefund(UUID merchantId, UUID applicationId) {
+        CreditApplication application = applicationRepository.findByIdAndMerchantId(applicationId, merchantId)
+                .orElseThrow(() -> new NoSuchElementException("Order not found"));
+        application.requestRefund();
+        writeOutboxEvent("applications.refund-requested", application.getId(), EventEnvelope.of(
+                "application.refund-requested", application.getId(),
+                new ApplicationEvents.RefundRequested(application.getId(), merchantId, application.getApplicantId())));
+        BigDecimal fee = merchantPayoutRepository.findByApplicationId(applicationId)
+                .map(MerchantPayout::getFeeAmount).orElse(null);
+        return toSale(application, fee);
+    }
+
+    /** The shopper has their money back: the order is refunded and the merchant payout reversed (fee kept). */
+    @Transactional
+    public void recordRefund(UUID applicationId) {
+        if (applicationId == null) {
+            log.warn("plan-refunded without applicationId, skipping");
+            return;
+        }
+        applicationRepository.findById(applicationId).ifPresentOrElse(application -> {
+            if (!application.markRefunded()) {
+                log.warn("plan-refunded for application {} in status {}, ignoring", applicationId, application.getStatus());
+                return;
+            }
+            merchantPayoutRepository.findByApplicationId(applicationId).ifPresent(MerchantPayout::reverse);
+        }, () -> log.warn("No application {} on plan-refunded, skipping", applicationId));
+    }
+
+    private static MerchantSaleResponse toSale(CreditApplication application, BigDecimal feeAmount) {
+        return new MerchantSaleResponse(
                 application.getId(),
                 application.getCreatedAt(),
                 application.getAmount(),
                 application.getStatus().name(),
                 application.getInstallmentCount(),
                 application.getInstallmentAmount(),
-                application.getDecisionAt()
-        ));
+                application.getDecisionAt(),
+                feeAmount);
     }
 
     /**

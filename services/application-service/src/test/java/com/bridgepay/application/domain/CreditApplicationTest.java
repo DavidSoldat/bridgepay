@@ -7,6 +7,7 @@ import java.math.RoundingMode;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CreditApplicationTest {
 
@@ -85,5 +86,36 @@ class CreditApplicationTest {
         assertThat(declined.complete()).isFalse();
         assertThat(declined.markDefaulted()).isFalse();
         assertThat(declined.getStatus()).isEqualTo(ApplicationStatus.DECLINED);
+    }
+
+    @Test
+    void anApprovedOrCompletedOrderCanBeRefunded_onlyOnce() {
+        CreditApplication approved = application("100.00", ApplicationStatus.APPROVED);
+        approved.requestRefund();
+        assertThat(approved.getStatus()).isEqualTo(ApplicationStatus.REFUND_PENDING);
+        assertThatThrownBy(approved::requestRefund).isInstanceOf(IllegalStateException.class);
+
+        CreditApplication completed = application("100.00", ApplicationStatus.APPROVED);
+        completed.complete();
+        completed.requestRefund();
+        assertThat(completed.getStatus()).isEqualTo(ApplicationStatus.REFUND_PENDING);
+    }
+
+    @Test
+    void anOrderInReviewCannotBeRefunded() {
+        CreditApplication inReview = application("100.00", ApplicationStatus.MANUAL_REVIEW);
+        assertThatThrownBy(inReview::requestRefund).isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void aPendingRefundStillHoldsTheSpendingLimit_aFinishedOneDoesNot() {
+        CreditApplication app = application("100.00", ApplicationStatus.APPROVED);
+        app.recordInstallmentPaid(1);
+        app.requestRefund();
+        assertThat(app.outstanding()).isEqualByComparingTo("75.00");
+
+        app.markRefunded();
+        assertThat(app.getStatus()).isEqualTo(ApplicationStatus.REFUNDED);
+        assertThat(app.outstanding()).isEqualByComparingTo("0.00");
     }
 }

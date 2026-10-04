@@ -85,6 +85,15 @@ public class MerchantPayout {
         }
     }
 
+    /** A merchant refund: an unpaid payout never happens, a paid one is clawed back. The fee is kept either way. */
+    public void reverse() {
+        if (status == PayoutStatus.PENDING) {
+            status = PayoutStatus.CANCELLED;
+        } else if (status == PayoutStatus.PAID) {
+            status = PayoutStatus.REFUNDED;
+        }
+    }
+
     public UUID getId() {
         return id;
     }

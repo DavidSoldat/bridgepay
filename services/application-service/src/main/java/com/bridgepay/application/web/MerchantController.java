@@ -6,6 +6,8 @@ import com.bridgepay.application.dto.MerchantDashboardResponse;
 import com.bridgepay.application.service.CreditApplicationService;
 import com.bridgepay.application.service.MerchantDashboardService;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -13,6 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -44,6 +47,14 @@ public class MerchantController {
                                             @RequestParam(defaultValue = "ALL") String status, Pageable pageable) {
         requireOwnMerchant(jwt, id);
         return applicationService.listSalesForMerchant(id, status, pageable);
+    }
+
+    @PostMapping("/{id}/orders/{applicationId}/refund")
+    @PreAuthorize("hasRole('MERCHANT')")
+    public ResponseEntity<MerchantSaleResponse> refund(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
+                                                       @PathVariable UUID applicationId) {
+        requireOwnMerchant(jwt, id);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(applicationService.requestRefund(id, applicationId));
     }
 
     @GetMapping("/{id}/dashboard")

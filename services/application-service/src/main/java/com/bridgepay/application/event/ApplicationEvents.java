@@ -5,6 +5,9 @@ import java.util.UUID;
 
 public final class ApplicationEvents {
 
+    public record RefundRequested(UUID applicationId, UUID merchantId, UUID applicantId) {
+    }
+
     private ApplicationEvents() {
     }
 
