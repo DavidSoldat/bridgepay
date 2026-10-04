@@ -66,7 +66,14 @@ public class RefundService {
         RepaymentPlan plan = planRepository.findByIdForUpdate(planId).orElseThrow();
 
         if (plan.getStatus() == PlanStatus.REFUNDED) {
-            publish(plan, refundedTotal(installments(plan)));
+            // The original plan-refunded event committed atomically with REFUNDED; republishing would only
+            // send the shopper a second notification on Kafka redelivery.
+            log.debug("Plan {} already refunded, nothing to do", plan.getId());
+            return;
+        }
+        if (plan.getStatus() == PlanStatus.CANCELLED) {
+            // Unpaid-order expiry won the race: nothing was ever charged, just let application-service finish.
+            publish(plan, BigDecimal.ZERO);
             return;
         }
         if (plan.getStatus() != PlanStatus.ACTIVE && plan.getStatus() != PlanStatus.COMPLETED) {
@@ -79,6 +86,8 @@ public class RefundService {
                 // Paid in Paddle but not recorded yet: record it the normal way first, then refund it below.
                 webhookService.handle("transaction.completed", paid.get());
             } else {
+                // ponytail: if Paddle cancels but our commit fails, retries fail on the already-cancelled transaction
+                // (same ceiling as FirstPaymentExpiryJob); treat Paddle's "already canceled" as success if it shows up.
                 paddleClient.cancelTransaction(plan.getPaddleInitialTransactionId());
             }
         }

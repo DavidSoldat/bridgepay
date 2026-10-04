@@ -75,7 +75,9 @@ export class InstallmentSchedule {
   private readonly activePlan = computed(() => {
     const s = this.state();
     // Before installment 1 is paid, FirstPayment owns the plan (Paddle checkout), not this component.
-    return s.kind === 'plan' && s.plan.status === 'ACTIVE' && s.plan.checkoutTransactionId === null ? s.plan : null;
+    // Not on a REFUND_PENDING/REFUNDED order either: a payment there would only have to be given back.
+    return s.kind === 'plan' && s.plan.status === 'ACTIVE' && s.plan.checkoutTransactionId === null &&
+      this.application().status === 'APPROVED' ? s.plan : null;
   });
   private readonly scheduled = computed(
     () => this.activePlan()?.installments.filter((i) => i.status === 'SCHEDULED') ?? [],

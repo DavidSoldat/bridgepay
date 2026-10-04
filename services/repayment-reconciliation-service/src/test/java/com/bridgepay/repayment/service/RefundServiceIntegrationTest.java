@@ -302,7 +302,7 @@ class RefundServiceIntegrationTest {
     }
 
     @Test
-    void alreadyRefundedPlan_republishesTheEvent_withoutCallingPaddle() {
+    void alreadyRefundedPlan_isANoOp() {
         RepaymentPlan plan = plan("twice", 1);
         refundService.refund(plan.getApplicationId());
         PADDLE.calls.clear();
@@ -310,7 +310,46 @@ class RefundServiceIntegrationTest {
         refundService.refund(plan.getApplicationId());
 
         assertThat(PADDLE.calls).isEmpty();
-        assertThat(refundedEvents(plan)).isEqualTo(2);
+        assertThat(refundedEvents(plan)).isEqualTo(1);
+    }
+
+    @Test
+    void aPaymentCompletingOnARefundedPlan_isRefundedAutomatically_andPlanStaysRefunded() {
+        RepaymentPlan plan = plan("late_pay", 1);
+        refundService.refund(plan.getApplicationId());
+        PADDLE.calls.clear();
+
+        webhookService.handle("transaction.completed", new PaddleWebhookData("txn_new_late", "sub_late_pay", null, null));
+
+        assertThat(PADDLE.calls).containsExactly("refund:txn_new_late");
+        assertThat(reload(plan).getStatus()).isEqualTo(PlanStatus.REFUNDED);
+    }
+
+    @Test
+    void theWebhookForATransactionTheRefundAlreadyHandled_isADuplicate_notRefundedAgain() {
+        RepaymentPlan plan = plan("dup", 1);
+        refundService.refund(plan.getApplicationId());
+        PADDLE.calls.clear();
+
+        webhookService.handle("transaction.completed", new PaddleWebhookData("txn_initial_dup", "sub_dup", null, null));
+
+        assertThat(PADDLE.calls).isEmpty();
+    }
+
+    @Test
+    void cancelledPlan_isAcknowledgedWithZero_withoutCallingPaddle() {
+        RepaymentPlan plan = plan("cancelled", 0);
+        plan.markCancelled();
+        planRepository.save(plan);
+
+        refundService.refund(plan.getApplicationId());
+
+        assertThat(PADDLE.calls).isEmpty();
+        assertThat(reload(plan).getStatus()).isEqualTo(PlanStatus.CANCELLED);
+        assertThat(outboxEventRepository.findAll()).anySatisfy(e -> {
+            assertThat(e.getTopic()).isEqualTo("repayments.plan-refunded");
+            assertThat(e.getPayload()).contains(plan.getApplicationId().toString()).contains("\"refundedAmount\":0");
+        });
     }
 
     @Test

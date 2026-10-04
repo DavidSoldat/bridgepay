@@ -68,8 +68,8 @@ class PaddleWebhookServiceTest {
     void transactionCompleted_marksInstallmentPaid_andAdoptsSubscriptionId() {
         RepaymentPlan plan = newPlan(4);
         Installment first = newInstallment(plan, 1);
-        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_real")).thenReturn(Optional.empty());
-        when(repaymentPlanRepository.findByPaddleSubscriptionId("txn_placeholder")).thenReturn(Optional.of(plan));
+        when(repaymentPlanRepository.findIdByPaddleSubscriptionId("sub_real")).thenReturn(Optional.empty());
+        when(repaymentPlanRepository.findIdByPaddleSubscriptionId("txn_placeholder")).thenReturn(Optional.of(plan.getId()));
         when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
                 eq(plan), eq(List.of(InstallmentStatus.SCHEDULED, InstallmentStatus.LATE))))
                 .thenReturn(Optional.of(first));
@@ -87,8 +87,8 @@ class PaddleWebhookServiceTest {
     void transactionCompleted_installmentPaidEventCarriesTheApplicationId() {
         RepaymentPlan plan = newPlan(4);
         Installment first = newInstallment(plan, 1);
-        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_real")).thenReturn(Optional.empty());
-        when(repaymentPlanRepository.findByPaddleSubscriptionId("txn_placeholder")).thenReturn(Optional.of(plan));
+        when(repaymentPlanRepository.findIdByPaddleSubscriptionId("sub_real")).thenReturn(Optional.empty());
+        when(repaymentPlanRepository.findIdByPaddleSubscriptionId("txn_placeholder")).thenReturn(Optional.of(plan.getId()));
         when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
                 eq(plan), eq(List.of(InstallmentStatus.SCHEDULED, InstallmentStatus.LATE))))
                 .thenReturn(Optional.of(first));
@@ -104,7 +104,7 @@ class PaddleWebhookServiceTest {
     void transactionCompleted_onFinalInstallment_completesPlanAndCancelsSubscription() {
         RepaymentPlan plan = newPlan(1);
         Installment only = newInstallment(plan, 1);
-        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan));
+        when(repaymentPlanRepository.findIdByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan.getId()));
         when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
                 eq(plan), eq(List.of(InstallmentStatus.SCHEDULED, InstallmentStatus.LATE))))
                 .thenReturn(Optional.of(only));
@@ -163,7 +163,7 @@ class PaddleWebhookServiceTest {
     @Test
     void transactionCompleted_redeliveredForAnAlreadyPaidTransaction_doesNotPayTheNextInstallment() {
         RepaymentPlan plan = newPlan(4);
-        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_real")).thenReturn(Optional.of(plan));
+        when(repaymentPlanRepository.findIdByPaddleSubscriptionId("sub_real")).thenReturn(Optional.of(plan.getId()));
         when(installmentRepository.existsByPaddleTransactionId("txn_placeholder")).thenReturn(true);
 
         service.handle("transaction.completed", new PaddleWebhookData("txn_placeholder", "sub_real"));
@@ -181,7 +181,7 @@ class PaddleWebhookServiceTest {
         RepaymentPlan plan = newPlan(4);
         Installment second = newInstallment(plan, 2);
         Installment third = newInstallment(plan, 3);
-        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan));
+        when(repaymentPlanRepository.findIdByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan.getId()));
         when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
                 eq(plan), eq(List.of(InstallmentStatus.SCHEDULED, InstallmentStatus.LATE))))
                 .thenReturn(Optional.of(second), Optional.of(third));
@@ -202,7 +202,7 @@ class PaddleWebhookServiceTest {
         Installment second = newInstallment(plan, 2);
         Installment third = newInstallment(plan, 3);
         Installment fourth = newInstallment(plan, 4);
-        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan));
+        when(repaymentPlanRepository.findIdByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan.getId()));
         when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
                 eq(plan), eq(List.of(InstallmentStatus.SCHEDULED, InstallmentStatus.LATE))))
                 .thenReturn(Optional.of(second), Optional.of(third), Optional.of(fourth));
@@ -220,7 +220,7 @@ class PaddleWebhookServiceTest {
     void transactionCompleted_coveringMoreThanIsLeft_paysWhatIsLeft_andCompletesOnce() {
         RepaymentPlan plan = newPlan(4);
         Installment fourth = newInstallment(plan, 4);
-        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan));
+        when(repaymentPlanRepository.findIdByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan.getId()));
         when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
                 eq(plan), eq(List.of(InstallmentStatus.SCHEDULED, InstallmentStatus.LATE))))
                 .thenReturn(Optional.of(fourth));
@@ -250,7 +250,7 @@ class PaddleWebhookServiceTest {
         Installment fourth = newInstallment(plan, 4);
         LocalDate thirdDue = third.getDueDate();
         LocalDate fourthDue = fourth.getDueDate();
-        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan));
+        when(repaymentPlanRepository.findIdByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan.getId()));
         when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
                 eq(plan), eq(List.of(InstallmentStatus.SCHEDULED, InstallmentStatus.LATE))))
                 .thenReturn(Optional.of(second));
@@ -275,7 +275,7 @@ class PaddleWebhookServiceTest {
         Installment fourth = newInstallment(plan, 4);
         LocalDate thirdDue = third.getDueDate();
         LocalDate fourthDue = fourth.getDueDate();
-        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan));
+        when(repaymentPlanRepository.findIdByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan.getId()));
         when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
                 eq(plan), eq(List.of(InstallmentStatus.SCHEDULED, InstallmentStatus.LATE))))
                 .thenReturn(Optional.of(second));
@@ -294,8 +294,8 @@ class PaddleWebhookServiceTest {
     void installmentPaidEvent_carriesThePaddleTransactionId() {
         RepaymentPlan plan = newPlan(4);
         Installment first = newInstallment(plan, 1);
-        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_real")).thenReturn(Optional.empty());
-        when(repaymentPlanRepository.findByPaddleSubscriptionId("txn_placeholder")).thenReturn(Optional.of(plan));
+        when(repaymentPlanRepository.findIdByPaddleSubscriptionId("sub_real")).thenReturn(Optional.empty());
+        when(repaymentPlanRepository.findIdByPaddleSubscriptionId("txn_placeholder")).thenReturn(Optional.of(plan.getId()));
         when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
                 eq(plan), eq(List.of(InstallmentStatus.SCHEDULED, InstallmentStatus.LATE))))
                 .thenReturn(Optional.of(first));

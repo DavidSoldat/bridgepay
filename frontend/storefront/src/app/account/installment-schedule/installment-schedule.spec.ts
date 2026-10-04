@@ -142,6 +142,17 @@ describe('InstallmentSchedule', () => {
     expect(button(projected, 'Pay')).toBeUndefined();
   });
 
+  it('offers no payments while the order is awaiting or past a merchant refund', () => {
+    for (const status of ['REFUND_PENDING', 'REFUNDED']) {
+      TestBed.resetTestingModule();
+      const fixture = setup(() => of(activePlan(['PAID', 'SCHEDULED', 'SCHEDULED', 'SCHEDULED'])));
+      fixture.componentRef.setInput('application', { ...app('app-1'), status });
+      fixture.detectChanges();
+      expect(button(fixture, 'Pay next payment now')).toBeUndefined();
+      expect(button(fixture, 'Pay off')).toBeUndefined();
+    }
+  });
+
   it('explains instead of offering payments while a payment is missed', () => {
     const fixture = render(activePlan(['PAID', 'LATE', 'SCHEDULED', 'SCHEDULED']));
     expect(button(fixture, 'Pay')).toBeUndefined();
