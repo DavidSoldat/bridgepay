@@ -4,5 +4,7 @@ public enum InstallmentStatus {
     SCHEDULED,
     PAID,
     LATE,
-    MISSED
+    MISSED,
+    REFUNDED,
+    CANCELLED
 }

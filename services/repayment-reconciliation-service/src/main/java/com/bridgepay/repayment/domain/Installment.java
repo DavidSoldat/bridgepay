@@ -69,6 +69,23 @@ public class Installment {
         this.paidAt = Instant.now();
     }
 
+    /** Paddle adjustment that refunded this installment's transaction; shared by installments paid together. */
+    @Column(name = "refund_adjustment_id", length = 64)
+    private String refundAdjustmentId;
+
+    public void markRefunded(String adjustmentId) {
+        this.status = InstallmentStatus.REFUNDED;
+        this.refundAdjustmentId = adjustmentId;
+    }
+
+    public void markCancelled() {
+        this.status = InstallmentStatus.CANCELLED;
+    }
+
+    public String getRefundAdjustmentId() {
+        return refundAdjustmentId;
+    }
+
     public void markLate() {
         this.status = InstallmentStatus.LATE;
     }
