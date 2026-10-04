@@ -71,6 +71,11 @@ public class PaddleWebhookService {
         // Row lock: the synchronous early-payment apply, Paddle's webhook and reconcile-on-read can all deliver the
         // same transaction at once; serialising here makes the dedupe check below reliable.
         RepaymentPlan plan = repaymentPlanRepository.findByIdForUpdate(found.getId()).orElse(found);
+        if (plan.getStatus() == PlanStatus.REFUNDED) {
+            // ponytail: a renewal that charged in the moment before our cancel isn't refunded automatically.
+            log.warn("Transaction {} completed on refunded plan {} - refund it by hand in Paddle", data.id(), plan.getId());
+            return;
+        }
         if (data.subscriptionId() != null && !data.subscriptionId().equals(plan.getPaddleSubscriptionId())) {
             plan.adoptSubscriptionId(data.subscriptionId());
         }
@@ -134,11 +139,14 @@ public class PaddleWebhookService {
     }
 
     private void handleSubscriptionCanceled(PaddleWebhookData data) {
-        RepaymentPlan plan = repaymentPlanRepository.findByPaddleSubscriptionId(data.id()).orElse(null);
-        if (plan == null) {
+        UUID planId = repaymentPlanRepository.findIdByPaddleSubscriptionId(data.id()).orElse(null);
+        if (planId == null) {
             log.warn("No repayment plan found for canceled subscription {}", data.id());
             return;
         }
+        // Locked, and the first load of the plan: our own refund cancels the subscription before it commits;
+        // waiting here means we see REFUNDED instead of defaulting the plan and failing the refund.
+        RepaymentPlan plan = repaymentPlanRepository.findByIdForUpdate(planId).orElseThrow();
         if (plan.getStatus() != PlanStatus.ACTIVE) {
             log.debug("Subscription {} cancel confirmed for plan {} already in status {}",
                     data.id(), plan.getId(), plan.getStatus());

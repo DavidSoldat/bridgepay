@@ -22,6 +22,14 @@ public interface RepaymentPlanRepository extends JpaRepository<RepaymentPlan, UU
 
     Optional<RepaymentPlan> findByPaddleSubscriptionId(String paddleSubscriptionId);
 
+    // Id-only: Hibernate hands back an already-loaded entity from a locking query without refreshing it, so
+    // callers that lock must not load the plan before the lock.
+    @Query("select p.id from RepaymentPlan p where p.paddleSubscriptionId = :subscriptionId")
+    Optional<UUID> findIdByPaddleSubscriptionId(@Param("subscriptionId") String subscriptionId);
+
+    @Query("select p.id from RepaymentPlan p where p.applicationId = :applicationId")
+    Optional<UUID> findIdByApplicationId(@Param("applicationId") UUID applicationId);
+
     List<RepaymentPlan> findByApplicantId(UUID applicantId);
 
     long countByApplicantIdAndStatus(UUID applicantId, PlanStatus status);

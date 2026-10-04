@@ -136,7 +136,7 @@ class PaddleWebhookServiceTest {
     void subscriptionCanceled_defaultsAnActivePlan() {
         RepaymentPlan plan = newPlan(4);
         Installment first = newInstallment(plan, 1);
-        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan));
+        when(repaymentPlanRepository.findIdByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan.getId()));
         when(installmentRepository.findFirstByRepaymentPlanAndStatusInOrderBySequenceNumberAsc(
                 eq(plan), eq(List.of(InstallmentStatus.SCHEDULED, InstallmentStatus.LATE))))
                 .thenReturn(Optional.of(first));
@@ -152,7 +152,7 @@ class PaddleWebhookServiceTest {
     void subscriptionCanceled_isANoOp_whenWeAlreadyCompletedThePlanOurselves() {
         RepaymentPlan plan = newPlan(1);
         plan.markCompleted();
-        when(repaymentPlanRepository.findByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan));
+        when(repaymentPlanRepository.findIdByPaddleSubscriptionId("sub_1")).thenReturn(Optional.of(plan.getId()));
 
         service.handle("subscription.canceled", new PaddleWebhookData("sub_1", null));
 

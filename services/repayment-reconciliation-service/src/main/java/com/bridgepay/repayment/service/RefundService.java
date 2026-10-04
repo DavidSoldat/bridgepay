@@ -61,9 +61,9 @@ public class RefundService {
     // webhook defaults the still-ACTIVE plan and the retried refund is rejected; ops sees it in failed events.
     @Transactional
     public void refund(UUID applicationId) {
-        RepaymentPlan found = planRepository.findByApplicationId(applicationId)
+        UUID planId = planRepository.findIdByApplicationId(applicationId)
                 .orElseThrow(() -> new IllegalStateException("No repayment plan yet for application " + applicationId));
-        RepaymentPlan plan = planRepository.findByIdForUpdate(found.getId()).orElseThrow();
+        RepaymentPlan plan = planRepository.findByIdForUpdate(planId).orElseThrow();
 
         if (plan.getStatus() == PlanStatus.REFUNDED) {
             publish(plan, refundedTotal(installments(plan)));

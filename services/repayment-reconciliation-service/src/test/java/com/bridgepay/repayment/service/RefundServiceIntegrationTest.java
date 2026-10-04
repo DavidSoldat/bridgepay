@@ -33,6 +33,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -139,6 +144,8 @@ class RefundServiceIntegrationTest {
     @Autowired
     RefundService refundService;
     @Autowired
+    PaddleWebhookService webhookService;
+    @Autowired
     RepaymentPlanRepository planRepository;
     @Autowired
     InstallmentRepository installmentRepository;
@@ -185,6 +192,51 @@ class RefundServiceIntegrationTest {
                 .filter(e -> e.getTopic().equals("repayments.plan-refunded"))
                 .filter(e -> e.getPayload().contains(plan.getApplicationId().toString()))
                 .count();
+    }
+
+    @Test
+    void paddlesOwnCancelWebhook_arrivingMidRefund_leavesThePlanRefunded() throws Exception {
+        RepaymentPlan plan = plan("race", 1);
+        CountDownLatch insideCancel = new CountDownLatch(1);
+        CountDownLatch releaseCancel = new CountDownLatch(1);
+        PADDLE.onCancelSubscription = () -> {
+            insideCancel.countDown();
+            try {
+                releaseCancel.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        };
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<?> refund = executor.submit(() -> refundService.refund(plan.getApplicationId()));
+            assertThat(insideCancel.await(10, TimeUnit.SECONDS)).isTrue();
+
+            // Paddle confirms our cancel before the refund transaction has committed.
+            Future<?> webhook = executor.submit(() -> webhookService.handle("subscription.canceled",
+                    new PaddleWebhookData("sub_race", null, null, null)));
+            Thread.sleep(500);   // give an unlocked handler time to read ACTIVE and commit DEFAULTED
+            releaseCancel.countDown();
+
+            refund.get(20, TimeUnit.SECONDS);
+            webhook.get(20, TimeUnit.SECONDS);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        assertThat(reload(plan).getStatus()).isEqualTo(PlanStatus.REFUNDED);
+    }
+
+    @Test
+    void aRenewalCompletingAfterTheRefund_isIgnored() {
+        RepaymentPlan plan = plan("renewal", 1);
+        refundService.refund(plan.getApplicationId());
+
+        webhookService.handle("transaction.completed", new PaddleWebhookData("txn_renewal_late", "sub_renewal", null, null));
+
+        assertThat(reload(plan).getStatus()).isEqualTo(PlanStatus.REFUNDED);
+        assertThat(statuses(plan)).doesNotContain(InstallmentStatus.PAID);
+        assertThat(installmentRepository.existsByPaddleTransactionId("txn_renewal_late")).isFalse();
     }
 
     @Test
