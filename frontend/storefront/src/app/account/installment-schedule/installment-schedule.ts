@@ -52,9 +52,9 @@ export class InstallmentSchedule {
         this.repaymentPlans.getPlan(app.applicationId).pipe(
           map((plan): ScheduleState => ({ kind: 'plan', plan })),
           catchError((err) =>
-            // 404 = approved but the plan isn't created yet (e.g. still waiting on Paddle).
+            // 404 on an approved order = the plan isn't created yet (e.g. still waiting on Paddle).
             of<ScheduleState>(
-              err instanceof HttpErrorResponse && err.status === 404
+              err instanceof HttpErrorResponse && err.status === 404 && app.status === 'APPROVED'
                 ? { kind: 'projected', installments: projectInstallments(app) }
                 : { kind: 'error' },
             ),

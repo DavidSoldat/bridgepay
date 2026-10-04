@@ -290,4 +290,35 @@ describe('InstallmentSchedule', () => {
     const header = (fixture.nativeElement as HTMLElement).querySelector('thead th');
     expect(header?.textContent?.trim()).toBe('Date');
   });
+
+  it('shows refunded and cancelled installments without any pay buttons', () => {
+    const plan: RepaymentPlanResponse = {
+      planId: 'plan-r', applicationId: 'app-r', status: 'REFUNDED',
+      totalAmount: 200, installmentCount: 4, installmentAmount: 50,
+      installments: [
+        { sequenceNumber: 1, dueDate: '2026-01-01', amount: 50, status: 'REFUNDED', paidAt: '2026-01-01T00:00:00Z' },
+        { sequenceNumber: 2, dueDate: '2026-01-08', amount: 50, status: 'CANCELLED', paidAt: null },
+        { sequenceNumber: 3, dueDate: '2026-01-15', amount: 50, status: 'CANCELLED', paidAt: null },
+        { sequenceNumber: 4, dueDate: '2026-01-22', amount: 50, status: 'CANCELLED', paidAt: null },
+      ],
+      checkoutTransactionId: null,
+    };
+    const fixture = setup(() => of(plan));
+    fixture.componentRef.setInput('application', { ...app('app-r'), status: 'REFUNDED' });
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    const badges = Array.from(el.querySelectorAll('tbody app-status-badge')).map((b) => b.textContent?.trim());
+    expect(badges).toEqual(['Refunded', 'Cancelled', 'Cancelled', 'Cancelled']);
+    expect(Array.from(el.querySelectorAll('button')).filter((b) => b.textContent?.trim().startsWith('Pay'))).toHaveLength(0);
+  });
+
+  it('does not project a schedule for a refunded order whose plan is missing', () => {
+    const fixture = setup(notFound);
+    fixture.componentRef.setInput('application', { ...app('app-r'), status: 'REFUNDED' });
+    fixture.detectChanges();
+
+    expect(text(fixture)).toContain('Could not load the payment schedule');
+    expect((fixture.nativeElement as HTMLElement).querySelector('tbody')).toBeNull();
+  });
 });

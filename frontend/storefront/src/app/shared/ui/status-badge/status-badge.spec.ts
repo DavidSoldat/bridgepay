@@ -17,6 +17,7 @@ describe('StatusBadge', () => {
     ['MANUAL_REVIEW', 'In review', 'review'],
     ['RETRYING', 'Retrying', 'review'],
     ['LATE', 'Late', 'review'],
+    ['REFUND_PENDING', 'Refund pending', 'review'],
     ['DECLINED', 'Declined', 'declined'],
     ['DEFAULTED', 'Defaulted', 'declined'],
     ['FAILED', 'Failed', 'declined'],
@@ -24,6 +25,7 @@ describe('StatusBadge', () => {
     ['PAID', 'Paid', 'paid'],
     ['COMPLETED', 'Completed', 'paid'],
     ['CANCELLED', 'Cancelled', 'neutral'],
+    ['REFUNDED', 'Refunded', 'neutral'],
     ['SCHEDULED', 'Scheduled', 'neutral'],
   ])('shows %s as "%s" in %s colours', (status, label, tone) => {
     const badge = render(status);
