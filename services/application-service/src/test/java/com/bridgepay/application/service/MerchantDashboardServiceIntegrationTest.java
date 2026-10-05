@@ -189,4 +189,23 @@ class MerchantDashboardServiceIntegrationTest {
         assertThatThrownBy(() -> service.dashboard(merchant, 14, UTC, TODAY))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("days");
     }
+
+    @Test
+    void aPendingRefundStillCountsAsApproved_aFinishedRefundOnlyAsACheckout() {
+        UUID refunds = merchantRepository.save(new Merchant("Refunds merchant", new BigDecimal("2.90"))).getId();
+        UUID kept = app(refunds, "APPROVED", "100.00", "2026-09-27T10:00:00Z");
+        payout(kept, "100.00", "2.90", "PAID", "2026-09-27T12:00:00Z");
+        UUID pendingRefund = app(refunds, "REFUND_PENDING", "50.00", "2026-09-27T11:00:00Z");
+        payout(pendingRefund, "50.00", "1.45", "PAID", "2026-09-27T12:00:00Z");
+        UUID refunded = app(refunds, "REFUNDED", "40.00", "2026-09-27T12:00:00Z");
+        payout(refunded, "40.00", "1.16", "REFUNDED", "2026-09-27T13:00:00Z");
+
+        var totals = service.dashboard(refunds, 7, UTC, TODAY).current();
+
+        assertThat(totals.checkouts()).isEqualTo(3);
+        assertThat(totals.approved()).isEqualTo(2);
+        assertThat(totals.approvedVolume()).isEqualByComparingTo("150.00");
+        assertThat(totals.feesPaid()).isEqualByComparingTo("4.35");
+        assertThat(totals.netPaidOut()).isEqualByComparingTo("145.65");
+    }
 }

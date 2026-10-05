@@ -47,7 +47,7 @@ public class MerchantDashboardQueries {
         return jdbc.query("""
                         SELECT date_trunc(:unit, a.created_at AT TIME ZONE :tz)::date AS start,
                                count(*) AS checkouts,
-                               coalesce(sum(a.amount) FILTER (WHERE a.status IN ('APPROVED', 'COMPLETED', 'DEFAULTED')), 0)
+                               coalesce(sum(a.amount) FILTER (WHERE a.status IN ('APPROVED', 'COMPLETED', 'DEFAULTED', 'REFUND_PENDING')), 0)
                                    AS volume
                         FROM application.applications a
                         WHERE a.merchant_id = :merchantId

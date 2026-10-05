@@ -60,7 +60,7 @@ export class Account {
 
   /** Orders that have (or had) a repayment plan worth showing. */
   protected hasSchedule(status: string): boolean {
-    return status === 'APPROVED' || status === 'COMPLETED' || status === 'DEFAULTED';
+    return ['APPROVED', 'COMPLETED', 'DEFAULTED', 'REFUND_PENDING', 'REFUNDED'].includes(status);
   }
 
   protected toggle(applicationId: string): void {

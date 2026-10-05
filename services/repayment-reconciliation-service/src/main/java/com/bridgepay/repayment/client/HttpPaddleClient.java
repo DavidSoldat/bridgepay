@@ -180,6 +180,31 @@ public class HttpPaddleClient implements PaddleClient {
         }, "find latest charge on subscription " + subscriptionId);
     }
 
+    // ponytail: an accepted (pending_approval) adjustment counts as refunded; Paddle's approve/reject outcome
+    // isn't tracked. Add an adjustment.updated webhook -> REFUND_REJECTED + ops alert if rejections show up.
+    @Override
+    public String refundTransaction(String transactionId) {
+        return execute(() -> {
+            AdjustmentListEnvelope existing = restClient.get()
+                    .uri(uriBuilder -> uriBuilder.path("/adjustments")
+                            .queryParam("transaction_id", transactionId)
+                            .queryParam("action", "refund")
+                            .queryParam("status", "pending_approval,approved")
+                            .build())
+                    .retrieve()
+                    .body(AdjustmentListEnvelope.class);
+            if (existing != null && existing.data() != null && !existing.data().isEmpty()) {
+                return existing.data().get(0).id();
+            }
+            return restClient.post()
+                    .uri("/adjustments")
+                    .body(new CreateRefundRequest("refund", "full", transactionId, "Merchant refund"))
+                    .retrieve()
+                    .body(AdjustmentEnvelope.class)
+                    .data().id();
+        }, "refund transaction " + transactionId);
+    }
+
     private static PaddleWebhookData toWebhookData(TransactionData data) {
         return new PaddleWebhookData(data.id(), data.subscriptionId(), data.items(), data.origin());
     }
@@ -268,5 +293,18 @@ public class HttpPaddleClient implements PaddleClient {
     }
 
     private record UpdateTransactionStatusRequest(String status) {
+    }
+
+    private record CreateRefundRequest(String action, String type,
+                                       @JsonProperty("transaction_id") String transactionId, String reason) {
+    }
+
+    private record AdjustmentData(String id, String status) {
+    }
+
+    private record AdjustmentEnvelope(AdjustmentData data) {
+    }
+
+    private record AdjustmentListEnvelope(List<AdjustmentData> data) {
     }
 }

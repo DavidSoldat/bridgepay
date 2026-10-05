@@ -87,6 +87,10 @@ public class RepaymentPlan {
         this.paddleSubscriptionId = subscriptionId;
     }
 
+    public void markRefunded() {
+        this.status = PlanStatus.REFUNDED;
+    }
+
     public void markCompleted() {
         this.status = PlanStatus.COMPLETED;
     }

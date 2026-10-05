@@ -1,8 +1,10 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { BehaviorSubject, Observable, Subject, of, throwError } from 'rxjs';
 import { SalesPage } from './sales-page';
 import { Sales } from '../sales';
+import { ToastService } from '../../shared/ui/toast-service';
 import { Auth } from '../../core/auth';
 import { Page } from '../../shared/models/page';
 import { MerchantSaleResponse } from '../../shared/models/merchant-sale';
@@ -35,11 +37,11 @@ function salesPage(totalPages: number, number = 0): Page<MerchantSaleResponse> {
     content: [
       {
         id: 's-1', createdAt: '2026-09-20T10:00:00Z', amount: 1500, status: 'DECLINED',
-        installmentCount: null, installmentAmount: null, decisionAt: '2026-09-20T10:00:01Z',
+        installmentCount: null, installmentAmount: null, decisionAt: '2026-09-20T10:00:01Z', feeAmount: null,
       },
       {
         id: 's-2', createdAt: '2026-09-19T10:00:00Z', amount: 100, status: 'APPROVED',
-        installmentCount: 4, installmentAmount: 25, decisionAt: '2026-09-19T10:00:01Z',
+        installmentCount: 4, installmentAmount: 25, decisionAt: '2026-09-19T10:00:01Z', feeAmount: 2.9,
       },
     ],
     totalElements: 2, totalPages, number, size: 20,
@@ -49,10 +51,13 @@ function salesPage(totalPages: number, number = 0): Page<MerchantSaleResponse> {
 function setup(stub: {
   list?: (id: string, status: string, page: number) => Observable<Page<MerchantSaleResponse>>;
   dashboard?: (id: string, days: number, tz: string) => Observable<MerchantDashboard>;
+  refund?: (merchantId: string, id: string) => Observable<MerchantSaleResponse>;
+  exportCsv?: (merchantId: string, status: string) => Observable<Blob>;
   query?: Record<string, string>;
 }) {
   const params = new BehaviorSubject(convertToParamMap(stub.query ?? {}));
   const navigate = vi.fn();
+  const toast = { show: vi.fn() };
   TestBed.configureTestingModule({
     imports: [SalesPage],
     providers: [
@@ -61,16 +66,19 @@ function setup(stub: {
         useValue: {
           list: stub.list ?? (() => of(salesPage(1))),
           dashboard: stub.dashboard ?? ((_id: string, days: number) => of(dashboard(days))),
+          refund: stub.refund ?? (() => of({ ...salesPage(1).content[1], status: 'REFUND_PENDING' })),
+          exportCsv: stub.exportCsv ?? (() => of(new Blob(['csv']))),
         },
       },
       { provide: Auth, useValue: { merchantId: () => 'm-1' } },
       { provide: ActivatedRoute, useValue: { queryParamMap: params } },
       { provide: Router, useValue: { navigate } },
+      { provide: ToastService, useValue: toast },
     ],
   });
   const fixture = TestBed.createComponent(SalesPage);
   fixture.detectChanges();
-  return { fixture, el: fixture.nativeElement as HTMLElement, params, navigate };
+  return { fixture, el: fixture.nativeElement as HTMLElement, params, navigate, toast };
 }
 
 function button(el: HTMLElement, label: string): HTMLButtonElement {
@@ -216,5 +224,110 @@ describe('SalesPage', () => {
     const { el } = setup({});
     const tones = Array.from(el.querySelectorAll('tbody [data-tone]')).map((b) => b.getAttribute('data-tone'));
     expect(tones).toEqual(['declined', 'approved']);
+  });
+});
+
+describe('refunds', () => {
+  it('offers Refund only on approved or completed rows', () => {
+    const { el } = setup({});
+    const rows = Array.from(el.querySelectorAll('tbody tr')).filter((r) => r.closest('.card.overflow-x-auto'));
+    expect(rows[0].textContent).not.toContain('Refund');   // DECLINED
+    expect(rows[1].querySelector('button')?.textContent?.trim()).toBe('Refund');   // APPROVED
+  });
+
+  it('asks before refunding, with the amount, the reversed payout and the kept fee', () => {
+    const refund = vi.fn(() => of({ ...salesPage(1).content[1], status: 'REFUND_PENDING' }));
+    const { el, fixture } = setup({ refund });
+
+    button(el, 'Refund').click();
+    fixture.detectChanges();
+
+    expect(el.textContent).toContain('Refund $100.00 to the shopper?');
+    expect(el.textContent).toContain('Your payout of $97.10 will be reversed; the $2.90 fee isn’t refunded.');
+    expect(refund).not.toHaveBeenCalled();
+
+    button(el, 'Keep order').click();
+    fixture.detectChanges();
+    expect(el.textContent).not.toContain('Refund $100.00 to the shopper?');
+    expect(refund).not.toHaveBeenCalled();
+  });
+
+  it('refunds on confirm, says so and reloads the list', () => {
+    const list = vi.fn(() => of(salesPage(1)));
+    const refund = vi.fn(() => of({ ...salesPage(1).content[1], status: 'REFUND_PENDING' }));
+    const { el, fixture, toast } = setup({ list, refund });
+    const callsBefore = list.mock.calls.length;
+
+    button(el, 'Refund').click();
+    fixture.detectChanges();
+    button(el, 'Confirm refund').click();
+    fixture.detectChanges();
+
+    expect(refund).toHaveBeenCalledWith('m-1', 's-2');
+    expect(toast.show).toHaveBeenCalledWith('success', 'Refund requested');
+    expect(list.mock.calls.length).toBe(callsBefore + 1);
+  });
+
+  it('disables Confirm while the refund is in flight', () => {
+    const pending = new Subject<MerchantSaleResponse>();
+    const { el, fixture } = setup({ refund: () => pending });
+
+    button(el, 'Refund').click();
+    fixture.detectChanges();
+    button(el, 'Confirm refund').click();
+    fixture.detectChanges();
+
+    expect(button(el, 'Refunding…').disabled).toBe(true);
+  });
+
+  it('shows the server message on a conflict, and a generic one otherwise', () => {
+    const conflict = new HttpErrorResponse({ status: 409, error: { message: 'Only approved or completed orders can be refunded (this one is REFUND_PENDING)' } });
+    const first = setup({ refund: () => throwError(() => conflict) });
+    button(first.el, 'Refund').click();
+    first.fixture.detectChanges();
+    button(first.el, 'Confirm refund').click();
+    expect(first.toast.show).toHaveBeenCalledWith('error', 'Only approved or completed orders can be refunded (this one is REFUND_PENDING)');
+
+    TestBed.resetTestingModule();
+    const second = setup({ refund: () => throwError(() => new HttpErrorResponse({ status: 503 })) });
+    button(second.el, 'Refund').click();
+    second.fixture.detectChanges();
+    button(second.el, 'Confirm refund').click();
+    expect(second.toast.show).toHaveBeenCalledWith('error', 'Refund failed — try again.');
+  });
+
+  it('offers a Refunded filter', () => {
+    const list = vi.fn(() => of(salesPage(1)));
+    const { el, fixture } = setup({ list });
+    button(el, 'Refunded').click();
+    fixture.detectChanges();
+    expect(list).toHaveBeenLastCalledWith('m-1', 'REFUNDED', 0);
+  });
+});
+
+describe('CSV export', () => {
+  it('downloads the current filter as a file', () => {
+    const exportCsv = vi.fn(() => of(new Blob(['csv'])));
+    const createObjectURL = vi.fn(() => 'blob:x');
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('URL', { ...URL, createObjectURL, revokeObjectURL });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const { el, fixture } = setup({ exportCsv });
+
+    button(el, 'Declined').click();
+    fixture.detectChanges();
+    button(el, 'Export CSV').click();
+
+    expect(exportCsv).toHaveBeenCalledWith('m-1', 'DECLINED');
+    expect(click).toHaveBeenCalled();
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:x');
+    vi.unstubAllGlobals();
+    click.mockRestore();
+  });
+
+  it('says so when the export fails', () => {
+    const { el, toast } = setup({ exportCsv: () => throwError(() => new HttpErrorResponse({ status: 500 })) });
+    button(el, 'Export CSV').click();
+    expect(toast.show).toHaveBeenCalledWith('error', 'Couldn’t export sales.');
   });
 });

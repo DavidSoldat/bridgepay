@@ -15,7 +15,7 @@ import java.util.UUID;
 /**
  * Lists and retries failed_events rows. Retry replays the stored payload
  * in-process through the same listener method Kafka would call - safe
- * because createPlanFromApprovedApplication is idempotent per application.
+ * because both handlers are idempotent per application.
  * Deliberately not @Transactional: the replay runs its own transaction, and
  * wrapping it would mark this one rollback-only when the replay throws.
  */
@@ -23,6 +23,7 @@ import java.util.UUID;
 public class FailedEventService {
 
     static final String APPROVED_TOPIC = "applications.approved";
+    static final String REFUND_TOPIC = "applications.refund-requested";
 
     private final FailedEventRepository failedEventRepository;
     private final ApplicationEventConsumer applicationEventConsumer;
@@ -46,7 +47,7 @@ public class FailedEventService {
         if (event.getStatus() == FailedEventStatus.RESOLVED) {
             throw new IllegalStateException("Failed event " + id + " is already resolved");
         }
-        if (!APPROVED_TOPIC.equals(event.getTopic())) {
+        if (!APPROVED_TOPIC.equals(event.getTopic()) && !REFUND_TOPIC.equals(event.getTopic())) {
             throw new IllegalStateException("No retry handler for topic " + event.getTopic());
         }
         // ponytail: a crash mid-replay leaves the row RETRYING forever; add a stale-claim timeout if that ever happens.
@@ -55,7 +56,11 @@ public class FailedEventService {
         }
         event = failedEventRepository.findById(id).orElseThrow();
         try {
-            applicationEventConsumer.onApproved(event.getPayload());
+            if (REFUND_TOPIC.equals(event.getTopic())) {
+                applicationEventConsumer.onRefundRequested(event.getPayload());
+            } else {
+                applicationEventConsumer.onApproved(event.getPayload());
+            }
             event.markResolved();
         } catch (Exception ex) {
             event.recordFailedRetry(FailedEvent.describe(ex));

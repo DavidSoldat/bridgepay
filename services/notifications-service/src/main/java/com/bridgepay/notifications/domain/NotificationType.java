@@ -8,5 +8,6 @@ public enum NotificationType {
     INSTALLMENT_MISSED,
     PLAN_COMPLETED,
     PLAN_DEFAULTED,
-    PLAN_CANCELLED
+    PLAN_CANCELLED,
+    PLAN_REFUNDED
 }

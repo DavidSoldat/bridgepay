@@ -16,4 +16,7 @@ public final class ApplicationEvents {
     public record Approved(UUID applicantId, UUID merchantId, BigDecimal amount,
                             int installmentCount, BigDecimal installmentAmount) {
     }
+
+    public record RefundRequested(UUID applicationId, UUID merchantId, UUID applicantId) {
+    }
 }

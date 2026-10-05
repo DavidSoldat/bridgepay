@@ -8,6 +8,7 @@ import com.bridgepay.application.client.ScoreDecision;
 import com.bridgepay.application.client.ScoreResult;
 import com.bridgepay.application.domain.Merchant;
 import com.bridgepay.application.repository.MerchantRepository;
+import com.bridgepay.application.repository.OutboxEventRepository;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,11 +35,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.closeTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -102,6 +105,8 @@ class MerchantControllerIntegrationTest {
     private ObjectMapper objectMapper;
     @Autowired
     private MerchantRepository merchantRepository;
+    @Autowired
+    private OutboxEventRepository outboxEventRepository;
 
     private RequestPostProcessor merchantJwt(UUID merchantId) {
         return jwt().jwt(j -> j.subject(UUID.randomUUID().toString())
@@ -109,14 +114,101 @@ class MerchantControllerIntegrationTest {
                 .authorities(new SimpleGrantedAuthority("ROLE_MERCHANT"));
     }
 
-    private void checkout(UUID merchantId, String amount) throws Exception {
+    private UUID checkout(UUID merchantId, String amount) throws Exception {
         String payload = objectMapper.writeValueAsString(Map.of("merchantId", merchantId.toString(), "amount", amount));
-        mockMvc.perform(post("/api/v1/applications")
+        String body = mockMvc.perform(post("/api/v1/applications")
                         .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString())))
                         .header("Idempotency-Key", UUID.randomUUID().toString())
                         .contentType("application/json")
                         .content(payload))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        return UUID.fromString(objectMapper.readTree(body).get("applicationId").asText());
+    }
+
+    @Test
+    void merchantRefundsAnApprovedOrder_itGoesPendingAndARefundRequestIsQueued() throws Exception {
+        Merchant merchant = merchantRepository.save(new Merchant("Merchant R", new BigDecimal("2.90")));
+        UUID applicationId = checkout(merchant.getId(), "100.00");
+
+        mockMvc.perform(post("/api/v1/merchants/{id}/orders/{applicationId}/refund", merchant.getId(), applicationId)
+                        .with(merchantJwt(merchant.getId())))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.status").value("REFUND_PENDING"))
+                .andExpect(jsonPath("$.feeAmount").value(2.90));
+
+        assertThat(outboxEventRepository.findAll()).filteredOn(e -> e.getTopic().equals("applications.refund-requested"))
+                .filteredOn(e -> e.getPayload().contains(applicationId.toString()))
+                .singleElement()
+                .satisfies(e -> {
+                    assertThat(e.getPartitionKey()).isEqualTo(applicationId.toString());
+                    assertThat(e.getPayload()).contains(merchant.getId().toString());
+                });
+    }
+
+    @Test
+    void aSecondRefundOfTheSameOrder_isAConflict_andQueuesNothingMore() throws Exception {
+        Merchant merchant = merchantRepository.save(new Merchant("Merchant R2", new BigDecimal("2.90")));
+        UUID applicationId = checkout(merchant.getId(), "100.00");
+        String url = "/api/v1/merchants/{id}/orders/{applicationId}/refund";
+        mockMvc.perform(post(url, merchant.getId(), applicationId).with(merchantJwt(merchant.getId())))
+                .andExpect(status().isAccepted());
+
+        mockMvc.perform(post(url, merchant.getId(), applicationId).with(merchantJwt(merchant.getId())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("CONFLICT"));
+
+        assertThat(outboxEventRepository.findAll()).filteredOn(e -> e.getTopic().equals("applications.refund-requested"))
+                .filteredOn(e -> e.getPayload().contains(applicationId.toString()))
+                .hasSize(1);
+    }
+
+    @Test
+    void ordersInReviewOrDeclined_cannotBeRefunded() throws Exception {
+        Merchant merchant = merchantRepository.save(new Merchant("Merchant R3", new BigDecimal("2.90")));
+        UUID inReview = checkout(merchant.getId(), "600.00");
+        UUID declined = checkout(merchant.getId(), "1500.00");
+
+        for (UUID id : List.of(inReview, declined)) {
+            mockMvc.perform(post("/api/v1/merchants/{id}/orders/{applicationId}/refund", merchant.getId(), id)
+                            .with(merchantJwt(merchant.getId())))
+                    .andExpect(status().isConflict());
+        }
+    }
+
+    @Test
+    void merchantCannotRefundAnotherMerchantsOrder() throws Exception {
+        Merchant mine = merchantRepository.save(new Merchant("Mine", new BigDecimal("2.90")));
+        Merchant theirs = merchantRepository.save(new Merchant("Theirs", new BigDecimal("2.90")));
+        UUID theirOrder = checkout(theirs.getId(), "100.00");
+
+        mockMvc.perform(post("/api/v1/merchants/{id}/orders/{applicationId}/refund", theirs.getId(), theirOrder)
+                        .with(merchantJwt(mine.getId())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/merchants/{id}/orders/{applicationId}/refund", mine.getId(), theirOrder)
+                        .with(merchantJwt(mine.getId())))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shoppersCannotRefund() throws Exception {
+        Merchant merchant = merchantRepository.save(new Merchant("Merchant R4", new BigDecimal("2.90")));
+        UUID applicationId = checkout(merchant.getId(), "100.00");
+
+        mockMvc.perform(post("/api/v1/merchants/{id}/orders/{applicationId}/refund", merchant.getId(), applicationId)
+                        .with(jwt().jwt(j -> j.claim("merchantId", merchant.getId().toString()))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void salesRowsCarryTheFee() throws Exception {
+        Merchant merchant = merchantRepository.save(new Merchant("Merchant F", new BigDecimal("2.90")));
+        checkout(merchant.getId(), "100.00");
+        checkout(merchant.getId(), "1500.00");   // declined: no payout
+
+        mockMvc.perform(get("/api/v1/merchants/{id}/sales", merchant.getId()).with(merchantJwt(merchant.getId())))
+                .andExpect(jsonPath("$.content[0].feeAmount").doesNotExist())
+                .andExpect(jsonPath("$.content[1].feeAmount").value(2.90));
     }
 
     @Test
@@ -289,5 +381,44 @@ class MerchantControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/merchants/{id}/summary", merchant.getId())
                         .with(merchantJwt(merchant.getId())))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void merchantExportsSalesAsCsv_withPayoutColumns_andTheStatusFilter() throws Exception {
+        Merchant merchant = merchantRepository.save(new Merchant("Merchant CSV", new BigDecimal("2.90")));
+        UUID approved = checkout(merchant.getId(), "100.00");
+        UUID declined = checkout(merchant.getId(), "1500.00");
+
+        String all = mockMvc.perform(get("/api/v1/merchants/{id}/sales/export", merchant.getId())
+                        .with(merchantJwt(merchant.getId())))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", org.hamcrest.Matchers.startsWith("text/csv")))
+                .andExpect(header().string("Content-Disposition",
+                        org.hamcrest.Matchers.matchesPattern("attachment; filename=\"bridgepay-sales-\\d{4}-\\d{2}-\\d{2}\\.csv\"")))
+                .andReturn().getResponse().getContentAsString();
+
+        String[] lines = all.split("\r\n");
+        assertThat(lines[0]).isEqualTo("order_id,created_at,amount,installments,status,decided_at,fee,net,payout_status,paid_at");
+        assertThat(lines).hasSize(3);
+        assertThat(all).contains(approved + ",").contains(",100.00,4,APPROVED,").contains(",2.90,97.10,PENDING,");
+        assertThat(all).contains(declined + ",").contains(",1500.00,,DECLINED,");
+
+        String declinedOnly = mockMvc.perform(get("/api/v1/merchants/{id}/sales/export", merchant.getId())
+                        .param("status", "DECLINED").with(merchantJwt(merchant.getId())))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(declinedOnly.split("\r\n")).hasSize(2);
+    }
+
+    @Test
+    void csvExportGuardsOwnershipAndStatus() throws Exception {
+        Merchant mine = merchantRepository.save(new Merchant("Mine CSV", new BigDecimal("2.90")));
+        Merchant theirs = merchantRepository.save(new Merchant("Theirs CSV", new BigDecimal("2.90")));
+
+        mockMvc.perform(get("/api/v1/merchants/{id}/sales/export", theirs.getId()).with(merchantJwt(mine.getId())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/merchants/{id}/sales/export", mine.getId()).param("status", "BOGUS")
+                        .with(merchantJwt(mine.getId())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
     }
 }

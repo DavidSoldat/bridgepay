@@ -106,5 +106,25 @@ describe('PayoutLedger', () => {
     );
     expect(tones).toEqual(['review', 'neutral']);
   });
+
+  it('strikes through a refunded payout and labels it', () => {
+    const page: Page<MerchantPayoutResponse> = {
+      content: [{ id: 'p-1', applicationId: 'a-1', amount: 100, feeAmount: 2.9, status: 'REFUNDED', paidAt: '2026-10-01T10:00:00Z' }],
+      totalElements: 1, totalPages: 1, number: 0, size: 20,
+    };
+    TestBed.configureTestingModule({
+      imports: [PayoutLedger],
+      providers: [
+        { provide: Payouts, useValue: { listPayouts: () => of(page) } },
+        { provide: Auth, useValue: { merchantId: () => 'm-1' } },
+      ],
+    });
+    const fixture = TestBed.createComponent(PayoutLedger);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.querySelector('tbody td')?.classList).toContain('line-through');
+    expect(el.textContent).toContain('Refunded');
+  });
 });
 

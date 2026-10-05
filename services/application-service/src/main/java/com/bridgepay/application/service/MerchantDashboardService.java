@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @Service
 public class MerchantDashboardService {
 
-    private static final Set<String> APPROVED = Set.of("APPROVED", "COMPLETED", "DEFAULTED");
+    private static final Set<String> APPROVED = Set.of("APPROVED", "COMPLETED", "DEFAULTED", "REFUND_PENDING");
 
     private final MerchantDashboardQueries queries;
 

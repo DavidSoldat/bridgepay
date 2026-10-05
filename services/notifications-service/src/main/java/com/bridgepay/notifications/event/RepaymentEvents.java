@@ -35,4 +35,7 @@ public final class RepaymentEvents {
 
     public record PlanCancelled(UUID applicantId, UUID applicationId) {
     }
+
+    public record PlanRefunded(UUID applicantId, UUID applicationId, UUID planId, BigDecimal refundedAmount) {
+    }
 }

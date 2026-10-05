@@ -188,4 +188,18 @@ class OpsDashboardServiceIntegrationTest {
 
         assertThat(service.dashboard(7, UTC, TODAY).reviewers()).extracting(Reviewer::name).contains("Unknown");
     }
+
+    @Test
+    void refundedOrdersStillCountAsApprovedDecisions() {
+        jdbc.update("DELETE FROM application.applications");
+        app("APPROVED", "MODEL", null, 0.10, "2026-09-27T10:00:00Z", 3L, false);
+        app("REFUND_PENDING", "MODEL", null, 0.10, "2026-09-27T11:00:00Z", 3L, false);
+        app("REFUNDED", "MODEL", null, 0.10, "2026-09-27T12:00:00Z", 3L, false);
+        app("DECLINED", "MODEL", null, 0.90, "2026-09-27T13:00:00Z", 3L, false);
+
+        var c = service.dashboard(7, UTC, TODAY).current();
+
+        assertThat(c.approved()).isEqualTo(3);
+        assertThat(c.approvalRate()).isEqualTo(0.75);
+    }
 }

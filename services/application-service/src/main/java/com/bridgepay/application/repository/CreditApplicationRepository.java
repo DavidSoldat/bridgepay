@@ -18,6 +18,8 @@ public interface CreditApplicationRepository extends JpaRepository<CreditApplica
 
     Page<CreditApplication> findByStatusAndDemoFalse(ApplicationStatus status, Pageable pageable);
 
+    Optional<CreditApplication> findByIdAndMerchantId(UUID id, UUID merchantId);
+
     Optional<CreditApplication> findByIdAndApplicantId(UUID id, UUID applicantId);
 
     List<CreditApplication> findByApplicantIdAndStatusIn(UUID applicantId, Collection<ApplicationStatus> statuses);

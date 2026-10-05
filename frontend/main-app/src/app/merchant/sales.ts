@@ -17,6 +17,20 @@ export class Sales {
     );
   }
 
+  refund(merchantId: string, applicationId: string): Observable<MerchantSaleResponse> {
+    return this.http.post<MerchantSaleResponse>(
+      `${environment.gatewayBaseUrl}/api/v1/merchants/${merchantId}/orders/${applicationId}/refund`,
+      null,
+    );
+  }
+
+  exportCsv(merchantId: string, status: string): Observable<Blob> {
+    return this.http.get(`${environment.gatewayBaseUrl}/api/v1/merchants/${merchantId}/sales/export`, {
+      params: { status },
+      responseType: 'blob',
+    });
+  }
+
   dashboard(merchantId: string, days: number, tz: string): Observable<MerchantDashboard> {
     return this.http.get<MerchantDashboard>(
       `${environment.gatewayBaseUrl}/api/v1/merchants/${merchantId}/dashboard`,

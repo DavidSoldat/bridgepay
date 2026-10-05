@@ -212,4 +212,45 @@ class HttpPaddleClientWireMockTest {
 
         assertThat(client(wm).findLatestChargeTransaction("sub_1")).isEmpty();
     }
+
+    @Test
+    void refundTransaction_createsAFullRefundAdjustment_whenNoneExists(WireMockRuntimeInfo wm) {
+        stubFor(get(urlPathEqualTo("/adjustments"))
+                .withQueryParam("transaction_id", equalTo("txn_1"))
+                .withQueryParam("action", equalTo("refund"))
+                .withQueryParam("status", equalTo("pending_approval,approved"))
+                .willReturn(okJson("{ \"data\": [] }")));
+        stubFor(post(urlPathEqualTo("/adjustments"))
+                .withRequestBody(matchingJsonPath("$.action", equalTo("refund")))
+                .withRequestBody(matchingJsonPath("$.type", equalTo("full")))
+                .withRequestBody(matchingJsonPath("$.transaction_id", equalTo("txn_1")))
+                .withRequestBody(matchingJsonPath("$.reason", equalTo("Merchant refund")))
+                .willReturn(okJson("{ \"data\": { \"id\": \"adj_1\", \"status\": \"pending_approval\" } }")));
+
+        assertThat(client(wm).refundTransaction("txn_1")).isEqualTo("adj_1");
+
+        verify(1, postRequestedFor(urlPathEqualTo("/adjustments")));
+    }
+
+    @Test
+    void refundTransaction_reusesAnExistingRefund_insteadOfRefundingTwice(WireMockRuntimeInfo wm) {
+        stubFor(get(urlPathEqualTo("/adjustments"))
+                .withQueryParam("transaction_id", equalTo("txn_2"))
+                .willReturn(okJson("{ \"data\": [ { \"id\": \"adj_existing\", \"status\": \"approved\" } ] }")));
+
+        assertThat(client(wm).refundTransaction("txn_2")).isEqualTo("adj_existing");
+
+        verify(0, postRequestedFor(urlPathEqualTo("/adjustments")));
+    }
+
+    @Test
+    void refundTransaction_surfacesPaddlesRefusal(WireMockRuntimeInfo wm) {
+        stubFor(get(urlPathEqualTo("/adjustments")).willReturn(okJson("{ \"data\": [] }")));
+        stubFor(post(urlPathEqualTo("/adjustments"))
+                .willReturn(aResponse().withStatus(400).withHeader("Content-Type", "application/json")
+                        .withBody("{ \"error\": { \"code\": \"transaction_not_completed\" } }")));
+
+        assertThatThrownBy(() -> client(wm).refundTransaction("txn_3"))
+                .isInstanceOf(PaddleUnavailableException.class);
+    }
 }

@@ -168,4 +168,15 @@ describe('Account', () => {
     expect(el.querySelector('[data-testid="skeleton"]')).not.toBeNull();
     expect(el.textContent).not.toContain('No purchases yet');
   });
+
+  it('shows refunded and refund-pending orders with their schedule and no first-payment step', () => {
+    const fixture = setup(true, () => of(pageOf(row('app-1', 'REFUNDED'), row('app-2', 'REFUND_PENDING'))));
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+
+    expect(el.textContent).toContain('Refunded');
+    expect(el.textContent).toContain('Refund pending');
+    expect(Array.from(el.querySelectorAll('button')).filter((b) => b.textContent?.includes('View schedule'))).toHaveLength(2);
+    expect(el.querySelector('app-first-payment')).toBeNull();
+  });
 });

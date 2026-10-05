@@ -178,6 +178,11 @@ class FailedEventsIntegrationTest {
                 String subscriptionId) {
             return java.util.Optional.empty();
         }
+
+        @Override
+        public String refundTransaction(String transactionId) {
+            throw new UnsupportedOperationException("refunds are not used by this test");
+        }
     }
 
     @Autowired
@@ -342,5 +347,22 @@ class FailedEventsIntegrationTest {
     void retry_ofAnUnknownId_isNotFound() throws Exception {
         mockMvc.perform(post("/api/v1/ops/failed-events/" + UUID.randomUUID() + "/retry").with(ops()))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void retry_ofARefundRequest_replaysItThroughTheRefundHandler() throws Exception {
+        // No plan exists for this application, so the replay fails again - proving it reached RefundService
+        // rather than being rejected as an unknown topic (409).
+        String payload = objectMapper.writeValueAsString(com.bridgepay.repayment.event.EventEnvelope.of(
+                "application.refund-requested", UUID.randomUUID(),
+                new com.bridgepay.repayment.event.ApplicationEvents.RefundRequested(
+                        UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID())));
+        FailedEvent row = failedEventRepository.save(
+                new FailedEvent("applications.refund-requested", "k", payload, "No repayment plan yet"));
+
+        mockMvc.perform(post("/api/v1/ops/failed-events/" + row.getId() + "/retry").with(ops()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("FAILED"))
+                .andExpect(jsonPath("$.attempts").value(2));
     }
 }

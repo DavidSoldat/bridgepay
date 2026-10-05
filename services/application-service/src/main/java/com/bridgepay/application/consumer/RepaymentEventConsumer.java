@@ -40,6 +40,13 @@ public class RepaymentEventConsumer {
         creditApplicationService.defaultPlan(envelope.payload().applicationId());
     }
 
+    @KafkaListener(topics = "repayments.plan-refunded")
+    public void onPlanRefunded(String message) {
+        EventEnvelope<RepaymentEvents.PlanRefunded> envelope = objectMapper.readValue(message,
+                objectMapper.getTypeFactory().constructParametricType(EventEnvelope.class, RepaymentEvents.PlanRefunded.class));
+        creditApplicationService.recordRefund(envelope.payload().applicationId());
+    }
+
     @KafkaListener(topics = "repayments.plan-cancelled")
     public void onPlanCancelled(String message) {
         EventEnvelope<RepaymentEvents.PlanCancelled> envelope = objectMapper.readValue(message,

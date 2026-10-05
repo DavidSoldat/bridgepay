@@ -34,4 +34,10 @@ public interface PaddleClient {
 
     /** The newest completed one-time-charge transaction on the subscription, if any. */
     Optional<PaddleWebhookData> findLatestChargeTransaction(String subscriptionId);
+
+    /**
+     * Fully refunds a completed transaction and returns the adjustment id. Idempotent: an existing
+     * pending/approved refund for the transaction is returned instead of creating a second one.
+     */
+    String refundTransaction(String transactionId);
 }

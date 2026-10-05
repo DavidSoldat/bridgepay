@@ -11,6 +11,7 @@ const STATUSES: Record<string, { label: string; tone: Tone }> = {
   MANUAL_REVIEW: { label: 'In review', tone: 'review' },
   RETRYING: { label: 'Retrying', tone: 'review' },
   LATE: { label: 'Late', tone: 'review' },
+  REFUND_PENDING: { label: 'Refund pending', tone: 'review' },
   DECLINED: { label: 'Declined', tone: 'declined' },
   DEFAULTED: { label: 'Defaulted', tone: 'declined' },
   FAILED: { label: 'Failed', tone: 'declined' },
@@ -18,6 +19,7 @@ const STATUSES: Record<string, { label: string; tone: Tone }> = {
   PAID: { label: 'Paid', tone: 'paid' },
   COMPLETED: { label: 'Completed', tone: 'paid' },
   CANCELLED: { label: 'Cancelled', tone: 'neutral' },
+  REFUNDED: { label: 'Refunded', tone: 'neutral' },
   SCHEDULED: { label: 'Scheduled', tone: 'neutral' },
 };
 

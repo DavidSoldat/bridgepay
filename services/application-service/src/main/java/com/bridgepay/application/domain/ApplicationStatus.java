@@ -7,5 +7,7 @@ public enum ApplicationStatus {
     DECLINED,
     COMPLETED,
     DEFAULTED,
-    CANCELLED
+    CANCELLED,
+    REFUND_PENDING,
+    REFUNDED
 }

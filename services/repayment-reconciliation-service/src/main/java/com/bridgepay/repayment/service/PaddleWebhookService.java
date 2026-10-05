@@ -63,19 +63,28 @@ public class PaddleWebhookService {
     }
 
     private void handleTransactionCompleted(PaddleWebhookData data) {
-        RepaymentPlan found = findPlanByTransactionEvent(data);
-        if (found == null) {
+        UUID planId = findPlanIdByTransactionEvent(data);
+        if (planId == null) {
             log.warn("No repayment plan found for completed transaction {}", data.id());
             return;
         }
-        // Row lock: the synchronous early-payment apply, Paddle's webhook and reconcile-on-read can all deliver the
-        // same transaction at once; serialising here makes the dedupe check below reliable.
-        RepaymentPlan plan = repaymentPlanRepository.findByIdForUpdate(found.getId()).orElse(found);
+        // Row lock, and the first load of the plan (a locking query returns an already-managed stale instance):
+        // the early-payment apply, Paddle's webhook, reconcile-on-read and a refund can all touch the same plan
+        // at once; serialising here makes the checks below reliable.
+        RepaymentPlan plan = repaymentPlanRepository.findByIdForUpdate(planId).orElseThrow();
         if (data.subscriptionId() != null && !data.subscriptionId().equals(plan.getPaddleSubscriptionId())) {
             plan.adoptSubscriptionId(data.subscriptionId());
         }
         if (installmentRepository.existsByPaddleTransactionId(data.id())) {
             log.debug("Transaction {} already applied to plan {}, duplicate delivery", data.id(), plan.getId());
+            return;
+        }
+        if (plan.getStatus() == PlanStatus.REFUNDED) {
+            // A payment landing after the refund committed (late renewal, 202 early charge): give it back.
+            // refundTransaction is idempotent per transaction.
+            paddleClient.refundTransaction(data.id());
+            log.info("Transaction {} completed after plan {} was refunded; refunded it automatically",
+                    data.id(), plan.getId());
             return;
         }
 
@@ -134,11 +143,14 @@ public class PaddleWebhookService {
     }
 
     private void handleSubscriptionCanceled(PaddleWebhookData data) {
-        RepaymentPlan plan = repaymentPlanRepository.findByPaddleSubscriptionId(data.id()).orElse(null);
-        if (plan == null) {
+        UUID planId = repaymentPlanRepository.findIdByPaddleSubscriptionId(data.id()).orElse(null);
+        if (planId == null) {
             log.warn("No repayment plan found for canceled subscription {}", data.id());
             return;
         }
+        // Locked, and the first load of the plan: our own refund cancels the subscription before it commits;
+        // waiting here means we see REFUNDED instead of defaulting the plan and failing the refund.
+        RepaymentPlan plan = repaymentPlanRepository.findByIdForUpdate(planId).orElseThrow();
         if (plan.getStatus() != PlanStatus.ACTIVE) {
             log.debug("Subscription {} cancel confirmed for plan {} already in status {}",
                     data.id(), plan.getId(), plan.getStatus());
@@ -160,6 +172,16 @@ public class PaddleWebhookService {
      * placeholder (the initial transaction id) for the very first event,
      * before any subscription has been adopted yet.
      */
+    private UUID findPlanIdByTransactionEvent(PaddleWebhookData data) {
+        if (data.subscriptionId() != null) {
+            Optional<UUID> bySubscription = repaymentPlanRepository.findIdByPaddleSubscriptionId(data.subscriptionId());
+            if (bySubscription.isPresent()) {
+                return bySubscription.get();
+            }
+        }
+        return repaymentPlanRepository.findIdByPaddleSubscriptionId(data.id()).orElse(null);
+    }
+
     private RepaymentPlan findPlanByTransactionEvent(PaddleWebhookData data) {
         if (data.subscriptionId() != null) {
             Optional<RepaymentPlan> bySubscription = repaymentPlanRepository.findByPaddleSubscriptionId(data.subscriptionId());
