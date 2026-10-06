@@ -6,4 +6,6 @@ export interface OpsApplicant {
   phone: string;
   /** yyyy-MM-dd */
   dateOfBirth: string;
+  /** Present on search results. */
+  createdAt?: string;
 }

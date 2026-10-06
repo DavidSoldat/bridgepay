@@ -2,13 +2,12 @@ import { Component, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
-import { Observable, catchError, filter, map, of, shareReplay, startWith, switchMap } from 'rxjs';
+import { catchError, filter, of, shareReplay, switchMap } from 'rxjs';
 import { Applications } from '../applications';
 import { OpsApplicants } from '../ops-applicants';
 import { RepaymentPlans } from '../repayment-plans';
 import { ApplicationCase } from '../../shared/models/application-case';
-import { Section } from '../../shared/models/section';
+import { toSection } from '../../shared/models/section';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { SkeletonRows } from '../../shared/ui/skeleton-rows/skeleton-rows';
 import { Icon } from '../../shared/ui/icon/icon';
@@ -38,17 +37,6 @@ const FEATURE_LABELS: Record<string, string> = {
   amountToIncome: 'Amount vs. monthly income',
   creditLimitUnavailable: "Spending limit couldn't be checked",
 };
-
-/** One card's data: loading first, then its value, "none" on a 404, or an error - independent of the other cards. */
-function section<T>(request: Observable<T>): Observable<Section<T>> {
-  return request.pipe(
-    map((value): Section<T> => ({ state: 'ready', value })),
-    catchError((err) =>
-      of<Section<T>>(err instanceof HttpErrorResponse && err.status === 404 ? { state: 'none' } : { state: 'error' }),
-    ),
-    startWith<Section<T>>({ state: 'loading' }),
-  );
-}
 
 const isCase = (c: ApplicationCase | undefined): c is ApplicationCase => c !== undefined;
 
@@ -87,11 +75,11 @@ export class ReviewDetail {
 
   protected readonly application = toSignal(this.caseFile$);
   protected readonly shopper = toSignal(
-    this.caseFile$.pipe(filter(isCase), switchMap((c) => section(this.opsApplicants.get(c.applicantId)))),
+    this.caseFile$.pipe(filter(isCase), switchMap((c) => toSection(this.opsApplicants.get(c.applicantId)))),
     { initialValue: { state: 'loading' } as const },
   );
   protected readonly plan = toSignal(
-    this.caseFile$.pipe(filter(isCase), switchMap((c) => section(this.repaymentPlans.get(c.applicationId)))),
+    this.caseFile$.pipe(filter(isCase), switchMap((c) => toSection(this.repaymentPlans.get(c.applicationId)))),
     { initialValue: { state: 'loading' } as const },
   );
 
