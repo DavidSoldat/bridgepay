@@ -1,0 +1,79 @@
+<a routerLink="/ops/shoppers" class="mb-4 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-coral hover:text-coral-hover">
+  <span class="size-4"><app-icon name="arrow-left" /></span>Shoppers
+</a>
+<h1 class="mb-5 font-display text-2xl font-bold">{{ heading() }}</h1>
+
+<div class="grid gap-5 lg:grid-cols-2">
+  @if (profile().state === 'none') {
+    <section class="card p-6" aria-labelledby="shopper-heading">
+      <h2 id="shopper-heading" class="mb-4 font-display text-lg font-bold">Shopper</h2>
+      <p class="text-sm text-ink-muted">No profile — this shopper never completed signup.</p>
+      <p class="mt-2 break-all font-mono text-xs text-ink-muted">{{ subject() }}</p>
+    </section>
+  } @else {
+    <app-shopper-card [section]="profile()" />
+  }
+
+  <section class="card p-6" aria-labelledby="standing-heading">
+    <h2 id="standing-heading" class="mb-4 font-display text-lg font-bold">Credit standing</h2>
+    @switch (standing().state) {
+      @case ('loading') { <app-skeleton-rows [rows]="3" /> }
+      @case ('error') { <p class="text-sm text-declined">Couldn't load credit standing.</p> }
+    }
+    @if (standing(); as s) {
+      @if (s.state === 'ready') {
+        @if (s.value.limit === null) {
+          <p class="mb-2 text-sm text-review">Limit unavailable right now.</p>
+          <p class="text-sm">Outstanding <span class="font-mono font-semibold">${{ s.value.outstanding | number: '1.2-2' }}</span></p>
+        } @else {
+          <div class="mb-3 flex flex-wrap items-center gap-3">
+            <span class="font-display text-2xl font-bold">${{ s.value.available | number: '1.2-2' }}</span>
+            <span class="text-sm text-ink-muted">available</span>
+            @if (s.value.band) { <app-status-badge [status]="s.value.band" /> }
+          </div>
+          <div class="mb-2 h-2 overflow-hidden rounded-full bg-hairline" role="img"
+               [attr.aria-label]="'$' + (s.value.outstanding | number: '1.2-2') + ' used of $' + (s.value.limit | number: '1.2-2')">
+            <div class="h-full bg-coral" [style.width.%]="usedPct()"></div>
+          </div>
+          <p class="text-sm text-ink-muted">
+            <span class="font-mono">${{ s.value.outstanding | number: '1.2-2' }}</span> used of
+            <span class="font-mono">${{ s.value.limit | number: '1.2-2' }}</span>
+          </p>
+        }
+        @if (reason(); as why) { <p class="mt-3 text-sm">{{ why }}</p> }
+      }
+    }
+  </section>
+</div>
+
+<div class="mt-5"><app-shopper-applications [subject]="subject()" /></div>
+
+<section class="card mt-5 p-6" aria-labelledby="timeline-heading">
+  <h2 id="timeline-heading" class="mb-4 font-display text-lg font-bold">Payment timeline</h2>
+  @switch (plans().state) {
+    @case ('loading') { <app-skeleton-rows /> }
+    @case ('error') { <p class="text-sm text-declined">Couldn't load payments.</p> }
+    @case ('ready') {
+      @if (timeline().length === 0) {
+        <app-empty-state icon="wallet" heading="No payments yet." />
+      } @else {
+        <ol class="divide-y divide-hairline">
+          @for (e of visibleTimeline(); track $index) {
+            <li data-testid="timeline-row" class="flex flex-wrap items-center gap-x-3 gap-y-1 py-3 text-sm">
+              <span class="size-4 shrink-0" [class]="toneClass[e.tone]"><app-icon [name]="toneIcon[e.tone]" /></span>
+              <span class="w-28 shrink-0 font-mono text-ink-muted">{{ e.at | date: 'MMM d, y' }}</span>
+              <span class="min-w-0 flex-1">{{ e.text }}</span>
+              <a [routerLink]="['/ops', e.applicationId]" class="font-mono text-coral hover:text-coral-hover"
+                 [attr.aria-label]="'Order ' + orderRef(e.applicationId) + ' case file'">#{{ orderRef(e.applicationId) }}</a>
+            </li>
+          }
+        </ol>
+        @if (!showAll() && timeline().length > visibleTimeline().length) {
+          <button type="button" class="btn-secondary mt-4" (click)="showAll.set(true)">Show all ({{ timeline().length }})</button>
+        }
+      }
+    }
+  }
+</section>
+
+<div class="mt-5"><app-shopper-notifications [subject]="subject()" /></div>
