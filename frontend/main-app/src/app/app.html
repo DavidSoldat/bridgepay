@@ -15,7 +15,7 @@
 
   <aside
     id="main-nav"
-    class="flex-col gap-1 border-b border-hairline bg-surface p-4 md:flex md:w-60 md:shrink-0 md:border-r md:border-b-0"
+    class="flex-col gap-1 border-b border-hairline bg-surface p-4 md:sticky md:top-0 md:flex md:h-screen md:w-60 md:shrink-0 md:overflow-y-auto md:border-r md:border-b-0"
     [class.hidden]="!menuOpen()"
     [class.flex]="menuOpen()"
   >
@@ -76,24 +76,21 @@
         class="flex min-h-11 items-center gap-3 rounded-sm px-3 hover:bg-blush"
       ><app-icon name="wallet" />Payouts</a>
     }
-  </aside>
-
-  <div class="flex min-w-0 flex-1 flex-col">
-    <header class="flex items-center justify-end gap-2 px-4 py-3 text-sm text-ink-muted md:px-8">
-      <span class="flex items-center gap-2">
+    <div data-testid="sidebar-account" class="mt-auto flex flex-col gap-1 border-t border-hairline pt-4">
+      <span class="flex min-h-11 items-center gap-3 px-3 text-sm text-ink-muted">
         <app-icon name="user" />
-        <span class="font-mono">{{ auth.username() }}</span>
+        <span class="min-w-0 truncate font-mono" title="Signed in as {{ auth.username() }}">{{ auth.username() }}</span>
       </span>
       <button
         type="button"
         (click)="auth.logout()"
-        aria-label="Log out"
-        class="flex size-11 items-center justify-center rounded-sm text-lg hover:bg-blush hover:text-ink"
-      >
-        <app-icon name="log-out" />
-      </button>
-    </header>
-    <main class="flex-1 px-4 pb-10 md:px-8">
+        class="flex min-h-11 items-center gap-3 rounded-sm px-3 font-semibold text-declined hover:bg-declined-bg"
+      ><app-icon name="log-out" />Log out</button>
+    </div>
+  </aside>
+
+  <div class="flex min-w-0 flex-1 flex-col">
+    <main class="flex-1 px-4 pt-6 pb-10 md:px-8">
       <router-outlet />
     </main>
   </div>

@@ -85,9 +85,28 @@ describe('App', () => {
     expect(active.classList).not.toContain('text-ink');
   });
 
-  it('labels the icon-only log out button', () => {
+  it('shows the signed-in user and a red Log out button at the bottom of the sidebar, not in a top header', () => {
     const fixture = setup(['ops']);
     fixture.detectChanges();
-    expect((fixture.nativeElement as HTMLElement).querySelector('button[aria-label="Log out"]')).not.toBeNull();
+    const el = fixture.nativeElement as HTMLElement;
+    const footer = el.querySelector('#main-nav [data-testid="sidebar-account"]') as HTMLElement;
+
+    expect(footer.textContent).toContain('test-user');
+    const logout = Array.from(footer.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Log out')!;
+    expect(logout.classList).toContain('text-declined');
+    // after the nav links, so it sits at the bottom
+    expect(footer.previousElementSibling?.tagName).toBe('A');
+    expect(el.querySelector('header')).toBeNull();
+  });
+
+  it('logs out from the sidebar button', () => {
+    const fixture = setup(['ops']);
+    fixture.detectChanges();
+    const auth = TestBed.inject(Auth);
+    const spy = vi.spyOn(auth, 'logout');
+    const el = fixture.nativeElement as HTMLElement;
+
+    (Array.from(el.querySelectorAll('#main-nav button')).find((b) => b.textContent?.trim() === 'Log out') as HTMLButtonElement).click();
+    expect(spy).toHaveBeenCalled();
   });
 });
