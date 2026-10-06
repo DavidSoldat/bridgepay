@@ -12,6 +12,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -257,5 +258,61 @@ class ApplicantControllerIntegrationTest {
         mockMvc.perform(get("/api/v1/ops/applicants/{subject}", UUID.randomUUID())
                         .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_OPS"))))
                 .andExpect(status().isNotFound());
+    }
+
+    private String signupPayload(String email, String lastName) throws Exception {
+        return objectMapper.writeValueAsString(Map.of(
+                "firstName", "Ana", "lastName", lastName, "dateOfBirth", "1995-04-12",
+                "email", email, "phone", "+38765123456"));
+    }
+
+    private void signUp(String email, String lastName) throws Exception {
+        mockMvc.perform(post("/api/v1/applicants")
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString())))
+                        .contentType("application/json")
+                        .content(signupPayload(email, lastName)))
+                .andExpect(status().isCreated());
+    }
+
+    private ResultActions search(String q) throws Exception {
+        return mockMvc.perform(get("/api/v1/ops/applicants").param("q", q)
+                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_OPS"))));
+    }
+
+    @Test
+    void search_matchesEmailAndFullName_caseInsensitive_newestFirst() throws Exception {
+        String tag = "Qx" + UUID.randomUUID().toString().substring(0, 6);
+        signUp(tag.toLowerCase() + "-one@example.com", "First" + tag);
+        signUp(tag.toLowerCase() + "-two@example.com", "Second" + tag);
+
+        search(tag.toUpperCase()).andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[0].lastName").value("Second" + tag))
+                .andExpect(jsonPath("$.content[0].createdAt").isNotEmpty())
+                .andExpect(jsonPath("$.content[1].lastName").value("First" + tag));
+        search("ana second" + tag).andExpect(jsonPath("$.totalElements").value(1));
+        search(tag.toLowerCase() + "-one@").andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    void search_treatsWildcardsLiterally() throws Exception {
+        signUp("wild-" + UUID.randomUUID().toString().substring(0, 6) + "@example.com", "Wild");
+
+        search("%%").andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
+        search("__").andExpect(status().isOk()).andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    void search_rejectsUnderTwoCharacters() throws Exception {
+        search(" a ").andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+        mockMvc.perform(get("/api/v1/ops/applicants").with(jwt().authorities(new SimpleGrantedAuthority("ROLE_OPS"))))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+    }
+
+    @Test
+    void search_isForbiddenWithoutTheOpsRole() throws Exception {
+        mockMvc.perform(get("/api/v1/ops/applicants").param("q", "ana")
+                        .with(jwt().jwt(j -> j.subject(UUID.randomUUID().toString()))))
+                .andExpect(status().isForbidden());
     }
 }

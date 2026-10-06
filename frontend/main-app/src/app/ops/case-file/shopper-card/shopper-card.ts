@@ -1,17 +1,21 @@
 import { Component, computed, input } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { OpsApplicant } from '../../../shared/models/ops-applicant';
 import { Section } from '../../../shared/models/section';
 import { SkeletonRows } from '../../../shared/ui/skeleton-rows/skeleton-rows';
+import { Icon } from '../../../shared/ui/icon/icon';
 
 @Component({
   selector: 'app-shopper-card',
-  imports: [DatePipe, SkeletonRows],
+  imports: [DatePipe, RouterLink, SkeletonRows, Icon],
   templateUrl: './shopper-card.html',
   styleUrl: './shopper-card.css',
 })
 export class ShopperCard {
   section = input.required<Section<OpsApplicant>>();
+  /** When set, links to the shopper's 360 page (works even when the profile itself is missing). */
+  subject = input<string | null>(null);
 
   protected readonly shopper = computed(() => {
     const s = this.section();

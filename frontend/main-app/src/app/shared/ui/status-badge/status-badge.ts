@@ -21,6 +21,10 @@ const STATUSES: Record<string, { label: string; tone: Tone }> = {
   SCHEDULED: { label: 'Scheduled', tone: 'neutral' },
   REFUND_PENDING: { label: 'Refund pending', tone: 'review' },
   REFUNDED: { label: 'Refunded', tone: 'neutral' },
+  // Credit-limit bands
+  LOW: { label: 'Low risk', tone: 'approved' },
+  MEDIUM: { label: 'Medium risk', tone: 'review' },
+  HIGH: { label: 'High risk', tone: 'declined' },
 };
 
 // Whole class names so Tailwind's scanner finds them.

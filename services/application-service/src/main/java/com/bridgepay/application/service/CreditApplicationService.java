@@ -12,6 +12,7 @@ import com.bridgepay.application.domain.Merchant;
 import com.bridgepay.application.domain.MerchantPayout;
 import com.bridgepay.application.domain.PayoutStatus;
 import com.bridgepay.application.domain.OutboxEvent;
+import com.bridgepay.application.dto.ApplicantApplicationResponse;
 import com.bridgepay.application.dto.ApplicationCaseResponse;
 import com.bridgepay.application.dto.ApplicationResponse;
 import com.bridgepay.application.dto.CheckoutRequest;
@@ -204,6 +205,16 @@ public class CreditApplicationService {
     @Transactional(readOnly = true)
     public Page<ApplicationResponse> listForApplicant(UUID applicantId, Pageable pageable) {
         return applicationRepository.findByApplicantIdOrderByCreatedAtDesc(applicantId, pageable).map(this::toResponse);
+    }
+
+    /** Ops: every application of one shopper, demo rows included (the queue's demo filter is for the queue). */
+    @Transactional(readOnly = true)
+    public Page<ApplicantApplicationResponse> listForApplicantOps(UUID applicantId, Pageable pageable) {
+        return applicationRepository.findByApplicantIdOrderByCreatedAtDesc(applicantId, pageable)
+                .map(a -> new ApplicantApplicationResponse(a.getId(), a.getMerchant().getId(), a.getMerchant().getName(),
+                        a.getAmount(), a.getStatus().name(),
+                        a.getDecisionSource() == null ? null : a.getDecisionSource().name(),
+                        a.getDecidedBy(), a.getCreatedAt(), a.getDecisionAt()));
     }
 
     @Transactional(readOnly = true)

@@ -9,6 +9,7 @@ import com.bridgepay.repayment.domain.Installment;
 import com.bridgepay.repayment.domain.InstallmentStatus;
 import com.bridgepay.repayment.domain.PlanStatus;
 import com.bridgepay.repayment.domain.RepaymentPlan;
+import com.bridgepay.repayment.dto.ApplicantPlansResponse;
 import com.bridgepay.repayment.dto.InstallmentResponse;
 import com.bridgepay.repayment.dto.RepaymentPlanResponse;
 import com.bridgepay.repayment.event.ApplicationEvents;
@@ -101,6 +102,21 @@ public class RepaymentPlanService {
             throw new AccessDeniedException("Repayment plan does not belong to this applicant");
         }
         return reconciled(plan);
+    }
+
+    /** Ops: every plan of one shopper, newest first. No reconcile-on-read (that stays on the single-plan GET). */
+    @Transactional(readOnly = true)
+    public List<ApplicantPlansResponse.Plan> listForApplicantOps(UUID applicantId) {
+        // ponytail: one installments query per plan; page if a shopper can exceed ~50 plans
+        return repaymentPlanRepository.findByApplicantIdOrderByCreatedAtDescIdDesc(applicantId).stream()
+                .map(plan -> new ApplicantPlansResponse.Plan(plan.getId(), plan.getApplicationId(), plan.getStatus().name(),
+                        plan.getTotalAmount(), plan.getInstallmentCount(), plan.getInstallmentAmount(),
+                        plan.getCreatedAt(), plan.getUpdatedAt(),
+                        installmentRepository.findByRepaymentPlanOrderBySequenceNumberAsc(plan).stream()
+                                .map(i -> new ApplicantPlansResponse.Installment(i.getSequenceNumber(), i.getDueDate(),
+                                        i.getAmount(), i.getStatus().name(), i.getPaidAt(), i.getUpdatedAt()))
+                                .toList()))
+                .toList();
     }
 
     /** Ops case file: any plan. Shoppers go through getForApplicant's owner check. */

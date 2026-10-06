@@ -1,0 +1,26 @@
+<section class="card p-6" aria-labelledby="notifications-heading">
+  <h2 id="notifications-heading" class="mb-4 font-display text-lg font-bold">Notifications sent</h2>
+  @if (items().length) {
+    <ul class="divide-y divide-hairline">
+      @for (n of items(); track n.id) {
+        <li class="py-3 text-sm">
+          <div class="flex flex-wrap items-baseline justify-between gap-x-3">
+            <span class="font-semibold">{{ n.title }}</span>
+            <span class="font-mono text-xs text-ink-muted">{{ n.createdAt | date: 'MMM d, y HH:mm' }}</span>
+          </div>
+          <p class="text-ink-muted">{{ n.body }}</p>
+        </li>
+      }
+    </ul>
+  }
+  @if (loadError()) {
+    <p class="text-sm text-declined">Couldn't load notifications.</p>
+  } @else if (loading() && items().length === 0) {
+    <app-skeleton-rows />
+  } @else if (items().length === 0) {
+    <app-empty-state icon="inbox" heading="No notifications sent." />
+  }
+  @if (hasMore() && !loadError()) {
+    <button type="button" class="btn-secondary mt-4" [disabled]="loading()" (click)="loadMore()">Load more</button>
+  }
+</section>

@@ -29,6 +29,11 @@ class ApplicantServiceTest {
 
     private ApplicantService applicantService;
 
+    @Test
+    void likePattern_escapes() {
+        assertThat(ApplicantService.likePattern("50%_Off\\")).isEqualTo("%50\\%\\_off\\\\%");
+    }
+
     private SignupRequest validRequest() {
         return new SignupRequest("Ana", "Doe", LocalDate.of(1995, 4, 12), "ana@example.com", "+38765123456");
     }

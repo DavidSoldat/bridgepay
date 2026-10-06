@@ -3,6 +3,7 @@ import { SalesPage } from './merchant/sales-page/sales-page';
 import { PayoutLedger } from './merchant/payout-ledger/payout-ledger';
 import { FailedEventsPage } from './ops/failed-events/failed-events';
 import { OpsDashboardPage } from './ops/dashboard/ops-dashboard';
+import { ShopperSearch } from './ops/shoppers/shopper-search/shopper-search';
 import { merchantGuard } from './core/merchant-guard';
 import { opsGuard } from './core/ops-guard';
 
@@ -35,5 +36,15 @@ describe('routes', () => {
     expect(routes[opsIndex].component).toBe(FailedEventsPage);
     expect(routes[opsIndex].canActivate).toEqual([opsGuard]);
     expect(opsIndex).toBeLessThan(detailIndex);
+  });
+
+  it('routes /ops/shoppers to shopper search, not review detail', () => {
+    const index = routes.findIndex((r) => r.path === 'ops/shoppers');
+    const detailIndex = routes.findIndex((r) => r.path === 'ops/:id');
+
+    expect(index).toBeGreaterThan(-1);
+    expect(routes[index].component).toBe(ShopperSearch);
+    expect(routes[index].canActivate).toEqual([opsGuard]);
+    expect(index).toBeLessThan(detailIndex);
   });
 });

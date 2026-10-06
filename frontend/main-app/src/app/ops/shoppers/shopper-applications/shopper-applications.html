@@ -1,0 +1,45 @@
+<section class="card overflow-x-auto" aria-labelledby="applications-heading">
+  <h2 id="applications-heading" class="px-6 pt-6 pb-2 font-display text-lg font-bold">Applications</h2>
+  @if (loadError()) {
+    <p class="p-6 text-sm text-declined">Couldn't load applications.</p>
+  } @else if (loading() && rows().length === 0) {
+    <div class="px-6"><app-skeleton-rows /></div>
+  } @else if (rows().length === 0) {
+    <app-empty-state icon="inbox" heading="No applications yet." />
+  } @else {
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-hairline text-left text-ink-muted">
+          <th class="px-4 py-3 font-medium">Date</th>
+          <th class="px-4 py-3 font-medium">Merchant</th>
+          <th class="px-4 py-3 text-right font-medium">Amount</th>
+          <th class="px-4 py-3 font-medium">Status</th>
+          <th class="px-4 py-3 font-medium">Decided by</th>
+          <th class="px-4 py-3"><span class="sr-only">Case file</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (a of rows(); track a.applicationId) {
+          <tr class="border-b border-hairline last:border-0">
+            <td class="px-4 py-3 font-mono whitespace-nowrap">{{ a.createdAt | date: 'MMM d, y' }}</td>
+            <td class="px-4 py-3">{{ a.merchantName }}</td>
+            <td class="px-4 py-3 text-right font-mono">${{ a.amount | number: '1.2-2' }}</td>
+            <td class="px-4 py-3"><app-status-badge [status]="a.status" /></td>
+            <td class="px-4 py-3">{{ decidedBy(a.decisionSource, a.decidedBy) }}</td>
+            <td class="px-4 py-3 text-right whitespace-nowrap">
+              <a [routerLink]="['/ops', a.applicationId]" class="font-semibold text-coral hover:text-coral-hover"
+                 [attr.aria-label]="'Case file for order ' + orderRef(a.applicationId)">Case file →</a>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+  @if (totalPages() > 1) {
+    <div class="flex items-center gap-3 px-6 pb-6 text-sm">
+      <button type="button" (click)="page.set(page() - 1)" [disabled]="page() === 0" class="btn-secondary">Prev</button>
+      <span class="font-mono text-ink-muted">Page {{ page() + 1 }} of {{ totalPages() }}</span>
+      <button type="button" (click)="page.set(page() + 1)" [disabled]="page() + 1 >= totalPages()" class="btn-secondary">Next</button>
+    </div>
+  }
+</section>

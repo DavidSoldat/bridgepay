@@ -1,5 +1,6 @@
 package com.bridgepay.application.web;
 
+import com.bridgepay.application.dto.ApplicantApplicationResponse;
 import com.bridgepay.application.dto.ApplicationCaseResponse;
 import com.bridgepay.application.dto.ApplicationResponse;
 import com.bridgepay.application.dto.CheckoutRequest;
@@ -78,6 +79,20 @@ public class CreditApplicationController {
     public ResponseEntity<OpsDashboardResponse> dashboard(@RequestParam int days,
                                                           @RequestParam(required = false) String tz) {
         return ResponseEntity.ok(opsDashboardService.dashboard(days, tz));
+    }
+
+    @GetMapping("/applicants/{applicantId}")
+    @PreAuthorize("hasRole('OPS')")
+    public ResponseEntity<Page<ApplicantApplicationResponse>> listForApplicant(@PathVariable UUID applicantId,
+                                                                              Pageable pageable) {
+        return ResponseEntity.ok(applicationService.listForApplicantOps(applicantId, pageable));
+    }
+
+    /** Not transactional: the engine call is HTTP (see SpendingLimitService). */
+    @GetMapping("/applicants/{applicantId}/credit-standing")
+    @PreAuthorize("hasRole('OPS')")
+    public ResponseEntity<CreditLimitResponse> creditStanding(@PathVariable UUID applicantId) {
+        return ResponseEntity.ok(spendingLimitService.forApplicant(applicantId));
     }
 
     @GetMapping("/{id}")

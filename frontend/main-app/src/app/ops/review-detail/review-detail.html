@@ -29,7 +29,7 @@
         @if (app.decision; as decision) {
           <app-decision-card [decision]="decision" [status]="app.status" [decisionAt]="app.decisionAt" />
         }
-        <app-shopper-card [section]="shopper()" />
+        <app-shopper-card [section]="shopper()" [subject]="app.applicantId" />
         <app-merchant-payout-card [merchant]="app.merchant" [payout]="app.payout" />
       </div>
       <div class="flex flex-col gap-6">

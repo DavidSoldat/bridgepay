@@ -27,6 +27,9 @@ describe('StatusBadge', () => {
     ['SCHEDULED', 'Scheduled', 'neutral'],
     ['REFUND_PENDING', 'Refund pending', 'review'],
     ['REFUNDED', 'Refunded', 'neutral'],
+    ['LOW', 'Low risk', 'approved'],
+    ['MEDIUM', 'Medium risk', 'review'],
+    ['HIGH', 'High risk', 'declined'],
   ])('shows %s as "%s" in %s colours', (status, label, tone) => {
     const badge = render(status);
     expect(badge.textContent?.trim()).toBe(label);

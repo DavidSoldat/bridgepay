@@ -1,0 +1,52 @@
+<h1 class="mb-5 font-display text-2xl font-bold">Shoppers</h1>
+
+<label for="shopper-search" class="mb-2 block text-sm font-semibold">Search shoppers by name or email</label>
+<input
+  id="shopper-search"
+  type="search"
+  class="input mb-5 w-full max-w-md"
+  autocomplete="off"
+  [value]="term()"
+  (input)="term.set($any($event.target).value)"
+/>
+
+<div class="card overflow-x-auto">
+  @if (q().length < minChars) {
+    <app-empty-state icon="users" heading="Search by name or email." [text]="'Type at least ' + minChars + ' characters.'" />
+  } @else if (searchError()) {
+    <p class="p-6 text-center text-declined">Could not search shoppers. Try again.</p>
+  } @else if (loading() && rows().length === 0) {
+    <div class="px-6"><app-skeleton-rows /></div>
+  } @else if (rows().length === 0) {
+    <app-empty-state icon="users" [heading]="noMatch()" />
+  } @else {
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-hairline text-left text-ink-muted">
+          <th class="px-4 py-3 font-medium">Name</th>
+          <th class="px-4 py-3 font-medium">Email</th>
+          <th class="px-4 py-3 font-medium">Joined</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (s of rows(); track s.subject) {
+          <tr class="border-b border-hairline last:border-0">
+            <td class="px-4 py-3">
+              <a [routerLink]="['/ops/shoppers', s.subject]" class="font-semibold text-coral hover:text-coral-hover">{{ s.firstName }} {{ s.lastName }}</a>
+            </td>
+            <td class="break-all px-4 py-3">{{ s.email }}</td>
+            <td class="px-4 py-3 font-mono whitespace-nowrap">{{ s.createdAt | date: 'MMM d, y' }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>
+
+@if (totalPages() > 1) {
+  <div class="mt-4 flex items-center gap-3 text-sm">
+    <button type="button" (click)="goToPage(page() - 1)" [disabled]="page() === 0" class="btn-secondary">Prev</button>
+    <span class="font-mono text-ink-muted">Page {{ page() + 1 }} of {{ totalPages() }}</span>
+    <button type="button" (click)="goToPage(page() + 1)" [disabled]="page() + 1 >= totalPages()" class="btn-secondary">Next</button>
+  </div>
+}

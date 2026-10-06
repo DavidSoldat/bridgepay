@@ -17,4 +17,7 @@
       <dd>{{ s.dateOfBirth | date: 'MMM d, y' }} · {{ age(s.dateOfBirth) }}</dd>
     </dl>
   }
+  @if (subject(); as id) {
+    <a [routerLink]="['/ops/shoppers', id]" class="mt-4 inline-flex min-h-11 items-center gap-1.5 text-sm font-semibold text-coral hover:text-coral-hover">View shopper <span class="size-4"><app-icon name="arrow-right" /></span></a>
+  }
 </section>

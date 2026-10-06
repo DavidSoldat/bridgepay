@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 import { ShopperCard } from './shopper-card';
 import { OpsApplicant } from '../../../shared/models/ops-applicant';
 import { Section } from '../../../shared/models/section';
@@ -35,5 +36,18 @@ describe('ShopperCard', () => {
 
   it('shows an error in the card when the lookup fails', () => {
     expect(render({ state: 'error' }).textContent).toContain("Couldn't load shopper details.");
+  });
+
+  it('links to the shopper 360 page when given a subject, even if the profile is missing', () => {
+    TestBed.configureTestingModule({ providers: [provideRouter([])] });
+    const fixture = TestBed.createComponent(ShopperCard);
+    fixture.componentRef.setInput('section', { state: 'none' });
+    fixture.componentRef.setInput('subject', 's-9');
+    fixture.detectChanges();
+    expect((fixture.nativeElement as HTMLElement).querySelector('a[href="/ops/shoppers/s-9"]')?.textContent).toContain('View shopper');
+  });
+
+  it('shows no link without a subject', () => {
+    expect(render({ state: 'none' }).textContent).not.toContain('View shopper');
   });
 });
