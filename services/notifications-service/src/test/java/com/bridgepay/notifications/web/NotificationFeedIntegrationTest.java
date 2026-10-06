@@ -170,4 +170,28 @@ class NotificationFeedIntegrationTest extends AbstractKafkaIntegrationTest {
     void feed_requiresAToken() throws Exception {
         mockMvc.perform(get("/api/v1/notifications")).andExpect(status().isUnauthorized());
     }
+
+    private ResultActions opsFeed(UUID applicant) throws Exception {
+        return mockMvc.perform(get("/api/v1/notifications/applicants/" + applicant)
+                .with(jwt().authorities(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_OPS"))));
+    }
+
+    @Test
+    void opsFeed_showsThatShoppersFoldedFeed_withoutMarkingAnythingRead() throws Exception {
+        UUID applicant = payoffHistory();
+        payoffHistory(); // someone else's
+
+        opsFeed(applicant).andExpect(status().isOk())
+                .andExpect(jsonPath("$.items.length()").value(4))
+                .andExpect(jsonPath("$.items[1].title").value("Payments 2–4 received"));
+        feed(applicant, "").andExpect(jsonPath("$.unreadCount").value(4));
+    }
+
+    @Test
+    void opsFeed_isForbiddenForAShopper_evenForThemselves() throws Exception {
+        UUID applicant = payoffHistory();
+        mockMvc.perform(get("/api/v1/notifications/applicants/" + applicant)
+                        .with(jwt().jwt(j -> j.subject(applicant.toString()))))
+                .andExpect(status().isForbidden());
+    }
 }
