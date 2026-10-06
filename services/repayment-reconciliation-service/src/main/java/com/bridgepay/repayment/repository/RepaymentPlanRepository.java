@@ -32,6 +32,8 @@ public interface RepaymentPlanRepository extends JpaRepository<RepaymentPlan, UU
 
     List<RepaymentPlan> findByApplicantId(UUID applicantId);
 
+    List<RepaymentPlan> findByApplicantIdOrderByCreatedAtDescIdDesc(UUID applicantId);
+
     long countByApplicantIdAndStatus(UUID applicantId, PlanStatus status);
 
     @Query("""

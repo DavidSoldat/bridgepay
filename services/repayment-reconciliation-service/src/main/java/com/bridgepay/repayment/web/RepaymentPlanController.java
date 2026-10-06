@@ -1,12 +1,15 @@
 package com.bridgepay.repayment.web;
 
+import com.bridgepay.repayment.dto.ApplicantPlansResponse;
 import com.bridgepay.repayment.dto.EarlyPaymentRequest;
 import com.bridgepay.repayment.dto.RepaymentPlanResponse;
 import com.bridgepay.repayment.service.EarlyPaymentService;
+import com.bridgepay.repayment.service.RepaymentHistoryService;
 import com.bridgepay.repayment.service.RepaymentPlanService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -27,9 +30,21 @@ public class RepaymentPlanController {
 
     private final EarlyPaymentService earlyPaymentService;
 
-    public RepaymentPlanController(RepaymentPlanService repaymentPlanService, EarlyPaymentService earlyPaymentService) {
+    private final RepaymentHistoryService repaymentHistoryService;
+
+    public RepaymentPlanController(RepaymentPlanService repaymentPlanService, EarlyPaymentService earlyPaymentService,
+                                   RepaymentHistoryService repaymentHistoryService) {
         this.repaymentPlanService = repaymentPlanService;
         this.earlyPaymentService = earlyPaymentService;
+        this.repaymentHistoryService = repaymentHistoryService;
+    }
+
+    /** Ops: a shopper's plans plus the history counts the credit-risk overlay scores. Never calls Paddle. */
+    @GetMapping("/applicants/{applicantId}")
+    @PreAuthorize("hasRole('OPS')")
+    public ResponseEntity<ApplicantPlansResponse> listForApplicant(@PathVariable UUID applicantId) {
+        return ResponseEntity.ok(new ApplicantPlansResponse(repaymentHistoryService.getHistory(applicantId),
+                repaymentPlanService.listForApplicantOps(applicantId)));
     }
 
     @GetMapping("/{applicationId}")

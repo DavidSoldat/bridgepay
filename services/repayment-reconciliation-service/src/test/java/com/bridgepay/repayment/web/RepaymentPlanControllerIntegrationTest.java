@@ -536,4 +536,57 @@ class RepaymentPlanControllerIntegrationTest {
         payEarly(applicationId, subject, "NEXT").andExpect(status().isServiceUnavailable()); // not 409: claim released
         verify(paddleClient, never()).chargeNow(anyString(), any(), anyInt());
     }
+
+    private org.springframework.test.web.servlet.ResultActions plansAsOps(Object applicantId) throws Exception {
+        return mockMvc.perform(get("/api/v1/repayment-plans/applicants/" + applicantId)
+                .with(jwt().authorities(new SimpleGrantedAuthority("ROLE_OPS"))));
+    }
+
+    @Test
+    void applicantPlans_listsThatShoppersPlansNewestFirst_withTheOverlayHistory() throws Exception {
+        String subject = UUID.randomUUID().toString();
+        UUID completedApp = UUID.randomUUID();
+        UUID activeApp = UUID.randomUUID();
+        RepaymentPlan completed = planWithFourInstallments(completedApp, subject, "txn_c_" + completedApp);
+        RepaymentPlan active = planWithFourInstallments(activeApp, subject, "txn_a_" + activeApp);
+        planWithFourInstallments(UUID.randomUUID(), UUID.randomUUID().toString(), "txn_other_" + activeApp);
+        for (Installment i : installmentRepository.findByRepaymentPlanOrderBySequenceNumberAsc(completed)) {
+            i.markPaid("txn_c_" + completedApp);
+            installmentRepository.save(i);
+        }
+        RepaymentPlan done = repaymentPlanRepository.findById(completed.getId()).orElseThrow();
+        done.markCompleted();
+        repaymentPlanRepository.save(done);
+        List<Installment> a = installmentRepository.findByRepaymentPlanOrderBySequenceNumberAsc(active);
+        a.get(0).markPaid("txn_a_" + activeApp);
+        a.get(1).markLate();
+        installmentRepository.saveAll(a.subList(0, 2));
+
+        plansAsOps(subject).andExpect(status().isOk())
+                .andExpect(jsonPath("$.plans.length()").value(2))
+                .andExpect(jsonPath("$.plans[0].applicationId").value(activeApp.toString()))
+                .andExpect(jsonPath("$.plans[0].createdAt").isNotEmpty())
+                .andExpect(jsonPath("$.plans[0].installments[1].status").value("LATE"))
+                .andExpect(jsonPath("$.plans[0].installments[1].updatedAt").isNotEmpty())
+                .andExpect(jsonPath("$.plans[0].checkoutTransactionId").doesNotExist())
+                .andExpect(jsonPath("$.plans[1].status").value("COMPLETED"))
+                .andExpect(jsonPath("$.history.completedPlans").value(1))
+                .andExpect(jsonPath("$.history.latePaymentCount").value(1));
+        org.mockito.Mockito.verifyNoInteractions(paddleClient);
+    }
+
+    @Test
+    void applicantPlans_forAnUnknownShopper_isEmptyWithACleanHistory() throws Exception {
+        plansAsOps(UUID.randomUUID()).andExpect(status().isOk())
+                .andExpect(jsonPath("$.plans.length()").value(0))
+                .andExpect(jsonPath("$.history.completedPlans").value(0))
+                .andExpect(jsonPath("$.history.onTimeRate").value(1.0));
+    }
+
+    @Test
+    void applicantPlans_isForbiddenForAShopper_evenForThemselves() throws Exception {
+        String subject = UUID.randomUUID().toString();
+        mockMvc.perform(get("/api/v1/repayment-plans/applicants/" + subject).with(jwt().jwt(j -> j.subject(subject))))
+                .andExpect(status().isForbidden());
+    }
 }
