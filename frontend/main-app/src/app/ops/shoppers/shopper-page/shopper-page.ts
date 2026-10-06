@@ -59,10 +59,11 @@ export class ShopperPage {
     const p = this.plans();
     return p.state === 'ready' ? standingReason(p.value.history) : null;
   });
-  /** Share of the limit in use, clamped to 0–100 (outstanding can exceed a limit that dropped). */
+  /** Share of the limit in use, clamped to 0–100 (outstanding can exceed a limit that dropped, even to 0). */
   protected readonly usedPct = computed(() => {
     const s = this.standing();
-    if (s.state !== 'ready' || !s.value.limit) return 0;
+    if (s.state !== 'ready' || s.value.limit === null) return 0;
+    if (s.value.limit <= 0) return s.value.outstanding > 0 ? 100 : 0;
     return Math.min(100, Math.round((s.value.outstanding / s.value.limit) * 100));
   });
   protected readonly timeline = computed(() => {

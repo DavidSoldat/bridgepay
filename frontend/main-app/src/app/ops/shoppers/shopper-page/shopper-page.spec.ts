@@ -71,6 +71,11 @@ describe('ShopperPage', () => {
     expect(el.textContent).toContain('120.00');
   });
 
+  it('fills the meter when a zero limit still has money outstanding', async () => {
+    const el = await setup({ standing: () => of({ limit: 0, outstanding: 150, available: 0, band: 'HIGH' }) });
+    expect((el.querySelector('[role="img"] > div') as HTMLElement).style.width).toBe('100%');
+  });
+
   it('plansFailure_dropsWhyLineOnly', async () => {
     const el = await setup({ plans: fails });
     expect(el.textContent).toContain('380.00');

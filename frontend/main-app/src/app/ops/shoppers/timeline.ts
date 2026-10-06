@@ -34,6 +34,16 @@ export function buildTimeline(plans: OpsPlan[]): TimelineEntry[] {
       entries.push({ at: plan.updatedAt, ...planEvent, applicationId: plan.applicationId, planEvent: true });
     }
     for (const i of plan.installments) {
+      // A refund keeps paidAt: show the payment too, so ops can still see when the shopper paid.
+      if (i.status === 'REFUNDED' && i.paidAt) {
+        entries.push({
+          at: i.paidAt,
+          tone: 'paid',
+          text: `Payment ${i.sequenceNumber} of ${plan.installmentCount} paid — $${i.amount.toFixed(2)}`,
+          applicationId: plan.applicationId,
+          planEvent: false,
+        });
+      }
       const event = INSTALLMENT_EVENTS[i.status];
       const at = event?.when(i);
       if (!event || !at) continue;

@@ -42,6 +42,16 @@ describe('buildTimeline', () => {
     expect(entries[1].at).toBe('2026-02-02T09:00:00Z');
   });
 
+  it('keeps the original payment of a refunded installment, so ops can still see when the shopper paid', () => {
+    const entries = buildTimeline([plan('REFUNDED', [inst(1, 'REFUNDED', { paidAt: '2026-01-01T10:00:00Z' })])]);
+
+    expect(entries.map((e) => [e.at, e.text])).toEqual([
+      ['2026-03-01T10:00:00Z', 'Plan refunded'],
+      ['2026-02-01T09:00:00Z', 'Payment 1 of 4 refunded — $17.44'],
+      ['2026-01-01T10:00:00Z', 'Payment 1 of 4 paid — $17.44'],
+    ]);
+  });
+
   it('labels each terminal plan status and leaves an active plan without one', () => {
     const text = (status: string) => buildTimeline([plan(status, [])]).map((e) => e.text);
     expect(text('COMPLETED')).toEqual(['Plan completed']);
