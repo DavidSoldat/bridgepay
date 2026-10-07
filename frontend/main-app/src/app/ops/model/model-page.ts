@@ -10,6 +10,8 @@ import { featureLabel } from '../../shared/models/feature-labels';
 import { psi, psiStatus } from './psi';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { SkeletonRows } from '../../shared/ui/skeleton-rows/skeleton-rows';
+import { PairedBars } from '../../shared/charts/paired-bars/paired-bars';
+import { DriftBars } from '../../shared/charts/drift-bars/drift-bars';
 
 const PERIODS = [7, 30, 90] as const;
 const DEFAULT_DAYS = 30;
@@ -26,7 +28,7 @@ function bandLabel(bin: { from: number; to: number }): string {
  */
 @Component({
   selector: 'app-model-page',
-  imports: [DecimalPipe, PercentPipe, StatusBadge, SkeletonRows],
+  imports: [DecimalPipe, PercentPipe, StatusBadge, SkeletonRows, PairedBars, DriftBars],
   templateUrl: './model-page.html',
 })
 export class ModelPage {
@@ -53,6 +55,7 @@ export class ModelPage {
   protected readonly minScored = MIN_SCORED;
   protected readonly minFinished = MIN_FINISHED;
   protected readonly label = featureLabel;
+  protected readonly driftBand = DRIFT_BAND;
 
   private readonly both = computed(() => {
     const b = this.baseline();
@@ -96,7 +99,15 @@ export class ModelPage {
       return { feature, label: featureLabel(feature), mean, shifted: Math.abs(mean) > DRIFT_BAND };
     });
   });
-  protected readonly shifted = computed(() => this.drift().filter((f) => f.shifted));
+  /** The engine's thresholds as boundaries between 0.1-wide score bins (0.3 sits between the 3rd and 4th). */
+  protected readonly thresholdMarkers = computed(() => {
+    const b = this.baseline();
+    if (b.state !== 'ready') return [];
+    return [
+      { at: Math.round(b.value.thresholds.review * 10), label: 'Review' },
+      { at: Math.round(b.value.thresholds.decline * 10), label: 'Decline' },
+    ];
+  });
 
   /** Factors that aren't model features: the policy overlay's rules. */
   protected readonly policyRules = computed(() => {

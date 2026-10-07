@@ -51,35 +51,13 @@
   <div class="mb-5 grid gap-5 lg:grid-cols-2">
     <section class="card p-6" aria-labelledby="distribution-heading" data-testid="distribution">
       <h2 id="distribution-heading" class="mb-3 font-display text-lg font-bold">Score distribution</h2>
-      <table class="w-full text-sm">
-        <thead><tr class="border-b border-hairline text-left text-ink-muted">
-          <th class="py-2 font-medium">Score</th><th class="py-2 text-right font-medium">Training</th>
-          <th class="py-2 text-right font-medium">This period</th>
-        </tr></thead>
-        <tbody>
-          @for (row of distribution(); track row.label) {
-            <tr class="border-b border-hairline last:border-0">
-              <td class="py-2 font-mono">{{ row.label }}</td>
-              <td class="py-2 text-right font-mono">{{ row.training | percent: '1.0-0' }}</td>
-              <td class="py-2 text-right font-mono">{{ row.current | percent: '1.0-0' }}</td>
-            </tr>
-          }
-        </tbody>
-      </table>
+      <app-paired-bars [rows]="distribution()" title="Score distribution, training vs this period" [markers]="thresholdMarkers()" />
     </section>
 
     <section class="card p-6" aria-labelledby="drift-heading" data-testid="feature-drift">
       <h2 id="drift-heading" class="mb-1 font-display text-lg font-bold">Feature drift</h2>
       <p class="mb-3 text-sm text-ink-muted">Average push on the score per feature; 0 is the training average.</p>
-      <ul class="text-sm">
-        @for (f of drift(); track f.feature) {
-          <li class="flex items-center justify-between gap-2 py-1">
-            <span>{{ f.label }}</span>
-            <span class="flex items-center gap-2"><span class="font-mono">{{ f.mean | number: '1.2-2' }}</span>
-              @if (f.shifted) { <app-status-badge status="SHIFTED" /> }</span>
-          </li>
-        }
-      </ul>
+      <app-drift-bars [rows]="drift()" [band]="driftBand" title="Mean contribution per feature" />
     </section>
   </div>
 
