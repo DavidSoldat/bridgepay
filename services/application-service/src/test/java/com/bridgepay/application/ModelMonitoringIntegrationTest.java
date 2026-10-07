@@ -100,7 +100,8 @@ class ModelMonitoringIntegrationTest {
         app("COMPLETED", 0.42, factors(0, 0), "OPS", 40, 3);    // ops approved, lean approve -> agreed
         app("DECLINED", 0.61, factors(0, 0), "OPS", 40, 3);     // ops declined, lean decline -> agreed
         app("APPROVED", 0.66, factors(0, 0), "OPS", 40, 3);     // ops approved, lean decline -> disagreed
-        app("APPROVED", null, null, "OPS", 40, 3);              // held (engine down): neither
+        app("APPROVED", null, null, "OPS", 40, 3);              // held (engine down): not counted at all
+        app("CANCELLED", 0.35, factors(0, 0), "OPS", 40, 3);    // ops approved, order later cancelled -> agreed
         app("REFUNDED", 0.10, factors(0, 0), "MODEL", 40, 2);   // not an outcome
         // outside the 7-day window
         app("DEFAULTED", 0.91, factors(9, 9), "MODEL", 60, 50);
@@ -116,7 +117,9 @@ class ModelMonitoringIntegrationTest {
                 .andExpect(jsonPath("$.drift.scoreBins[1].count").value(2))
                 .andExpect(jsonPath("$.drift.scoreBins[4].count").value(1))
                 .andExpect(jsonPath("$.drift.scoreBins[5].count").value(1))
-                .andExpect(jsonPath("$.drift.scoreBins[8].count").value(1))
+                // 0.85 includes priorDefault +3.0: the model alone scored sigmoid(logit(0.85) - 3) = 0.22
+                .andExpect(jsonPath("$.drift.scoreBins[8].count").value(0))
+                .andExpect(jsonPath("$.drift.scoreBins[2].count").value(1))
                 .andExpect(jsonPath("$.drift.factors[0].feature").value("priorDefault"))
                 .andExpect(jsonPath("$.drift.factors[0].fireRate").value(closeTo(0.2, 1e-9)))
                 .andExpect(jsonPath("$.drift.factors[?(@.feature=='age')].count").value(contains(3)))
@@ -128,7 +131,7 @@ class ModelMonitoringIntegrationTest {
                 .andExpect(jsonPath("$.performance.outcomeBins[1].defaulted").value(1))
                 .andExpect(jsonPath("$.performance.outcomeBins[4].finished").value(1))
                 .andExpect(jsonPath("$.performance.reviews.decided").value(4))
-                .andExpect(jsonPath("$.performance.reviews.agreedWithModel").value(2))
+                .andExpect(jsonPath("$.performance.reviews.agreedWithModel").value(3))
                 .andExpect(jsonPath("$.performance.reviews.opsApproved.finished").value(1))
                 .andExpect(jsonPath("$.performance.reviews.opsApproved.defaulted").value(0))
                 .andExpect(jsonPath("$.performance.reviews.modelApproved.finished").value(2))
@@ -138,9 +141,25 @@ class ModelMonitoringIntegrationTest {
     @Test
     void longerPeriodIncludesOlderRows() throws Exception {
         mockMvc.perform(get(URL).param("days", "90").param("tz", "UTC").with(as("OPS")))
-                .andExpect(jsonPath("$.drift.scored").value(12))
+                .andExpect(jsonPath("$.drift.scored").value(13))
                 .andExpect(jsonPath("$.performance.finished").value(4))
                 .andExpect(jsonPath("$.performance.outcomeBins[9].defaulted").value(1));
+    }
+
+    /**
+     * Bins compare against a model-only training histogram, so policy-rule pushes are taken back out of the decision
+     * score: model 0.15 + amountToIncome (+1.0 log-odds) is stored as 0.3242 but belongs in the 0.1-0.2 bin.
+     */
+    @Test
+    void binsUseTheModelScoreWithoutPolicyRules() throws Exception {
+        jdbc.update("DELETE FROM application.applications");
+        String withRule = "[{\"feature\":\"age\",\"contribution\":0.1},{\"feature\":\"amountToIncome\",\"contribution\":1.0}]";
+        app("COMPLETED", 0.3242, withRule, "MODEL", 1, 1);
+        app("APPROVED", 0.3242, withRule, "MODEL", 1, 1);
+        mockMvc.perform(get(URL).param("days", "7").param("tz", "UTC").with(as("OPS")))
+                .andExpect(jsonPath("$.drift.scoreBins[1].count").value(2))
+                .andExpect(jsonPath("$.drift.scoreBins[3].count").value(0))
+                .andExpect(jsonPath("$.performance.outcomeBins[1].finished").value(1));
     }
 
     @Test
