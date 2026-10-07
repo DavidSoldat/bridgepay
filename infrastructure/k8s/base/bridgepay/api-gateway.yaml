@@ -20,6 +20,7 @@ spec:
             - containerPort: 8086
           envFrom:
             - configMapRef: { name: bridgepay-env }
+            - secretRef: { name: bridgepay-credentials }
           env:
             - { name: APPLICANT_SERVICE_URL, value: "http://applicant-service:8080" }
             - { name: APPLICATION_SERVICE_URL, value: "http://application-service:8081" }

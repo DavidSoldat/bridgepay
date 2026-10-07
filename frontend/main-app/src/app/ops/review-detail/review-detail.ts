@@ -16,6 +16,7 @@ import { DecisionCard } from '../case-file/decision-card/decision-card';
 import { ShopperCard } from '../case-file/shopper-card/shopper-card';
 import { MerchantPayoutCard } from '../case-file/merchant-payout-card/merchant-payout-card';
 import { RepaymentCard } from '../case-file/repayment-card/repayment-card';
+import { AuditTrail } from '../audit-trail/audit-trail';
 
 // The model's 10 bureau-shaped feature keys (services/credit-risk-engine's
 // coefficients.json) plus PolicyOverlay's rule keys - unknown keys fall back
@@ -44,7 +45,7 @@ const isCase = (c: ApplicationCase | undefined): c is ApplicationCase => c !== u
   selector: 'app-review-detail',
   imports: [
     RouterLink, DatePipe, DecimalPipe, StatusBadge, SkeletonRows, Icon,
-    DecisionCard, ShopperCard, MerchantPayoutCard, RepaymentCard,
+    DecisionCard, ShopperCard, MerchantPayoutCard, RepaymentCard, AuditTrail,
   ],
   templateUrl: './review-detail.html',
   styleUrl: './review-detail.css',

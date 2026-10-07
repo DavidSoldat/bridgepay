@@ -15,6 +15,9 @@ const STATUSES: Record<string, { label: string; tone: Tone }> = {
   DEFAULTED: { label: 'Defaulted', tone: 'declined' },
   FAILED: { label: 'Failed', tone: 'declined' },
   MISSED: { label: 'Missed', tone: 'declined' },
+  // Audit outcomes (FAILED above is shared)
+  ALLOWED: { label: 'Allowed', tone: 'approved' },
+  DENIED: { label: 'Denied', tone: 'declined' },
   PAID: { label: 'Paid', tone: 'paid' },
   COMPLETED: { label: 'Completed', tone: 'paid' },
   CANCELLED: { label: 'Cancelled', tone: 'neutral' },

@@ -49,6 +49,14 @@
         class="flex min-h-11 items-center gap-3 rounded-sm px-3 hover:bg-blush"
       ><app-icon name="alert-triangle" />Failed Events</a>
       <a
+        routerLink="/ops/audit"
+        routerLinkActive="bg-blush text-coral-hover font-semibold"
+        #rla6="routerLinkActive"
+        [class.text-ink]="!rla6.isActive"
+        (click)="menuOpen.set(false)"
+        class="flex min-h-11 items-center gap-3 rounded-sm px-3 hover:bg-blush"
+      ><app-icon name="clock" />Audit Log</a>
+      <a
         routerLink="/ops/shoppers"
         routerLinkActive="bg-blush text-coral-hover font-semibold"
         #rla5="routerLinkActive"

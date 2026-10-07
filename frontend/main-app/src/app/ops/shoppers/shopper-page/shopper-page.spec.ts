@@ -7,6 +7,8 @@ import { ShopperPage } from './shopper-page';
 import { ShoppersApi } from '../shoppers-api';
 import { OpsApplicants } from '../../ops-applicants';
 import { ApplicantPlans, CreditStanding } from '../../../shared/models/shopper';
+import { AuditApi } from '../../audit-api';
+import { Auth } from '../../../core/auth';
 
 const plans: ApplicantPlans = {
   history: { completedPlans: 2, defaultedPlans: 0, latePaymentCount: 1, onTimeRate: 0.9 },
@@ -41,6 +43,8 @@ async function setup(over: {
           notifications: () => of({ items: [], page: 0, hasMore: false }),
         },
       },
+      { provide: AuditApi, useValue: { list: () => of({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 50 }) } },
+      { provide: Auth, useValue: { username: () => 'ops1', hasRole: () => true } },
     ],
   });
   const harness = await RouterTestingHarness.create('/ops/shoppers/s-1');
@@ -48,6 +52,12 @@ async function setup(over: {
 }
 
 describe('ShopperPage', () => {
+  it('shows who accessed this shopper, linked to the filtered audit log', async () => {
+    const el = await setup();
+    expect(el.textContent).toContain('Access history');
+    expect(Array.from(el.querySelectorAll('a')).find((a) => a.textContent?.trim() === 'View all')?.getAttribute('href')).toBe('/ops/audit?targetType=SHOPPER&targetId=s-1');
+  });
+
   it('heads the page with the shopper and shows credit standing with the why line', async () => {
     const el = await setup();
     expect(el.querySelector('h1')?.textContent).toContain('Ana Doe');

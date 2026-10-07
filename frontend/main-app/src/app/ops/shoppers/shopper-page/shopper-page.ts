@@ -15,6 +15,7 @@ import { Icon } from '../../../shared/ui/icon/icon';
 import { ShopperCard } from '../../case-file/shopper-card/shopper-card';
 import { ShopperApplications } from '../shopper-applications/shopper-applications';
 import { ShopperNotifications } from '../shopper-notifications/shopper-notifications';
+import { AuditTrail } from '../../audit-trail/audit-trail';
 import { buildTimeline, orderRef, standingReason } from '../timeline';
 
 const TIMELINE_PREVIEW = 20;
@@ -25,7 +26,7 @@ const LOADING = { state: 'loading' } as const;
   selector: 'app-shopper-page',
   imports: [
     RouterLink, DatePipe, DecimalPipe, StatusBadge, SkeletonRows, EmptyState, Icon,
-    ShopperCard, ShopperApplications, ShopperNotifications,
+    ShopperCard, ShopperApplications, ShopperNotifications, AuditTrail,
   ],
   templateUrl: './shopper-page.html',
 })
