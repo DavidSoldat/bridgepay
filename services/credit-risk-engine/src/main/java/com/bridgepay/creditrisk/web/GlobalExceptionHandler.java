@@ -33,6 +33,11 @@ public class GlobalExceptionHandler {
                 .body(error("CREDIT_LIMIT_UNAVAILABLE", ex.getMessage()));
     }
 
+    @ExceptionHandler(ModelController.BaselineUnavailableException.class)
+    public ResponseEntity<ApiError> handleBaselineUnavailable(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(error("BASELINE_UNAVAILABLE", ex.getMessage()));
+    }
+
     private ApiError error(String code, String message) {
         String traceId = MDC.get("traceId");
         if (traceId == null) {

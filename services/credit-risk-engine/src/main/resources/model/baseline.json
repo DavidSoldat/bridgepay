@@ -1,0 +1,80 @@
+{
+  "modelVersion": "08321ca1e1d4",
+  "aucRoc": 0.8196,
+  "evalRows": 22500,
+  "evalDefaultRate": 0.0668,
+  "features": [
+    "revolvingUtilization",
+    "age",
+    "numberOfTime30to59DaysPastDueNotWorse",
+    "debtRatio",
+    "monthlyIncome",
+    "numberOfOpenCreditLinesAndLoans",
+    "numberOfTimes90DaysLate",
+    "numberRealEstateLoansOrLines",
+    "numberOfTime60to89DaysPastDueNotWorse",
+    "numberOfDependents"
+  ],
+  "scoreBins": [
+    {
+      "from": 0.0,
+      "to": 0.1,
+      "share": 0.0026222222222222224,
+      "defaultRate": 0.03389830508474576
+    },
+    {
+      "from": 0.1,
+      "to": 0.2,
+      "share": 0.11097777777777777,
+      "defaultRate": 0.006407689227072487
+    },
+    {
+      "from": 0.2,
+      "to": 0.3,
+      "share": 0.2660888888888889,
+      "defaultRate": 0.018707198931017206
+    },
+    {
+      "from": 0.3,
+      "to": 0.4,
+      "share": 0.2571111111111111,
+      "defaultRate": 0.03076923076923077
+    },
+    {
+      "from": 0.4,
+      "to": 0.5,
+      "share": 0.1943111111111111,
+      "defaultRate": 0.05901189387008234
+    },
+    {
+      "from": 0.5,
+      "to": 0.6,
+      "share": 0.0588,
+      "defaultRate": 0.10204081632653061
+    },
+    {
+      "from": 0.6,
+      "to": 0.7,
+      "share": 0.037955555555555555,
+      "defaultRate": 0.18618266978922718
+    },
+    {
+      "from": 0.7,
+      "to": 0.8,
+      "share": 0.02288888888888889,
+      "defaultRate": 0.258252427184466
+    },
+    {
+      "from": 0.8,
+      "to": 0.9,
+      "share": 0.01951111111111111,
+      "defaultRate": 0.33029612756264237
+    },
+    {
+      "from": 0.9,
+      "to": 1.0,
+      "share": 0.029733333333333334,
+      "defaultRate": 0.5440956651718983
+    }
+  ]
+}

@@ -28,6 +28,11 @@ const STATUSES: Record<string, { label: string; tone: Tone }> = {
   LOW: { label: 'Low risk', tone: 'approved' },
   MEDIUM: { label: 'Medium risk', tone: 'review' },
   HIGH: { label: 'High risk', tone: 'declined' },
+  // Model monitoring
+  STABLE: { label: 'Stable', tone: 'approved' },
+  MODERATE_SHIFT: { label: 'Moderate shift', tone: 'review' },
+  SIGNIFICANT_SHIFT: { label: 'Significant shift', tone: 'declined' },
+  SHIFTED: { label: 'Shifted', tone: 'review' },
 };
 
 // Whole class names so Tailwind's scanner finds them.

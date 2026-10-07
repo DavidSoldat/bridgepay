@@ -24,6 +24,7 @@ bridgepay:
   credit-risk-model:
     model-path: ${CREDIT_RISK_MODEL_PATH:classpath:model/model.onnx}
     coefficients-path: ${CREDIT_RISK_COEFFICIENTS_PATH:classpath:model/coefficients.json}
+    baseline-path: ${CREDIT_RISK_BASELINE_PATH:classpath:model/baseline.json}
 
 management:
   endpoints:

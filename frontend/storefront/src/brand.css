@@ -19,6 +19,8 @@
   --color-declined-bg: #FDE0DC;
   --color-paid: #2A4596;
   --color-paid-bg: #E1E7FA;
+  /* Chart cool pole (vs coral): validated light-mode CVD-safe pair, dataviz skill */
+  --color-chart-cool: #3350A6;
   --color-neutral: #5E4E4A;
   --color-neutral-bg: #F1E6E1;
 

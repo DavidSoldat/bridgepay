@@ -6,6 +6,7 @@ import { OpsDashboardPage } from './ops/dashboard/ops-dashboard';
 import { ShopperSearch } from './ops/shoppers/shopper-search/shopper-search';
 import { ShopperPage } from './ops/shoppers/shopper-page/shopper-page';
 import { AuditLog } from './ops/audit-log/audit-log';
+import { ModelPage } from './ops/model/model-page';
 import { PayoutLedger } from './merchant/payout-ledger/payout-ledger';
 import { SalesPage } from './merchant/sales-page/sales-page';
 import { NoAccess } from './no-access/no-access';
@@ -21,6 +22,7 @@ export const routes: Routes = [
   { path: 'ops/shoppers', component: ShopperSearch, canActivate: [opsGuard] },
   { path: 'ops/shoppers/:subject', component: ShopperPage, canActivate: [opsGuard] },
   { path: 'ops/audit', component: AuditLog, canActivate: [opsGuard] },
+  { path: 'ops/model', component: ModelPage, canActivate: [opsGuard] },
   { path: 'ops/:id', component: ReviewDetail, canActivate: [opsGuard] },
   { path: 'merchant', component: SalesPage, canActivate: [merchantGuard] },
   { path: 'merchant/payouts', component: PayoutLedger, canActivate: [merchantGuard] },

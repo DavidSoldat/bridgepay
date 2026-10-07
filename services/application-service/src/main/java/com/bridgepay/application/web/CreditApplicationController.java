@@ -5,9 +5,11 @@ import com.bridgepay.application.dto.ApplicationCaseResponse;
 import com.bridgepay.application.dto.ApplicationResponse;
 import com.bridgepay.application.dto.CheckoutRequest;
 import com.bridgepay.application.dto.CreditLimitResponse;
+import com.bridgepay.application.dto.ModelMonitoringResponse;
 import com.bridgepay.application.dto.OpsDashboardResponse;
 import com.bridgepay.application.dto.ReviewDecisionRequest;
 import com.bridgepay.application.service.CreditApplicationService;
+import com.bridgepay.application.service.ModelMonitoringService;
 import com.bridgepay.application.service.OpsDashboardService;
 import com.bridgepay.application.service.SpendingLimitService;
 import jakarta.validation.Valid;
@@ -44,13 +46,16 @@ public class CreditApplicationController {
 
     private final CreditApplicationService applicationService;
     private final OpsDashboardService opsDashboardService;
+    private final ModelMonitoringService modelMonitoringService;
     private final SpendingLimitService spendingLimitService;
 
     public CreditApplicationController(CreditApplicationService applicationService,
                                        OpsDashboardService opsDashboardService,
+                                       ModelMonitoringService modelMonitoringService,
                                        SpendingLimitService spendingLimitService) {
         this.applicationService = applicationService;
         this.opsDashboardService = opsDashboardService;
+        this.modelMonitoringService = modelMonitoringService;
         this.spendingLimitService = spendingLimitService;
     }
 
@@ -79,6 +84,13 @@ public class CreditApplicationController {
     public ResponseEntity<OpsDashboardResponse> dashboard(@RequestParam int days,
                                                           @RequestParam(required = false) String tz) {
         return ResponseEntity.ok(opsDashboardService.dashboard(days, tz));
+    }
+
+    @GetMapping("/model-monitoring")
+    @PreAuthorize("hasRole('OPS')")
+    public ResponseEntity<ModelMonitoringResponse> modelMonitoring(@RequestParam int days,
+                                                                   @RequestParam(required = false) String tz) {
+        return ResponseEntity.ok(modelMonitoringService.monitoring(days, tz));
     }
 
     @GetMapping("/applicants/{applicantId}")

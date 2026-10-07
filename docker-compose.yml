@@ -154,6 +154,7 @@ services:
       - application-service
       - repayment-reconciliation-service
       - notifications-service
+      - credit-risk-engine
     environment:
       SPRING_PROFILES_ACTIVE: local
       DB_HOST: postgres
@@ -165,6 +166,7 @@ services:
       APPLICATION_SERVICE_URL: http://application-service:8081
       REPAYMENT_RECONCILIATION_SERVICE_URL: http://repayment-reconciliation-service:8084
       NOTIFICATIONS_SERVICE_URL: http://notifications-service:8085
+      CREDIT_RISK_ENGINE_URL: http://credit-risk-engine:8082
     ports:
       - "8086:8086"
 

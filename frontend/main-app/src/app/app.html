@@ -32,6 +32,14 @@
         class="flex min-h-11 items-center gap-3 rounded-sm px-3 hover:bg-blush"
       ><app-icon name="chart-column" />Dashboard</a>
       <a
+        routerLink="/ops/model"
+        routerLinkActive="bg-blush text-coral-hover font-semibold"
+        #rla7="routerLinkActive"
+        [class.text-ink]="!rla7.isActive"
+        (click)="menuOpen.set(false)"
+        class="flex min-h-11 items-center gap-3 rounded-sm px-3 hover:bg-blush"
+      ><app-icon name="activity" />Model</a>
+      <a
         routerLink="/ops"
         routerLinkActive="bg-blush text-coral-hover font-semibold"
         #rla1="routerLinkActive"

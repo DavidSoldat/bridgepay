@@ -26,6 +26,7 @@ spec:
             - { name: APPLICATION_SERVICE_URL, value: "http://application-service:8081" }
             - { name: REPAYMENT_RECONCILIATION_SERVICE_URL, value: "http://repayment-reconciliation-service:8084" }
             - { name: NOTIFICATIONS_SERVICE_URL, value: "http://notifications-service:8085" }
+            - { name: CREDIT_RISK_ENGINE_URL, value: "http://credit-risk-engine:8082" }
           startupProbe:
             httpGet: { path: /actuator/health/liveness, port: 8086 }
             periodSeconds: 5
