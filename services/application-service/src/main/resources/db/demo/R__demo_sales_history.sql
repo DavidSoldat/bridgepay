@@ -379,22 +379,40 @@ SELECT id, n, created_at, decision_at, jitter, route, reviewer_roll, note_roll,
             ELSE 'PAID' END AS payout_status
 FROM decided;
 
+-- D4c: each order takes a real model sample from its route's score band (credit-risk-engine
+-- scripts/build_monitoring_baseline.py). Orders from the last 21 days take only applicants under 45, a deliberate
+-- drift the model monitoring page should flag. Approved orders decided over 35 days ago have finished their plan:
+-- the sample's real label decides COMPLETED or DEFAULTED.
+ALTER TABLE demo_orders ADD COLUMN risk_score numeric, ADD COLUMN score_factors text, ADD COLUMN defaulted boolean;
+
+UPDATE demo_orders o
+SET (risk_score, score_factors, defaulted) = (
+    SELECT s.score, s.factors, s.defaulted
+    FROM demo_model_samples s
+    WHERE s.band = CASE o.route WHEN 'MODEL_APPROVE' THEN 'A' WHEN 'REVIEW' THEN 'R' ELSE 'D' END
+      AND (s.young OR o.created_at < now() - interval '21 days')
+    ORDER BY md5(o.n::text || '-' || s.k::text)
+    LIMIT 1);
+
+UPDATE demo_orders
+SET status = CASE WHEN defaulted THEN 'DEFAULTED' ELSE 'COMPLETED' END
+WHERE status = 'APPROVED' AND decision_at < now() - interval '35 days';
+
 INSERT INTO application.applications
     (id, applicant_id, merchant_id, amount, status, risk_score, score_factors, decision_at,
-     installment_count, installment_amount, decision_source, decided_by, reviewer_note, is_demo,
+     installment_count, installment_amount, installments_paid, decision_source, decided_by, reviewer_note, is_demo,
      created_at, updated_at)
 SELECT id,
        ('00000000-0000-7000-8000-0000000de0' || lpad((n % 40)::text, 2, '0'))::uuid,
        '00000000-0000-7000-8000-000000000001',
        amount,
        status,
-       CASE route WHEN 'MODEL_DECLINE' THEN round((0.72 + jitter * 0.25)::numeric, 3)
-                  WHEN 'REVIEW' THEN round((0.30 + jitter * 0.39)::numeric, 3)
-                  ELSE round((0.05 + jitter * 0.22)::numeric, 3) END,
-       '[]',
+       risk_score,
+       score_factors,
        decision_at,
        4,
        installment,
+       CASE status WHEN 'COMPLETED' THEN 4 WHEN 'DEFAULTED' THEN 1 ELSE 0 END,
        CASE WHEN route = 'REVIEW' THEN 'OPS' ELSE 'MODEL' END,
        CASE WHEN route = 'REVIEW' THEN CASE WHEN reviewer_roll < 0.65 THEN 'ops1' ELSE 'ops2' END END,
        CASE WHEN route <> 'REVIEW' THEN NULL
@@ -420,3 +438,4 @@ JOIN application.merchants m ON m.id = '00000000-0000-7000-8000-000000000001'
 WHERE o.payout_status IS NOT NULL;
 
 DROP TABLE demo_orders;
+DROP TABLE demo_model_samples;
