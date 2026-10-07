@@ -7,8 +7,9 @@
   </ul>
   <div class="space-y-2" aria-hidden="true">
     @for (r of bars(); track r.feature) {
-      <div class="flex items-center gap-3 text-sm" [attr.data-shifted]="r.shifted">
-        <div class="w-32 shrink-0 truncate sm:w-44" [title]="r.label">{{ r.label }}</div>
+      <!-- Phones: label on its own line, so the track gets the row's width -->
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm sm:flex-nowrap" [attr.data-shifted]="r.shifted">
+        <div class="basis-full truncate sm:basis-auto sm:w-44 sm:shrink-0" [title]="r.label">{{ r.label }}</div>
         <div class="relative h-4 min-w-0 flex-1 rounded-full bg-cream">
           <div data-testid="drift-band" class="absolute inset-y-0 bg-blush"
                [style.left.%]="50 - bandWidthPct() / 2" [style.width.%]="bandWidthPct()"></div>
@@ -19,8 +20,10 @@
             <div data-testid="drift-bar" class="absolute inset-y-0.5 rounded-l-full bg-chart-cool" style="right: 50%" [style.width.%]="r.width"></div>
           }
         </div>
-        <div class="w-12 shrink-0 text-right font-mono">{{ r.text }}</div>
-        <div class="w-20 shrink-0">@if (r.shifted) { <app-status-badge status="SHIFTED" /> }</div>
+        <div data-testid="drift-value" class="flex shrink-0 items-center gap-2">
+          <span class="w-12 text-right font-mono">{{ r.text }}</span>
+          @if (r.shifted) { <app-status-badge status="SHIFTED" /> }
+        </div>
       </div>
     }
   </div>

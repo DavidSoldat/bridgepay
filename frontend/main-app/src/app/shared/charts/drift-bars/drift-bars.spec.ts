@@ -40,6 +40,18 @@ describe('DriftBars', () => {
     expect(parseFloat(bars(el)[0].style.width)).toBeLessThanOrEqual(50);
   });
 
+  it('gives the track the full row width on phones: label on its own line, no reserved badge column', () => {
+    const el = render();
+    const row = el.querySelector('[data-shifted]') as HTMLElement;
+    expect(row.classList).toContain('flex-wrap');
+    const label = row.firstElementChild as HTMLElement;
+    expect(label.classList).toContain('basis-full');
+    expect(label.classList).toContain('sm:basis-auto');
+    expect(row.querySelector('.w-20')).toBeNull();
+    // the badge sits with the value, not in its own fixed column
+    expect(row.querySelector('[data-testid="drift-value"]')!.textContent).toContain('Shifted');
+  });
+
   it('labels each row with its signed value and lists them in a hidden table', () => {
     const el = render();
     expect(el.textContent).toContain('+0.41');
