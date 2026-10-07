@@ -92,10 +92,10 @@ class DemoSalesHistorySeedTest {
                 + " AND a.status IN ('COMPLETED', 'DEFAULTED') AND a.decision_at >= now() - interval '35 days'")).isZero();
         assertThat(count(jdbc, "SELECT count(*) FROM application.applications a WHERE " + DEMO
                 + " AND a.status = 'APPROVED' AND a.decision_at < now() - interval '35 days'")).isZero();
-        // the deliberate drift: the last week's applicants are younger than training (age pushes risk up)
+        // the deliberate drift: the last 60 days' applicants are younger, enough to flag over the page's default 90 days
         Double recentAge = jdbc.queryForObject("SELECT avg((f->>'contribution')::float8) FROM application.applications a,"
                 + " jsonb_array_elements(a.score_factors::jsonb) f WHERE " + DEMO
-                + " AND f->>'feature' = 'age' AND a.created_at >= now() - interval '7 days'", Double.class);
+                + " AND f->>'feature' = 'age' AND a.created_at >= now() - interval '90 days'", Double.class);
         assertThat(recentAge).isGreaterThan(0.25);
 
         List<Map<String, Object>> before = statusCounts(jdbc);

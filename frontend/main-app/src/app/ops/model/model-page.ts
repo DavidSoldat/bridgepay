@@ -14,7 +14,8 @@ import { PairedBars } from '../../shared/charts/paired-bars/paired-bars';
 import { DriftBars } from '../../shared/charts/drift-bars/drift-bars';
 
 const PERIODS = [7, 30, 90] as const;
-const DEFAULT_DAYS = 30;
+// Model health moves slowly, and plans take weeks to finish: default to the longest period.
+const DEFAULT_DAYS = 90;
 const FEW = 20;
 
 function bandLabel(bin: { from: number; to: number }): string {

@@ -380,7 +380,7 @@ SELECT id, n, created_at, decision_at, jitter, route, reviewer_roll, note_roll,
 FROM decided;
 
 -- D4c: each order takes a real model sample from its route's score band (credit-risk-engine
--- scripts/build_monitoring_baseline.py). Orders from the last 21 days take only applicants under 45, a deliberate
+-- scripts/build_monitoring_baseline.py). Orders from the last 60 days take only applicants under 45, a deliberate
 -- drift the model monitoring page should flag. Approved orders decided over 35 days ago have finished their plan:
 -- the sample's real label decides COMPLETED or DEFAULTED.
 ALTER TABLE demo_orders ADD COLUMN risk_score numeric, ADD COLUMN score_factors text, ADD COLUMN defaulted boolean;
@@ -390,7 +390,7 @@ SET (risk_score, score_factors, defaulted) = (
     SELECT s.score, s.factors, s.defaulted
     FROM demo_model_samples s
     WHERE s.band = CASE o.route WHEN 'MODEL_APPROVE' THEN 'A' WHEN 'REVIEW' THEN 'R' ELSE 'D' END
-      AND (s.young OR o.created_at < now() - interval '21 days')
+      AND (s.young OR o.created_at < now() - interval '60 days')
     ORDER BY md5(o.n::text || '-' || s.k::text)
     LIMIT 1);
 

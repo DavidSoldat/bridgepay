@@ -63,7 +63,7 @@ const text = (el: Element | null) => el?.textContent ?? '';
 describe('ModelPage', () => {
   it('shows model version, AUC and a stable PSI when production matches training', async () => {
     const { el, calls } = await setup('/ops/model');
-    expect(calls).toEqual([30]);
+    expect(calls).toEqual([90]); // model health moves slowly: 90 days by default
     expect(text(el)).toContain('abc123def456');
     expect(text(el)).toContain('0.82');
     expect(text(el)).toContain('Stable');
@@ -72,10 +72,10 @@ describe('ModelPage', () => {
   it('reads and writes the period in ?days=', async () => {
     const { harness, el, calls, router } = await setup('/ops/model?days=7');
     expect(calls).toEqual([7]);
-    (Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.trim() === '90 days') as HTMLButtonElement).click();
+    (Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.trim() === '30 days') as HTMLButtonElement).click();
     await harness.fixture.whenStable();
-    expect(router.url).toBe('/ops/model?days=90');
-    expect(calls.at(-1)).toBe(90);
+    expect(router.url).toBe('/ops/model?days=30');
+    expect(calls.at(-1)).toBe(30);
   });
 
   it('flags shifted model features and lists policy rules separately', async () => {
