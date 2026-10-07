@@ -65,9 +65,9 @@ export class AuditLog {
   protected readonly totalPages = computed(() => this.result()?.totalPages ?? 0);
   protected readonly outcomes = OUTCOMES;
   protected readonly actions = Object.entries(AUDIT_ACTION_LABELS);
-  protected readonly actionLabels = AUDIT_ACTION_LABELS;
+  protected readonly actionLabels: Partial<Record<string, string>> = AUDIT_ACTION_LABELS;
   protected readonly roleLabels = ROLE_LABELS;
-  protected readonly targetLabels = TARGET_LABELS;
+  protected readonly targetLabels: Partial<Record<string, string>> = TARGET_LABELS;
   protected readonly targetLink = auditTargetLink;
   protected readonly outcomeOf = outcomeOf;
 

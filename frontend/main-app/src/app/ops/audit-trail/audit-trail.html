@@ -1,0 +1,27 @@
+<section class="card p-6" [attr.aria-labelledby]="headingId">
+  <div class="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+    <h2 [id]="headingId" class="font-display text-lg font-bold">{{ heading() }}</h2>
+    <a routerLink="/ops/audit" [queryParams]="{ targetType: targetType(), targetId: targetId() }"
+       class="text-sm font-semibold text-coral hover:text-coral-hover">View all</a>
+  </div>
+  @switch (section().state) {
+    @case ('loading') { <app-skeleton-rows [rows]="3" /> }
+    @case ('error') { <p class="text-sm text-declined">Couldn't load activity.</p> }
+    @default {
+      @if (entries().length === 0) {
+        <app-empty-state icon="clock" heading="No activity recorded." />
+      } @else {
+        <ul class="divide-y divide-hairline">
+          @for (e of entries(); track e.id) {
+            <li class="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
+              <span class="w-32 shrink-0 font-mono text-ink-muted">{{ e.occurredAt | date: 'MMM d, HH:mm' }}</span>
+              <span class="font-semibold">{{ e.actorUsername ?? '—' }}</span>
+              <span class="min-w-0 flex-1">{{ labels[e.action] ?? e.action }}</span>
+              @if (outcomeOf(e.status) !== 'ALLOWED') { <app-status-badge [status]="outcomeOf(e.status)" /> }
+            </li>
+          }
+        </ul>
+      }
+    }
+  }
+</section>

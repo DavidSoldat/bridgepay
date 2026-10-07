@@ -10,6 +10,8 @@ import { ApplicationCase } from '../../shared/models/application-case';
 import { OpsApplicant } from '../../shared/models/ops-applicant';
 import { RepaymentPlan } from '../../shared/models/repayment-plan';
 import { ToastService } from '../../shared/ui/toast-service';
+import { AuditApi } from '../audit-api';
+import { Auth } from '../../core/auth';
 
 const baseCase: ApplicationCase = {
   applicationId: 'app-1', applicantId: 'a-1', amount: 500, status: 'MANUAL_REVIEW', riskScore: 0.4,
@@ -44,6 +46,8 @@ function setup(opts: {
       },
       { provide: OpsApplicants, useValue: { get: opts.getShopper ?? (() => of(shopper)) } },
       { provide: RepaymentPlans, useValue: { get: opts.getPlan ?? notFound } },
+      { provide: AuditApi, useValue: { list: () => of({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 50 }) } },
+      { provide: Auth, useValue: { username: () => 'ops1', hasRole: () => true } },
     ],
   });
   const fixture = TestBed.createComponent(ReviewDetail);
@@ -60,6 +64,12 @@ function button(el: HTMLElement, label: string): HTMLButtonElement {
 }
 
 describe('ReviewDetail', () => {
+  it('shows activity on this application, linked to the filtered audit log', () => {
+    const el = setup().nativeElement as HTMLElement;
+    expect(el.textContent).toContain('Activity');
+    expect(Array.from(el.querySelectorAll('a')).find((a) => a.textContent?.trim() === 'View all')?.getAttribute('href')).toBe('/ops/audit?targetType=APPLICATION&targetId=app-1');
+  });
+
   it('renders each score factor', () => {
     const el = setup({
       getCase: withCase({ scoreFactors: [{ feature: 'revolving_util', contribution: 0.12 }, { feature: 'debt_ratio', contribution: -0.05 }] }),
