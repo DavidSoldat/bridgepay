@@ -56,6 +56,19 @@ class AuditActionTest {
     }
 
     @Test
+    void percentEncodedIdsStillMatch() {
+        // "%30" is "0": the proxy forwards the raw path, the downstream decodes it to a real UUID.
+        String encoded = "%30" + U.substring(1);
+        assertThat(match("GET", "/api/v1/ops/applicants/" + encoded))
+                .contains(new AuditMatch(AuditAction.VIEW_SHOPPER_PROFILE, "SHOPPER", U, null));
+        assertThat(match("POST", "/api/v1/merchants/" + M + "/orders/" + encoded + "/refund"))
+                .contains(new AuditMatch(AuditAction.REFUND_ORDER, "APPLICATION", U, "merchantId=" + M));
+        // Upper-case UUIDs reach the same row downstream; store one spelling so per-target views find it.
+        assertThat(match("GET", "/api/v1/ops/applicants/" + U.toUpperCase()))
+                .contains(new AuditMatch(AuditAction.VIEW_SHOPPER_PROFILE, "SHOPPER", U, null));
+    }
+
+    @Test
     void detailIsTruncatedTo500() {
         String q = "x".repeat(600);
         assertThat(match("GET", "/api/v1/ops/applicants", "q", q).orElseThrow().detail()).hasSize(500);

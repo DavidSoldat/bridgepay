@@ -1,7 +1,9 @@
 package com.bridgepay.gateway.audit;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.util.UrlPathHelper;
 
+import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -47,13 +49,16 @@ public enum AuditAction {
     }
 
     public static Optional<AuditMatch> match(HttpServletRequest request) {
-        String path = request.getRequestURI();
+        // Decoded: the proxy forwards the raw path and the downstream decodes it, so "%30…" is the same UUID.
+        String path = UrlPathHelper.defaultInstance.getPathWithinApplication(request);
         for (AuditAction action : values()) {
             if (!action.method.equals(request.getMethod())) continue;
             Matcher m = action.pattern.matcher(path);
             if (!m.matches()) continue;
-            String targetId = action.targetType == null ? null : m.group("id");
-            String detail = action.hasMerchant ? "merchantId=" + m.group("m") : action.detail.apply(request);
+            String targetId = action.targetType == null ? null : m.group("id").toLowerCase(Locale.ROOT);
+            String detail = action.hasMerchant
+                    ? "merchantId=" + m.group("m").toLowerCase(Locale.ROOT)
+                    : action.detail.apply(request);
             return Optional.of(new AuditMatch(action, action.targetType, targetId, truncate(detail)));
         }
         return Optional.empty();
