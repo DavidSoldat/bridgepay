@@ -1,13 +1,16 @@
 package com.bridgepay.gateway.web;
 
+import com.bridgepay.gateway.audit.InvalidAuditQueryException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 
 import java.time.Instant;
@@ -22,6 +25,20 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleNotFound(NoHandlerFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(error("NOT_FOUND", "No route for " + ex.getHttpMethod() + " " + ex.getRequestURL()));
+    }
+
+    // The gateway's own @PreAuthorize (the audit endpoint); without this the catch-all below turns it into a 502.
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error("FORBIDDEN", "Access denied"));
+    }
+
+    @ExceptionHandler({InvalidAuditQueryException.class, MethodArgumentTypeMismatchException.class})
+    public ResponseEntity<ApiError> handleBadQuery(Exception ex) {
+        String message = ex instanceof MethodArgumentTypeMismatchException m
+                ? m.getName() + " has an invalid value"
+                : ex.getMessage();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error("VALIDATION_ERROR", message));
     }
 
     @ExceptionHandler(Exception.class)
