@@ -1,0 +1,4 @@
+# Every @SpringBootTest gets a real Postgres via the Testcontainers JDBC URL; one container per JVM.
+spring:
+  datasource:
+    url: jdbc:tc:postgresql:16-alpine:///bridgepay?TC_DAEMON=true
