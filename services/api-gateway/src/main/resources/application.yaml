@@ -66,6 +66,10 @@ spring:
               uri: ${bridgepay.notifications-service.base-url}
               predicates:
                 - Path=/api/v1/notifications/**
+            - id: model
+              uri: ${bridgepay.credit-risk-engine.base-url}
+              predicates:
+                - Path=/api/v1/model/**
 
 bridgepay:
   applicant-service:
@@ -76,6 +80,8 @@ bridgepay:
     base-url: ${REPAYMENT_RECONCILIATION_SERVICE_URL:http://localhost:8084}
   notifications-service:
     base-url: ${NOTIFICATIONS_SERVICE_URL:http://localhost:8085}
+  credit-risk-engine:
+    base-url: ${CREDIT_RISK_ENGINE_URL:http://localhost:8082}
 
 management:
   endpoints:
