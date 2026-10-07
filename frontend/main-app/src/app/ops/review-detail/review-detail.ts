@@ -17,27 +17,11 @@ import { ShopperCard } from '../case-file/shopper-card/shopper-card';
 import { MerchantPayoutCard } from '../case-file/merchant-payout-card/merchant-payout-card';
 import { RepaymentCard } from '../case-file/repayment-card/repayment-card';
 import { AuditTrail } from '../audit-trail/audit-trail';
+import { featureLabel } from '../../shared/models/feature-labels';
 
 // The model's 10 bureau-shaped feature keys (services/credit-risk-engine's
 // coefficients.json) plus PolicyOverlay's rule keys - unknown keys fall back
 // to the raw name as-is.
-const FEATURE_LABELS: Record<string, string> = {
-  revolvingUtilization: 'Revolving utilization',
-  age: 'Age',
-  numberOfTime30to59DaysPastDueNotWorse: '30-59 days past due',
-  debtRatio: 'Debt ratio',
-  monthlyIncome: 'Monthly income',
-  numberOfOpenCreditLinesAndLoans: 'Open credit lines & loans',
-  numberOfTimes90DaysLate: '90+ days late',
-  numberRealEstateLoansOrLines: 'Real estate loans/lines',
-  numberOfTime60to89DaysPastDueNotWorse: '60-89 days past due',
-  numberOfDependents: 'Dependents',
-  priorDefault: 'Prior BridgePay default',
-  latePayments: 'Late BridgePay payments',
-  completedPlans: 'Completed BridgePay plans',
-  amountToIncome: 'Amount vs. monthly income',
-  creditLimitUnavailable: "Spending limit couldn't be checked",
-};
 
 const isCase = (c: ApplicationCase | undefined): c is ApplicationCase => c !== undefined;
 
@@ -94,7 +78,7 @@ export class ReviewDetail {
   }
 
   protected featureLabel(feature: string): string {
-    return FEATURE_LABELS[feature] ?? feature;
+    return featureLabel(feature);
   }
 
   decide(decision: 'APPROVE' | 'DECLINE'): void {
