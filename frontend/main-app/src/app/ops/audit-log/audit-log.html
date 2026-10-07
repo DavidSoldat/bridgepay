@@ -1,0 +1,95 @@
+<h1 class="mb-5 font-display text-2xl font-bold">Audit log</h1>
+
+<div class="card mb-5 grid gap-4 p-4 sm:grid-cols-2 lg:grid-cols-4">
+  <label class="text-sm">
+    <span class="mb-1 block font-medium">User</span>
+    <input type="search" class="input" placeholder="e.g. ops1" [value]="filters().actor ?? ''"
+           (change)="set({ actor: inputValue($event) })" />
+  </label>
+  <label class="text-sm">
+    <span class="mb-1 block font-medium">Action</span>
+    <select class="input" (change)="set({ action: inputValue($event) })">
+      <option value="" [selected]="!filters().action">All actions</option>
+      @for (a of actions; track a[0]) {
+        <option [value]="a[0]" [selected]="filters().action === a[0]">{{ a[1] }}</option>
+      }
+    </select>
+  </label>
+  <label class="text-sm">
+    <span class="mb-1 block font-medium">From</span>
+    <input type="date" class="input" [value]="filters().from ?? ''" (change)="set({ from: inputValue($event) })" />
+  </label>
+  <label class="text-sm">
+    <span class="mb-1 block font-medium">To</span>
+    <input type="date" class="input" [value]="filters().to ?? ''" (change)="set({ to: inputValue($event) })" />
+  </label>
+</div>
+
+<div class="mb-5 flex flex-wrap items-center gap-2">
+  <div class="flex flex-wrap gap-2" role="group" aria-label="Filter by outcome">
+    @for (o of outcomes; track o.label) {
+      <button type="button" (click)="set({ outcome: o.value })" [attr.aria-pressed]="filters().outcome === o.value"
+              class="min-h-11 rounded-full border px-4 text-sm font-semibold"
+              [class]="filters().outcome === o.value ? 'border-coral bg-coral text-white' : 'border-hairline bg-surface text-ink-muted hover:text-ink'"
+      >{{ o.label }}</button>
+    }
+  </div>
+  @if (filters().targetType && filters().targetId) {
+    <span class="inline-flex min-h-11 max-w-full items-center gap-2 rounded-full bg-blush px-4 text-sm">
+      <span class="min-w-0 break-all">{{ targetLabels[filters().targetType!] ?? filters().targetType }} <span class="font-mono">{{ filters().targetId }}</span></span>
+      <button type="button" aria-label="Remove target filter" class="size-4 shrink-0 text-coral hover:text-coral-hover"
+              (click)="set({ targetType: null, targetId: null })"><app-icon name="x" /></button>
+    </span>
+  }
+</div>
+
+<div class="card overflow-x-auto">
+  @if (loadError()) {
+    <p class="p-6 text-center text-declined">Could not load the audit log. Try refreshing.</p>
+  } @else if (loading() && rows().length === 0) {
+    <div class="px-6"><app-skeleton-rows /></div>
+  } @else if (rows().length === 0) {
+    <app-empty-state icon="list" heading="No audit entries match." />
+  } @else {
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-hairline text-left text-ink-muted">
+          <th class="px-4 py-3 font-medium">Time</th>
+          <th class="px-4 py-3 font-medium">Who</th>
+          <th class="px-4 py-3 font-medium">Action</th>
+          <th class="px-4 py-3 font-medium">Target</th>
+          <th class="px-4 py-3 font-medium">Outcome</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (row of rows(); track row.id) {
+          <tr class="border-b border-hairline align-top last:border-0">
+            <td class="px-4 py-3 font-mono whitespace-nowrap">{{ row.occurredAt | date: 'MMM d, y HH:mm:ss' }}</td>
+            <td class="px-4 py-3">
+              <span class="font-semibold">{{ row.actorUsername ?? '—' }}</span>
+              <span class="ml-1 text-ink-muted">{{ roleLabels[row.actorRole] }}</span>
+            </td>
+            <td class="px-4 py-3">
+              {{ actionLabels[row.action] ?? row.action }}
+              @if (row.detail) { <span class="block break-all font-mono text-xs text-ink-muted">{{ row.detail }}</span> }
+            </td>
+            <td class="px-4 py-3 font-mono">
+              @if (targetLink(row); as link) {
+                <a [routerLink]="link" class="break-all text-coral hover:text-coral-hover">{{ row.targetId }}</a>
+              } @else {
+                <span class="break-all">{{ row.targetId ?? '—' }}</span>
+              }
+            </td>
+            <td class="px-4 py-3"><span [title]="'HTTP ' + row.status"><app-status-badge [status]="outcomeOf(row.status)" /></span></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>
+
+<div class="mt-4 flex items-center gap-3 text-sm">
+  <button type="button" (click)="goToPage(page() - 1)" [disabled]="page() === 0" class="btn-secondary">Prev</button>
+  <span class="font-mono text-ink-muted">Page {{ page() + 1 }} of {{ totalPages() || 1 }}</span>
+  <button type="button" (click)="goToPage(page() + 1)" [disabled]="page() + 1 >= totalPages()" class="btn-secondary">Next</button>
+</div>
