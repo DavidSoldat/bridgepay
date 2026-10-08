@@ -73,7 +73,7 @@ class FailedEventsIntegrationTest {
             .withUsername("test")
             .withPassword("test");
 
-    static final KafkaContainer KAFKA = new KafkaContainer(DockerImageName.parse("apache/kafka-native:latest"));
+    static final KafkaContainer KAFKA = new KafkaContainer(DockerImageName.parse("apache/kafka:4.3.1"));
 
     static final SwitchablePaddleClient PADDLE = new SwitchablePaddleClient();
 
