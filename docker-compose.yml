@@ -12,7 +12,7 @@ services:
       - ./infrastructure/postgres-init:/docker-entrypoint-initdb.d
 
   kafka:
-    image: apache/kafka:latest
+    image: apache/kafka:4.3.1
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
