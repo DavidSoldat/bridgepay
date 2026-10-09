@@ -1,0 +1,15 @@
+#!/bin/sh
+# Forced command for the CI deploy key (authorized_keys: restrict,command="/usr/local/bin/bridgepay-deploy").
+# Reads rendered manifests on stdin, applies them, waits for every rollout. SSH_ORIGINAL_COMMAND is ignored.
+set -eu
+export KUBECONFIG=/home/deploy/.kube/config
+manifest=$(mktemp)
+trap 'rm -f "$manifest"' EXIT
+cat > "$manifest"
+kubectl apply -f "$manifest"
+for ns in platform bridgepay; do
+  for d in $(kubectl -n "$ns" get deploy -o name); do
+    kubectl -n "$ns" rollout status "$d" --timeout=600s
+  done
+done
+echo "deploy ok"

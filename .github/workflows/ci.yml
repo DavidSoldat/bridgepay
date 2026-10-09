@@ -63,6 +63,15 @@ jobs:
         working-directory: frontend/${{ matrix.app }}
         run: npx ng test --watch=false
 
+  render-k8s:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Render both overlays
+        run: |
+          kubectl kustomize --load-restrictor LoadRestrictionsNone infrastructure/k8s/overlays/local > /dev/null
+          kubectl kustomize --load-restrictor LoadRestrictionsNone infrastructure/k8s/overlays/prod > /dev/null
+
   build-and-push:
     needs: [test-java, test-angular]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -114,3 +123,33 @@ jobs:
           tags: |
             ghcr.io/davidsoldat/${{ matrix.image }}:latest
             ghcr.io/davidsoldat/${{ matrix.image }}:${{ github.sha }}
+
+  # Production: the OCI VM. The deploy key can only run /usr/local/bin/bridgepay-deploy
+  # (infrastructure/k8s/prod-host/), which applies stdin and waits for every rollout.
+  deploy:
+    needs: [build-and-push, render-k8s]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - name: Render production manifests pinned to this commit
+        run: |
+          sed -i "s/newTag: latest/newTag: ${GITHUB_SHA}/" infrastructure/k8s/overlays/prod/kustomization.yaml
+          kubectl kustomize --load-restrictor LoadRestrictionsNone infrastructure/k8s/overlays/prod > rendered.yaml
+          ! grep -n ':latest' rendered.yaml
+      - name: Apply on the VM
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -p 2222 -i ~/.ssh/deploy -o StrictHostKeyChecking=yes "deploy@${DEPLOY_HOST}" < rendered.yaml
