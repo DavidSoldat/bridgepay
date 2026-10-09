@@ -25,6 +25,12 @@ const steps = (el: HTMLElement) =>
   Array.from(el.querySelectorAll('[data-testid="walkthrough"] li')).map((li) => li.textContent!.replace(/\s+/g, ' '));
 
 describe('TryDemo', () => {
+  it('warns that the demo data is erased nightly', () => {
+    const el = render(config());
+    expect(el.querySelector('[data-testid="demo-notice"]')?.textContent)
+      .toContain("This is a demo — don't enter real personal details. All data is erased nightly.");
+  });
+
   it('shows shopper, ops and merchant cards in that order, each linking to its app', () => {
     const el = render(config());
     const cards = Array.from(el.querySelectorAll('app-role-card'));

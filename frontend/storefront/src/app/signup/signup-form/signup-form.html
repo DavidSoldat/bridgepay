@@ -1,6 +1,9 @@
 <div class="card max-w-lg p-6 sm:p-8">
   <h1 class="mb-1 font-display text-2xl font-bold">Tell us who you are</h1>
-  <p class="mb-6 text-ink-muted">Just once — we'll remember you next time.</p>
+  <p class="mb-4 text-ink-muted">Just once — we'll remember you next time.</p>
+  <p data-testid="demo-notice" role="note" class="mb-6 rounded-md bg-blush px-3 py-2 text-sm text-ink">
+    This is a demo — don't enter real personal details. All data is erased nightly.
+  </p>
 
   <form [formGroup]="form" (ngSubmit)="submit()" novalidate class="flex flex-col gap-4">
     <label class="flex flex-col gap-1">

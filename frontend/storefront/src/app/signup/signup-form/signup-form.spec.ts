@@ -21,6 +21,12 @@ describe('SignupForm', () => {
   };
   const text = (fixture: { nativeElement: HTMLElement }) => fixture.nativeElement.textContent ?? '';
 
+  it('warns that this is a demo and data is erased nightly', () => {
+    const fixture = setup(() => of({ id: 'a-1' }));
+    const note = fixture.nativeElement.querySelector('[data-testid="demo-notice"]');
+    expect(note?.textContent).toContain("This is a demo — don't enter real personal details. All data is erased nightly.");
+  });
+
   it('emits signedUp after a successful submission', () => {
     const fixture = setup(() => of({ id: 'a-1' }));
     const component = fixture.componentInstance;
