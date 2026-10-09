@@ -225,6 +225,20 @@ class MerchantControllerIntegrationTest {
     }
 
     @Test
+    void payoutsAreNewestFirst() throws Exception {
+        // Production seeds 90 days of demo payouts; without an order a new payout lands past page 1.
+        Merchant merchant = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("3.50")));
+        checkout(merchant.getId(), "100.00");
+        checkout(merchant.getId(), "200.00");
+
+        mockMvc.perform(get("/api/v1/merchants/{id}/payouts", merchant.getId())
+                        .with(merchantJwt(merchant.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].amount").value(200.00))
+                .andExpect(jsonPath("$.content[1].amount").value(100.00));
+    }
+
+    @Test
     void merchantIsBlockedFromAnotherMerchantsPayouts() throws Exception {
         Merchant merchantA = merchantRepository.save(new Merchant("Merchant A", new BigDecimal("3.50")));
         Merchant merchantB = merchantRepository.save(new Merchant("Merchant B", new BigDecimal("3.50")));

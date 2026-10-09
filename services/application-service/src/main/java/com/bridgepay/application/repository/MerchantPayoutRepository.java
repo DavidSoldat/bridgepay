@@ -13,7 +13,8 @@ import java.util.UUID;
 
 public interface MerchantPayoutRepository extends JpaRepository<MerchantPayout, UUID> {
 
-    Page<MerchantPayout> findByMerchantId(UUID merchantId, Pageable pageable);
+    // Newest first: the demo seed holds months of payouts, so a fresh one must lead page 1.
+    Page<MerchantPayout> findByMerchantIdOrderByCreatedAtDescIdDesc(UUID merchantId, Pageable pageable);
 
     Optional<MerchantPayout> findByApplicationId(UUID applicationId);
 

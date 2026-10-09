@@ -219,7 +219,7 @@ public class CreditApplicationService {
 
     @Transactional(readOnly = true)
     public Page<MerchantPayoutResponse> listPayoutsForMerchant(UUID merchantId, Pageable pageable) {
-        return merchantPayoutRepository.findByMerchantId(merchantId, pageable)
+        return merchantPayoutRepository.findByMerchantIdOrderByCreatedAtDescIdDesc(merchantId, pageable)
                 .map(payout -> new MerchantPayoutResponse(
                         payout.getId(),
                         payout.getApplication().getId(),
