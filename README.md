@@ -4,7 +4,19 @@
 
 An instant-credit / Buy-Now-Pay-Later underwriting platform, similar in shape to Klarna or Afterpay. A shopper splits a purchase into four installments at checkout, a trained credit-risk model decides in real time whether to extend credit, the merchant is paid in full immediately, and the platform collects the installments afterward — carrying the default risk itself.
 
-Built as independently deployable Spring Boot microservices with Kafka, a from-scratch trained ML model served via ONNX Runtime, Keycloak auth, and two Angular frontends.
+Built as independently deployable Spring Boot microservices with Kafka, a from-scratch trained ML model served via ONNX Runtime, Keycloak auth, and three Angular frontends.
+
+## Live demo
+
+| | |
+|---|---|
+| **[bridgepay.duckdns.org](https://bridgepay.duckdns.org)** | Start here: what BridgePay is, the demo logins and a guided walkthrough |
+| [shop.bridgepay.duckdns.org](https://shop.bridgepay.duckdns.org) | Storefront: check out with "Pay in 4" as a shopper |
+| [app.bridgepay.duckdns.org](https://app.bridgepay.duckdns.org) | Main app: ops review and merchant dashboards |
+
+Demo users (password = username): `shopper1`, `ops1`, `merchant1`. A full loop: check out as `shopper1` → review and approve as `ops1` → pay the first installment with Paddle's sandbox card `4242 4242 4242 4242` → see the sale and payout as `merchant1`.
+
+It's a public demo: don't enter real personal details. All data is erased nightly.
 
 ## Architecture
 
@@ -54,42 +66,18 @@ Java 21 · Spring Boot 4 · Spring Cloud Gateway · PostgreSQL (schema per servi
 
 `services/credit-risk-engine/scripts/train_model.py` trains a `StandardScaler` + `LogisticRegression` on 10 bureau-style features from the Kaggle dataset, excluding the exact rows the mock bureau serves, and exports to ONNX. Eval AUC-ROC is 0.82. Each decision stores per-feature log-odds contributions, which the ops review screen renders as an explanation chart.
 
-## Run it locally
+## Deployment
 
-Requires Docker.
-
-```bash
-docker compose up --build
-```
-
-| URL | What |
-|---|---|
-| http://localhost:4202 | Start here: landing page with the demo guide |
-| http://localhost:4201 | Storefront (shopper) |
-| http://localhost:4200 | Main app (ops / merchant) |
-| http://localhost:8086 | API gateway |
-| http://localhost:8180 | Keycloak admin (`admin` / `admin`) |
-
-Demo users (password = username): `shopper1`, `ops1`, `merchant1`.
-
-A full loop: check out as `shopper1` in the storefront → review and approve as `ops1` in the main app → see the sale and payout as `merchant1`.
-
-Each service also has its own `docker-compose.yml` and README for working on it alone. Build and test one service with `cd services/<name> && mvn clean verify`.
+Runs on a single ARM64 OCI instance under k3s, with Let's Encrypt TLS. Every green push to `main` is tested, built into `linux/arm64` images on GHCR and deployed by GitHub Actions. Manifests and the runbook are in [`infrastructure/k8s`](infrastructure/k8s).
 
 ## Repository layout
 
 ```
 services/        7 Spring Boot services, one Maven project each
-frontend/        main-app and storefront (Angular)
+frontend/        landing, main-app and storefront (Angular)
 infrastructure/  Keycloak realm + login theme, Postgres init, Kubernetes manifests
 docs/            platform spec: architecture, schemas, Kafka and API contracts, ML plan
 data/            training data location (dataset not committed)
 ```
 
 The full design is in [`docs/bridgepay-platform-spec.md`](docs/bridgepay-platform-spec.md).
-
-## Status and limitations
-
-- **Deployment:** Kubernetes manifests (Kustomize, k3s) are in [`infrastructure/k8s`](infrastructure/k8s) and run end to end on a local k3d cluster. The production overlay for the ARM64 OCI instance comes once that host exists. CI already builds and publishes arm64 images.
-- **Paddle** runs against the sandbox API shape. Without real sandbox keys, repayment-plan creation fails into the ops failed-events queue.
-- **The credit bureau is a simulation.** Making real credit decisions would need a real bureau integration, KYC, and lending compliance. That is a regulated undertaking, not an engineering task.
