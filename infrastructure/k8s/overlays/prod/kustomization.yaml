@@ -85,6 +85,8 @@ patches:
               - name: keycloak
                 env:
                   - { name: KC_HOSTNAME, value: "https://auth.bridgepay.duckdns.org" }
+                  # Admin console only via `kubectl port-forward` (/admin is not on the Ingress).
+                  - { name: KC_HOSTNAME_ADMIN, value: "http://localhost:8080" }
   # Frontend Ingress: real hosts, TLS, redirect + headers. The test ops fail the render if base's rule order changes.
   - target: { kind: Ingress, name: frontends }
     patch: |-

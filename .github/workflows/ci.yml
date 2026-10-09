@@ -11,7 +11,8 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel a main run: it may be mid-deploy.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   test-java:
@@ -67,8 +68,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # The repo is public: a committed realm key would let anyone sign tokens Keycloak accepts.
+      - name: No Keycloak signing keys in the realm export
+        run: |
+          ! grep -nE '"(privateKey|secret)" :' infrastructure/keycloak/bridgepay-realm.json
       - name: Render both overlays
         run: |
+          # overlays/local reads the gitignored .env; the runner gets the placeholder template.
+          cp .env.example .env
           kubectl kustomize --load-restrictor LoadRestrictionsNone infrastructure/k8s/overlays/local > /dev/null
           kubectl kustomize --load-restrictor LoadRestrictionsNone infrastructure/k8s/overlays/prod > /dev/null
 
