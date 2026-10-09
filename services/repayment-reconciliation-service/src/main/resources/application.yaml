@@ -51,6 +51,8 @@ paddle:
   base-url: ${PADDLE_BASE_URL:https://sandbox-api.paddle.com}
   api-key: ${PADDLE_API_KEY:changeme}
   webhook-secret: ${PADDLE_WEBHOOK_SECRET:changeme}
+  # true in production only: refuse to start on placeholder credentials (PaddleCredentialsGuard).
+  require-credentials: ${PADDLE_REQUIRE_CREDENTIALS:false}
   # Between lookups for a just-made early-payment charge (up to 3 attempts).
   charge-lookup-delay: ${PADDLE_CHARGE_LOOKUP_DELAY:PT1S}
 

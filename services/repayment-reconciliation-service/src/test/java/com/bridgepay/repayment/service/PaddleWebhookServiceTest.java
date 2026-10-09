@@ -161,6 +161,18 @@ class PaddleWebhookServiceTest {
     }
 
     @Test
+    void webhooksForASubscriptionWithNoPlan_areNoOps() {
+        // The public demo erases every plan nightly; Paddle sandbox subscriptions keep renewing.
+        for (String event : List.of("transaction.completed", "transaction.payment_failed",
+                "subscription.past_due", "subscription.canceled")) {
+            service.handle(event, new PaddleWebhookData("sub_erased_by_demo_reset", "sub_erased_by_demo_reset"));
+        }
+
+        verify(repaymentPlanRepository, never()).findByIdForUpdate(any());
+        verifyNoInteractions(installmentRepository, outboxEventRepository, paddleClient);
+    }
+
+    @Test
     void transactionCompleted_redeliveredForAnAlreadyPaidTransaction_doesNotPayTheNextInstallment() {
         RepaymentPlan plan = newPlan(4);
         when(repaymentPlanRepository.findIdByPaddleSubscriptionId("sub_real")).thenReturn(Optional.of(plan.getId()));
