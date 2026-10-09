@@ -26,7 +26,7 @@
   "oauth2DeviceCodeLifespan" : 600,
   "oauth2DevicePollingInterval" : 5,
   "enabled" : true,
-  "sslRequired" : "none",
+  "sslRequired" : "external",
   "loginTheme" : "bridgepay",
   "registrationAllowed" : false,
   "registrationEmailAsUsername" : false,
@@ -76,10 +76,7 @@
       "description" : "${role_default-roles}",
       "composite" : true,
       "composites" : {
-        "realm" : [ "offline_access", "uma_authorization" ],
-        "client" : {
-          "account" : [ "view-profile", "manage-account" ]
-        }
+        "realm" : [ "offline_access", "uma_authorization" ]
       },
       "clientRole" : false,
       "containerId" : "a23b40ec-feba-40e0-a630-0f70905cadcf",
@@ -647,8 +644,8 @@
     "enabled" : true,
     "alwaysDisplayInConsole" : false,
     "clientAuthenticatorType" : "client-secret",
-    "redirectUris" : [ "http://localhost:4200/*", "http://app.localhost/*" ],
-    "webOrigins" : [ "http://localhost:4200", "http://app.localhost" ],
+    "redirectUris" : [ "http://localhost:4200/*", "http://app.localhost/*", "https://app.bridgepay.duckdns.org/*" ],
+    "webOrigins" : [ "http://localhost:4200", "http://app.localhost", "https://app.bridgepay.duckdns.org" ],
     "notBefore" : 0,
     "bearerOnly" : false,
     "consentRequired" : false,
@@ -769,8 +766,8 @@
     "enabled" : true,
     "alwaysDisplayInConsole" : false,
     "clientAuthenticatorType" : "client-secret",
-    "redirectUris" : [ "http://localhost:4201/*", "http://shop.localhost/*" ],
-    "webOrigins" : [ "http://localhost:4201", "http://shop.localhost" ],
+    "redirectUris" : [ "http://localhost:4201/*", "http://shop.localhost/*", "https://shop.bridgepay.duckdns.org/*" ],
+    "webOrigins" : [ "http://localhost:4201", "http://shop.localhost", "https://shop.bridgepay.duckdns.org" ],
     "notBefore" : 0,
     "bearerOnly" : false,
     "consentRequired" : false,
