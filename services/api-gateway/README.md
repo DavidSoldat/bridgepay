@@ -1,52 +1,35 @@
 # BridgePay — API Gateway
 
-The single `/api/v1/**` entry point in front of Applicant Service and
-Application Service (spec section 4/7/13): path-based routing, a global
-rate limit, and gateway-level JWT validation. Internal-only endpoints
-(`/internal/**` on any service) are never routed here at all - they're
-unreachable from outside the cluster at the network level, not just
-auth-gated (spec section 11).
+The single `/api/v1/**` entry point (Spring Cloud Gateway, WebMVC server). It routes by path, validates
+the Keycloak JWT before proxying (401 without one), applies a global Resilience4j rate limit, stamps an
+`X-Correlation-Id` on every request and response, and records an audit trail of staff actions.
+
+Role checks stay on the downstream services (`@PreAuthorize`); the gateway only authenticates.
+`/internal/**` endpoints are never routed here: they are reachable only inside the cluster.
 
 ## Routes
 
 | Path | Target |
 |---|---|
 | `/api/v1/applicants/**` | Applicant Service |
-| `/api/v1/applications/**` | Application Service |
-| `/api/v1/merchants/**` | Application Service |
+| `/api/v1/ops/applicants/**` | Applicant Service |
+| `/api/v1/applications/**`, `/api/v1/merchants/**` | Application Service |
+| `/api/v1/repayment-plans/**`, `/api/v1/ops/**` | Repayment Reconciliation |
+| `/api/v1/notifications/**` | Notifications Service |
+| `/api/v1/model/**` | Credit Risk Engine |
+| `/api/v1/audit` | served by the gateway itself (ops only) |
 
-## Run locally
+`/api/v1/ops/applicants/**` is declared before `/api/v1/ops/**` so it isn't shadowed.
 
-```bash
-docker-compose up --build
-```
+## Audit log
 
-Uses the `local` Spring profile (JWT auth disabled) and defaults to
-`host.docker.internal:8080`/`host.docker.internal:8081` for the two
-downstream services - run their own `docker-compose.yml` files alongside
-this one (so they're reachable on the host), or run the whole stack from
-the repo root instead.
+`AuditFilter` records ops and merchant actions and every 403 into the gateway's own append-only
+`audit.audit_entries` table: who, which action (14 known routes), which target id, and the outcome.
+Shoppers' own reads are never recorded. Ops read it at `GET /api/v1/audit` (filter by actor, action,
+target, date range and outcome; 50 per page, newest first). Recording is fail-open: an audit write
+failure never blocks the request.
 
-## Run tests
+## Errors
 
-```bash
-mvn clean verify
-```
-
-`RoutingIntegrationTest` and `SecurityIntegrationTest` stub the two
-downstream services with WireMock rather than requiring them to actually
-run. `CorrelationIdFilterTest`/`RateLimitFilterTest` are plain unit tests
-against a fake `FilterChain`.
-
-## Known gap
-
-No route for Repayment Reconciliation Service's public `/webhooks/paddle`
-endpoint (a non-`/api/v1` path) - it's reached directly for now. Revisit
-when the k3s Ingress rules are written.
-
-No CORS configuration exists yet. The two Angular apps (main app on
-`localhost:4200`, storefront on `localhost:4201`, per the Keycloak
-realm's registered client origins) will need
-`spring.security.web.cors`/`CorsConfigurationSource` wiring in both
-`SecurityConfig` and `LocalDevSecurityConfig` before real browser traffic
-can reach this gateway. Revisit when the Main Angular app work starts.
+Gateway-generated errors (no route, access denied, validation) use the platform's shared
+`{error, message, traceId, timestamp}` shape.

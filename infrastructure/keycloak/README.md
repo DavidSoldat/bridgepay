@@ -1,58 +1,38 @@
 # BridgePay — Keycloak realm
 
-`bridgepay-realm.json` is a real Keycloak export (via `kc.sh export`), not
-hand-authored: configured against a running Keycloak via `kcadm.sh`, then
-exported and verified to round-trip from a clean import.
+`bridgepay-realm.json` is the `bridgepay` realm, exported from a real Keycloak (`kc.sh export`) and
+imported on first start. It contains **no signing keys**: Keycloak generates its own on import, and
+CI fails if a `privateKey` or `secret` ever appears in the file (the repository is public).
 
-## Run locally
+## Roles and demo users
 
-Included in the root `docker-compose.yml` — `docker-compose up keycloak` (or
-just run the whole stack). Auto-imports this file on startup via
-`start-dev --import-realm`. Admin console: http://localhost:8180 (`admin`/`admin`,
-dev-only credentials).
+| Username | Role | Notes |
+|---|---|---|
+| `shopper1` | `shopper` | |
+| `ops1` | `ops` | |
+| `merchant1` | `merchant` | `merchantId` claim = `00000000-0000-7000-8000-000000000001`, the seeded demo merchant |
 
-## Demo users (dev-only, do not reuse this password pattern anywhere real)
+Passwords equal the usernames. They're published on the landing page on purpose: this is a public
+demo. Demo users can't change their password or profile (the account console roles are removed from
+the realm's default roles), and there is no self-registration.
 
-| Username | Password | Role | Notes |
-|---|---|---|---|
-| `shopper1` | `shopper1` | `shopper` | |
-| `merchant1` | `merchant1` | `merchant` | `merchantId` claim = `00000000-0000-7000-8000-000000000001` (the seeded demo merchant, see Application Service's `V2__seed_demo_merchant.sql`) |
-| `ops1` | `ops1` | `ops` | |
-
-## Login theme
-
-`themes/bridgepay/login/` is a CSS-only reskin of Keycloak's default
-`keycloak.v2` theme (no FTL templates touched, so the actual PKCE
-form/flow is exactly stock Keycloak) — brand colors/fonts/logo only, via
-the CSS custom properties Keycloak documents for this. Mounted into the
-container at `/opt/keycloak/themes` by the root `docker-compose.yml` and
-selected as the realm's `loginTheme` in `bridgepay-realm.json`. The
-wordmark/mark SVGs live at `../assets/brand/` (canonical source) and are
-copied into `themes/bridgepay/login/resources/img/`.
+Roles are lowercase realm roles in the `realm_access.roles` claim. Every service maps them to Spring
+authorities with its own converter.
 
 ## Clients
 
 Both public (no secret), PKCE required:
 
-| Client | Redirect URI |
-|---|---|
-| `main-app` | `http://localhost:4200/*` |
-| `storefront` | `http://localhost:4201/*` |
+| Client | App | Production redirect URI |
+|---|---|---|
+| `main-app` | ops and merchant app | `https://app.bridgepay.duckdns.org/*` |
+| `storefront` | shop | `https://shop.bridgepay.duckdns.org/*` |
 
-## Regenerating this file
+## Login theme
 
-If the realm needs to change (new role, new client, new mapper), configure
-it against a running Keycloak via `kcadm.sh` or the admin console, then
-re-export:
+`themes/bridgepay/login/` is a CSS-only reskin of Keycloak's `keycloak.v2` theme: brand colours,
+fonts and logo through the CSS custom properties Keycloak documents. No FTL template is touched, so
+the login form and flow are stock Keycloak. The logo SVGs come from `../../assets/brand/`.
 
-```bash
-docker-compose stop keycloak
-docker-compose run --name kc-export --entrypoint "" keycloak \
-  /opt/keycloak/bin/kc.sh export --dir /tmp/export --realm bridgepay --users realm_file
-docker cp kc-export:/tmp/export/bridgepay-realm.json ./infrastructure/keycloak/bridgepay-realm.json
-docker rm kc-export
-```
-
-Then verify it actually round-trips before committing: drop the `keycloak`
-Postgres schema, recreate it empty, restart Keycloak, and confirm the demo
-users can still log in.
+In production only `/realms/bridgepay/` and `/resources/` are routed to Keycloak; the admin console
+and the master realm are not reachable from the internet.

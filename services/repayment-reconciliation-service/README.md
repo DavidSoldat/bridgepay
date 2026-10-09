@@ -1,95 +1,56 @@
 # BridgePay — Repayment Reconciliation Service
 
-Tracks scheduled vs. received BNPL installments and integrates with **real
-Paddle Sandbox** (not a mock) for shopper installment collection. Consumes
-`applications.approved`, creates a Paddle customer + a weekly-recurring
-non-catalog-price transaction, and reacts to Paddle's real webhooks
-(`transaction.completed`, `transaction.payment_failed`/`subscription.past_due`,
-`subscription.canceled`) to drive installment/plan status and publish the 4
-`repayments.*` topics Notifications Service already consumes.
+Collects the four installments through **Paddle** (sandbox) and tracks them. On
+`applications.approved` it finds or creates the shopper's Paddle customer and creates a
+weekly-recurring transaction for the plan. The shopper pays installment 1 in Paddle's overlay
+checkout, which saves the card; Paddle's subscription then charges installments 2–4 weekly.
 
-The Paddle API mechanics were confirmed against Paddle's own developer docs,
-not guessed.
+Paddle's webhooks drive the state machine: `transaction.completed` (installment paid, possibly
+several at once), `transaction.payment_failed` / `subscription.past_due` (late), and
+`subscription.canceled` (defaulted, unless we cancelled it ourselves after the last payment). Each
+transition is published through the outbox on a `repayments.*` topic.
 
-## Run locally
+## Shopper-facing features
 
-```bash
-docker-compose up --build
-```
+- **Pay early / pay off**: a one-time charge to the saved card for the next installment or all of
+  them, guarded by an atomic claim so a double click or a racing webhook never charges twice.
+- **Reconcile on read**: while installment 1 is unpaid, reading the plan asks Paddle directly, so a
+  payment shows up even if its webhook is late or lost.
+- **Unpaid-order expiry**: a scheduled job cancels the Paddle transaction and the order if
+  installment 1 isn't paid within 24 hours (`FIRST_PAYMENT_EXPIRY`).
+- **Refunds**: a merchant refund cancels an unpaid checkout or refunds every paid Paddle transaction
+  in full, then cancels the subscription.
 
-Uses the `local` Spring profile (JWT auth disabled) plus its own Postgres and
-its own single-node KRaft Kafka broker. `PADDLE_API_KEY`/`PADDLE_WEBHOOK_SECRET`
-default to `changeme` — fine for local smoke testing of the webhook signature
-path (see below), but a real Paddle sandbox key is needed for
-`findOrCreateCustomer`/`createInstallmentTransaction`/`cancelSubscription` to
-actually reach Paddle rather than fail over via the circuit breaker. Applicant
-Service must also be running (`APPLICANT_SERVICE_URL`, default
-`http://host.docker.internal:8080`) for a real `applications.approved`
-message to resolve to an applicant profile.
+## Ops features
 
-## Run tests
+A failed `applications.approved` (for example Paddle unreachable) is saved to `failed_events`
+instead of being dropped. Ops list and retry them; a retry replays the stored event through the same
+idempotent listener, with an atomic claim so two ops tabs can't both create a Paddle transaction.
 
-```bash
-mvn clean verify
-```
+## Security
 
-23/23 green. Breakdown:
-- `PaddleSignatureVerifierTest` / `PaddleWebhookControllerTest`: drives real
-  HMAC-SHA256-signed (and tampered/wrong-secret) payloads through the actual
-  verifier end-to-end.
-- `HttpPaddleClientWireMockTest`: stubs Paddle's real HTTP API shape (customer
-  lookup/create, non-catalog transaction creation, subscription cancel) with
-  WireMock, since a real sandbox can't run in a container. Required switching
-  `HttpPaddleClient`'s underlying `RestClient` to force HTTP/1.1 — the JDK
-  `HttpClient`'s default h2c upgrade negotiation doesn't complete cleanly
-  against WireMock's Jetty engine on POST requests (EOF/RST_STREAM). HTTP/1.1
-  is all Paddle's API needs, so this is a safe simplification, not a
-  test-only workaround.
-- `RepaymentPlanServiceTest` / `PaddleWebhookServiceTest` / `RepaymentHistoryServiceTest`:
-  unit tests (Mockito) covering customer reuse-vs-create, redelivery
-  idempotency, the full webhook state machine (paid/late/completed/defaulted,
-  including the "did we cancel it or did Paddle" branch), and the
-  repayment-history aggregation.
-- `ApplicationEventConsumerIntegrationTest`: real Testcontainers Postgres +
-  Kafka, `ApplicantClient`/`PaddleClient` swapped for in-memory fakes (`@Primary`
-  test beans) since a real Applicant Service and Paddle sandbox can't run
-  here — publishes a real `applications.approved` message and asserts the
-  plan/installments land, and that redelivery doesn't duplicate them.
+`/webhooks/paddle` is public by necessity (Paddle calls it from the internet). Its control is the
+HMAC-SHA256 `Paddle-Signature` check, compared in constant time; a bad signature gets `400` before
+any handler runs. In production the service refuses to start if the Paddle API key or webhook secret
+is missing, blank or a placeholder (`PADDLE_REQUIRE_CREDENTIALS=true`).
 
-`OutboxPublisher` itself has no dedicated test, matching Application
-Service's own precedent (same copied class, same gap there).
+## Endpoints
 
-## Design notes / deviations from the written spec
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| GET | `/api/v1/repayment-plans/{applicationId}` | owner or ops | Plan and installments |
+| POST | `/api/v1/repayment-plans/{applicationId}/early-payment` | owner | Pay `NEXT` or `REMAINING` now |
+| GET | `/api/v1/repayment-plans/applicants/{id}` | ops | A shopper's plans and repayment history |
+| GET | `/api/v1/ops/failed-events?status=` | ops | Failed events, newest first |
+| POST | `/api/v1/ops/failed-events/{id}/retry` | ops | Retry one |
+| POST | `/webhooks/paddle` | Paddle signature | Paddle webhooks |
+| GET | `/internal/repayment-history/{applicantId}` | cluster only | History for the Credit Risk Engine (all zeros for a new shopper, not 404) |
 
-- **Applicant Service gained two internal endpoints** (`GET
-  /internal/applicants/{id}`, `PATCH /internal/applicants/{id}/paddle-customer`)
-  as part of this work — see that service's own `InternalApplicantController`.
-  Its `paddle_customer_id` column was dead until now.
-- **Webhook route is `/webhooks/paddle`, not `/internal/webhooks/paddle`**:
-  `/internal/**` means ClusterIP-only in this project; Paddle must reach this
-  endpoint from the public internet, so it can't live under that prefix. HMAC
-  signature verification is its access control instead of network isolation
-  or a JWT.
-- **`repayment_plans.paddle_subscription_id` doubles as a placeholder**: it
-  holds the initial transaction id until the first `transaction.completed`
-  webhook adopts the real subscription id Paddle creates as a side effect of
-  that transaction completing (confirmed against Paddle's docs: there is no
-  direct "create subscription" call).
-- **No scheduled "sweep overdue installments" job**: webhooks are the sole
-  source of truth for status transitions in this design;
-  `installments(due_date, status)` exists for ops query visibility only.
+## Design notes
 
-## Smoke-tested manually
-
-`docker-compose up --build`, then:
-- `GET /actuator/health` → `UP`.
-- `GET /internal/repayment-history/<random-uuid>` → all-zero response (no
-  404), confirming the "brand-new applicant isn't an error" design choice.
-- A real `POST /webhooks/paddle` with an HMAC-SHA256 signature computed by
-  hand (`openssl dgst -sha256 -hmac`) against the `local` profile's default
-  webhook secret → `200`, and the log shows it was actually parsed and routed
-  (`No repayment plan found for completed transaction txn_smoke`, expected
-  since no real plan exists for that fabricated id). The same payload with a
-  tampered signature → `400`, never reaching the handler.
-- Confirmed `Started RepaymentReconciliationServiceApplication` and the
-  Flyway migration applying cleanly against a fresh Postgres.
+- `repayment_plans.paddle_subscription_id` holds the checkout transaction id until the first
+  `transaction.completed` adopts the subscription Paddle creates; Paddle has no direct
+  "create subscription" call.
+- `HttpPaddleClient` forces HTTP/1.1. Paddle needs nothing newer, and it avoids h2c upgrade issues.
+- Paddle's 4xx refusals don't count toward the circuit breaker, so retrying already-settled orders
+  can't open it and block new approvals.

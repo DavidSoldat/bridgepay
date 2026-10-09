@@ -1,59 +1,24 @@
-# MainApp
+# BridgePay — Main app
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.19.
+Live: **[app.bridgepay.duckdns.org](https://app.bridgepay.duckdns.org)**
 
-## Development server
+The staff app, one Angular app with role-gated views. Login is Keycloak OIDC with PKCE
+(`login-required`); `realm_access.roles` decides what the sidebar shows.
 
-To start a local development server, run:
+**Ops** (`ops1`)
+- Review queue with a status filter, and a case file per application: decision record, shopper,
+  merchant and payout, repayment progress, and the score factors as an explanation chart.
+- Dashboard: queue, decision mix, risk-score histogram, review times, per-reviewer stats.
+- Shoppers: search, and a 360 view per shopper (credit standing, applications, payment timeline,
+  notifications sent, access history).
+- Model: score drift, per-feature drift, policy rules fired, and default rate per score band
+  against the training baseline.
+- Failed events with retry, and the audit log.
 
-```bash
-ng serve
-```
+**Merchant** (`merchant1`)
+- Sales dashboard (7/30/90 days, period-over-period change, charts), a sales list with filters,
+  refunds and CSV export, and the payout ledger.
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
-```
-
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
-
-```bash
-ng generate --help
-```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Angular 21 with standalone components and signals, Tailwind v4, and hand-written SVG charts (no
+chart library). API calls go to the same origin (`/api/`), which nginx proxies to the gateway; the
+Keycloak URL comes from a runtime `/config.json`.

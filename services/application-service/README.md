@@ -1,99 +1,64 @@
 # BridgePay — Application Service
 
-Owns the checkout flow: idempotency handling, the synchronous call into the
-Credit Risk Engine, the transactional outbox, and the shared "finalize
-decision" path used by both the automated engine and ops manual review.
+Owns the checkout: idempotency, the synchronous call into the Credit Risk Engine, the shopper's
+spending limit, the transactional outbox, and the one "finalize decision" path shared by the model
+and ops manual review. Also owns merchants, their sales and payouts, refunds, and the ops and
+merchant dashboards.
 
-## Run locally
+## How a checkout is decided
 
-```bash
-docker-compose up --build
-```
+1. The shopper's available limit (`limit − outstanding`) is checked first: an order above it is
+   refused with `422 OVER_LIMIT` and nothing is stored.
+2. The Credit Risk Engine scores it: `APPROVE`, `DECLINE` or `MANUAL_REVIEW`. Any scoring failure
+   (engine down, circuit breaker open) falls back to `MANUAL_REVIEW`, never a blind decision.
+3. The decision, its score factors and the outbox event are written in one transaction. Ops can
+   later approve or decline a manual review; that goes through the same finalize path.
 
-Uses the `local` Spring profile (JWT auth disabled — see `LocalDevSecurityConfig`)
-so you can poke at the checkout endpoint without Keycloak running. **Note:**
-the ops endpoints (`@PreAuthorize("hasRole('OPS')")`) still reject requests
-even in this profile — method security is independent of the HTTP filter
-chain, so there's no local bypass for those specifically. Kafka being
-unreachable locally is expected and harmless: the outbox publisher logs a
-warning and retries on its next poll rather than failing.
-
-The Credit Risk Engine doesn't exist yet, so every real checkout call will
-fail over to `MANUAL_REVIEW` via the circuit breaker's fallback — that's
-correct behavior, not a bug, until that service is built.
-
-## Run tests
-
-```bash
-mvn clean verify
-```
-
-Unit tests cover the checkout/review-decision logic (mocked repos + credit
-risk client), the circuit breaker's fallback behavior, and the outbox
-publisher's success/failure handling. The integration test uses Testcontainers
-Postgres, a stubbed `JwtDecoder`, and a stubbed `CreditRiskClient` (always
-approves) to exercise the full HTTP path: checkout, idempotency replay,
-missing-header validation, and ops role enforcement.
-
-## Known things to double-check on first build
-
-Same caveat as the Applicant Service — written without the ability to
-compile it. Specific risk areas this time, roughly in order of how confident
-I am something's slightly off:
-
-- **Resilience4j**: deliberately using `resilience4j-circuitbreaker` (core,
-  framework-agnostic) instead of `resilience4j-spring-boot3`, since the
-  latter's dependency chain is still pinned to Spring Framework 6 and I
-  couldn't confirm Boot 4 / Spring Framework 7 support. The circuit breaker
-  is wired programmatically in `HttpCreditRiskClient` rather than via
-  annotations - if a Boot4-compatible Resilience4j Spring integration exists
-  by the time you build this, switching to it is a reasonable upgrade, not
-  a requirement.
-- **`JwtGrantedAuthoritiesConverter` / `JwtAuthenticationToken` package
-  paths** in `SecurityConfig` — written from Spring Security 6-era memory.
-  Spring Security 7 (paired with Boot 4) reportedly went through its own
-  modularization pass; these specific class locations are the most likely
-  spot for another `cannot find symbol` if anything moved.
-- **`spring-boot-starter-flyway`** — confirmed as the correct replacement
-  for `flyway-core`, but I couldn't confirm whether it also subsumes
-  `flyway-database-postgresql` or whether that needs adding alongside it.
-- Same Boot version / `uuid-creator` version caveats as before.
-
-If you hit another `cannot find symbol`, paste it the same way as last time —
-these are all findable with a targeted search rather than another guess.
-
-## Design notes worth knowing
-
-- **`applicantId` = the Keycloak subject, parsed as a UUID** (Keycloak
-  subject IDs are UUIDs by default), not a resolved reference to the
-  Applicant Service's own internal `id`. Deliberate: resolving that would
-  mean a live cross-service call on the critical checkout path, which is
-  exactly the kind of extra failure point the design otherwise avoids.
-- **`score_factors` is stored as `TEXT` containing JSON**, not a native
-  `jsonb` column — sidesteps depending on Hibernate's JSON type-mapping
-  behavior in this specific Boot/Hibernate pairing, which isn't verified.
-  Trivial to upgrade later.
-- Installment amount is a flat `amount / 4`, not remainder-adjusted on the
-  last installment — a known minor simplification, not an oversight.
+The merchant payout is created `PENDING` at approval and becomes `PAID` when the shopper's first
+installment clears (`repayments.installment-paid`); an unpaid order that expires or is refunded
+cancels it. A later shopper default never claws back a paid payout.
 
 ## Endpoints
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/api/v1/applications` | shopper, `Idempotency-Key` header required | Checkout / apply |
-| GET | `/api/v1/applications/{id}` | shopper (own) or ops (any) | Status lookup |
-| GET | `/api/v1/applications` | ops | Manual review queue |
-| POST | `/api/v1/applications/{id}/review-decision` | ops | Approve/decline a manual-review application |
+| POST | `/api/v1/applications` | shopper, `Idempotency-Key` header | Checkout |
+| GET | `/api/v1/applications/me` | shopper | The caller's orders, newest first |
+| GET | `/api/v1/applications/me/credit-limit` | shopper | Limit, outstanding and available |
+| GET | `/api/v1/applications/{id}` | owner or ops | One application |
+| GET | `/api/v1/applications?status=` | ops | Review queue / decision history |
+| POST | `/api/v1/applications/{id}/review-decision` | ops | Approve or decline a manual review |
+| GET | `/api/v1/applications/{id}/case` | ops | Case file: decision record, merchant, payout |
+| GET | `/api/v1/applications/applicants/{id}` | ops | One shopper's applications |
+| GET | `/api/v1/applications/applicants/{id}/credit-standing` | ops | One shopper's limit and outstanding |
+| GET | `/api/v1/applications/dashboard?days=&tz=` | ops | Ops dashboard |
+| GET | `/api/v1/applications/model-monitoring` | ops | Score drift and outcomes vs the training baseline |
+| GET | `/api/v1/merchants/{id}/sales` | own merchant | Sales, filterable by status |
+| GET | `/api/v1/merchants/{id}/sales/export` | own merchant | Sales as CSV |
+| GET | `/api/v1/merchants/{id}/payouts` | own merchant | Payouts, newest first |
+| GET | `/api/v1/merchants/{id}/dashboard?days=&tz=` | own merchant | Merchant dashboard |
+| POST | `/api/v1/merchants/{id}/orders/{applicationId}/refund` | own merchant | Full refund |
+
+Merchants never see shopper credit data: sales rows are their own DTO, without applicant id,
+risk score or score factors.
+
+## Events
+
+Publishes `applications.approved`, `applications.manual-review`, `applications.declined` and
+`applications.refund-requested` through the outbox. Consumes `repayments.installment-paid`,
+`plan-completed`, `plan-defaulted`, `plan-cancelled` and `plan-refunded` to keep order, payout and
+outstanding balance in step.
+
+## Design notes
+
+- `applicantId` is the Keycloak subject, not a reference into Applicant Service, so checkout makes
+  no extra cross-service call.
+- `score_factors` is stored as JSON text: the model's per-feature log-odds contributions plus any
+  policy rules that fired, rendered as the ops explanation chart.
 
 ## Demo sales history
 
-`src/main/resources/db/demo/R__demo_sales_history.sql` seeds ~90 days of sales for the demo merchant so the
-merchant dashboard has something to show. It runs only where `SPRING_FLYWAY_LOCATIONS` includes
-`classpath:db/demo` (root `docker-compose.yml`, k3d `overlays/local`); it is a repeatable migration, re-run
-whenever the file changes. Timestamps are relative to when it first ran, so on a long-lived stack the history
-slowly leaves the 90-day window. To remove the rows:
-
-    DELETE FROM application.merchant_payouts p USING application.applications a
-     WHERE p.application_id = a.id AND a.applicant_id::text LIKE '00000000-0000-7000-8000-0000000de0%';
-    DELETE FROM application.applications
-     WHERE applicant_id::text LIKE '00000000-0000-7000-8000-0000000de0%';
+`src/main/resources/db/demo/R__demo_sales_history.sql` seeds about 90 days of sales, payouts and
+decided manual reviews for the demo merchant, so the dashboards and the model page have data. It
+runs only where `SPRING_FLYWAY_LOCATIONS` includes `classpath:db/demo`. Seeded rows carry
+`is_demo = true` and never appear in the ops review queue.
