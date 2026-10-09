@@ -1,0 +1,28 @@
+# platform: only BridgePay pods, platform itself, and Traefik (kube-system, for Keycloak).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-namespaces
+  namespace: platform
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: bridgepay } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: platform } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }
+---
+# bridgepay: only itself and Traefik. /internal/** stays cluster-internal by construction.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-trusted-namespaces
+  namespace: bridgepay
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: bridgepay } }
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: kube-system } }

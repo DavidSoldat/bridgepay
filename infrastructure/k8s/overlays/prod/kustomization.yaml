@@ -1,0 +1,127 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Render: kubectl kustomize --load-restrictor LoadRestrictionsNone infrastructure/k8s/overlays/prod
+# Secrets are NOT here: created by hand on the VM (see infrastructure/k8s/README.md, "Production").
+resources:
+  - ../../base
+  - middlewares.yaml
+  - network-policies.yaml
+  - demo-reset.yaml
+# CI rewrites "newTag: latest" to the pushed git SHA before rendering (ci.yml, deploy job).
+images:
+  - { name: ghcr.io/davidsoldat/bridgepay-applicant-service, newTag: latest }
+  - { name: ghcr.io/davidsoldat/bridgepay-application-service, newTag: latest }
+  - { name: ghcr.io/davidsoldat/bridgepay-credit-risk-engine, newTag: latest }
+  - { name: ghcr.io/davidsoldat/bridgepay-mock-credit-bureau, newTag: latest }
+  - { name: ghcr.io/davidsoldat/bridgepay-repayment-reconciliation-service, newTag: latest }
+  - { name: ghcr.io/davidsoldat/bridgepay-notifications-service, newTag: latest }
+  - { name: ghcr.io/davidsoldat/bridgepay-api-gateway, newTag: latest }
+  - { name: ghcr.io/davidsoldat/bridgepay-main-app, newTag: latest }
+  - { name: ghcr.io/davidsoldat/bridgepay-storefront, newTag: latest }
+  - { name: ghcr.io/davidsoldat/bridgepay-landing, newTag: latest }
+generatorOptions:
+  disableNameSuffixHash: true
+configMapGenerator:
+  # Same realm file as local: demo users are public on purpose (landing page), self-service is off.
+  - name: keycloak-realm
+    namespace: platform
+    files:
+      - ../../../keycloak/bridgepay-realm.json
+  - name: bridgepay-env
+    namespace: bridgepay
+    behavior: merge
+    literals:
+      - KEYCLOAK_ISSUER_URI=https://auth.bridgepay.duckdns.org/realms/bridgepay
+  - name: frontend-config
+    namespace: bridgepay
+    behavior: replace
+    literals:
+      - 'config.json={"keycloakUrl": "https://auth.bridgepay.duckdns.org", "paddleClientToken": "test_964bb547230bc1dd3ca093a9dfe"}'
+  - name: landing-config
+    namespace: bridgepay
+    behavior: replace
+    literals:
+      - 'config.json={"storefrontUrl": "https://shop.bridgepay.duckdns.org", "appUrl": "https://app.bridgepay.duckdns.org", "githubUrl": null, "demoLogins": [{"role": "shopper", "username": "shopper1", "password": "shopper1"}, {"role": "ops", "username": "ops1", "password": "ops1"}, {"role": "merchant", "username": "merchant1", "password": "merchant1"}]}'
+patches:
+  # Namespaces are created by hand (cluster-scoped; the CI deploy user has no cluster rights).
+  - target: { kind: Namespace }
+    patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: Namespace
+      metadata: { name: any }
+  # Env patches are strategic merges: entries match by name, so base order doesn't matter.
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata: { name: application-service, namespace: bridgepay }
+      spec:
+        template:
+          spec:
+            containers:
+              - name: application-service
+                env:
+                  # Demo sales history for the merchant dashboard and model page.
+                  - { name: SPRING_FLYWAY_LOCATIONS, value: "classpath:db/migration,classpath:db/demo" }
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata: { name: repayment-reconciliation-service, namespace: bridgepay }
+      spec:
+        template:
+          spec:
+            containers:
+              - name: repayment-reconciliation-service
+                env:
+                  - { name: PADDLE_REQUIRE_CREDENTIALS, value: "true" }
+  - patch: |-
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata: { name: keycloak, namespace: platform }
+      spec:
+        template:
+          spec:
+            containers:
+              - name: keycloak
+                env:
+                  - { name: KC_HOSTNAME, value: "https://auth.bridgepay.duckdns.org" }
+  # Frontend Ingress: real hosts, TLS, redirect + headers. The test ops fail the render if base's rule order changes.
+  - target: { kind: Ingress, name: frontends }
+    patch: |-
+      - { op: test, path: /spec/rules/0/host, value: app.localhost }
+      - { op: test, path: /spec/rules/1/host, value: shop.localhost }
+      - { op: test, path: /spec/rules/2/host, value: localhost }
+      - { op: replace, path: /spec/rules/0/host, value: app.bridgepay.duckdns.org }
+      - { op: replace, path: /spec/rules/1/host, value: shop.bridgepay.duckdns.org }
+      - { op: replace, path: /spec/rules/2/host, value: bridgepay.duckdns.org }
+      - op: add
+        path: /metadata/annotations
+        value:
+          cert-manager.io/cluster-issuer: letsencrypt
+          traefik.ingress.kubernetes.io/router.middlewares: bridgepay-https-redirect@kubernetescrd,bridgepay-security-headers@kubernetescrd
+      - op: add
+        path: /spec/tls
+        value:
+          - { hosts: [app.bridgepay.duckdns.org], secretName: tls-app }
+          - { hosts: [shop.bridgepay.duckdns.org], secretName: tls-shop }
+          - { hosts: [bridgepay.duckdns.org], secretName: tls-landing }
+  # Keycloak Ingress: allowlist. /admin and the master realm are not routed at all.
+  - target: { kind: Ingress, name: keycloak }
+    patch: |-
+      - op: replace
+        path: /spec/rules/0
+        value:
+          host: auth.bridgepay.duckdns.org
+          http:
+            paths:
+              - { path: /realms/bridgepay/, pathType: Prefix, backend: { service: { name: keycloak, port: { number: 8080 } } } }
+              - { path: /resources/, pathType: Prefix, backend: { service: { name: keycloak, port: { number: 8080 } } } }
+      - op: add
+        path: /metadata/annotations
+        value:
+          cert-manager.io/cluster-issuer: letsencrypt
+          traefik.ingress.kubernetes.io/router.middlewares: platform-https-redirect@kubernetescrd
+      - op: add
+        path: /spec/tls
+        value:
+          - { hosts: [auth.bridgepay.duckdns.org], secretName: tls-auth }
