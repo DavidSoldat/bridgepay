@@ -1,8 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { catchError, finalize, map, of } from 'rxjs';
 import { Auth } from '../core/auth';
 import { Applications } from '../checkout/applications';
 import { ApplicationResponse } from '../shared/models/application';
@@ -26,27 +24,40 @@ export class Account {
   private readonly applicationsService = inject(Applications);
 
   protected readonly loadError = signal(false);
+  protected readonly loadMoreError = signal(false);
   protected readonly loading = signal(true);
+  protected readonly hasMore = signal(false);
+  protected readonly rows = signal<ApplicationResponse[]>([]);
   protected readonly expandedId = signal<string | null>(null);
   protected readonly limitRefresh = signal(0);
+  private nextPage = 0;
 
   constructor() {
     if (!this.auth.authenticated()) {
       this.auth.login(`${window.location.origin}/account`);
     }
+    this.load();
   }
 
-  protected readonly rows = toSignal(
-    this.applicationsService.listMine().pipe(
-      map((page) => page.content),
-      catchError(() => {
-        this.loadError.set(true);
-        return of([] as ApplicationResponse[]);
-      }),
-      finalize(() => this.loading.set(false)),
-    ),
-    { initialValue: [] as ApplicationResponse[] },
-  );
+  protected load(): void {
+    const page = this.nextPage;
+    this.loading.set(true);
+    this.loadMoreError.set(false);
+    this.applicationsService.listMine(page).subscribe({
+      next: (result) => {
+        // Dedupe by id: a new order arriving between pages shifts the next page by one.
+        const seen = new Set(this.rows().map((row) => row.applicationId));
+        this.rows.update((rows) => [...rows, ...result.content.filter((row) => !seen.has(row.applicationId))]);
+        this.nextPage = page + 1;
+        this.hasMore.set(page + 1 < result.totalPages);
+        this.loading.set(false);
+      },
+      error: () => {
+        (page === 0 ? this.loadError : this.loadMoreError).set(true);
+        this.loading.set(false);
+      },
+    });
+  }
 
   protected readonly orderIds = computed(() => this.rows().map((row) => row.applicationId));
 

@@ -44,6 +44,12 @@
         </li>
       }
     </ul>
+    @if (loadMoreError()) {
+      <p class="mt-3 text-sm text-declined" role="alert">Could not load more purchases.</p>
+    }
+    @if (hasMore()) {
+      <button type="button" class="btn-secondary mt-4" [disabled]="loading()" (click)="load()">Load more purchases</button>
+    }
   }
 
   <app-activity [orderIds]="orderIds()" [ordersLoaded]="!loading()" (viewOrder)="viewOrder($event)" />

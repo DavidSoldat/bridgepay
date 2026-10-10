@@ -179,4 +179,41 @@ describe('Account', () => {
     expect(Array.from(el.querySelectorAll('button')).filter((b) => b.textContent?.includes('View schedule'))).toHaveLength(2);
     expect(el.querySelector('app-first-payment')).toBeNull();
   });
+
+  it('appends the next page of purchases with Load more, and hides it on the last page', () => {
+    const calls: number[] = [];
+    const pages = [
+      { content: [row('app-1', 'DECLINED')], totalElements: 2, totalPages: 2, number: 0, size: 20 },
+      { content: [row('app-2', 'DECLINED')], totalElements: 2, totalPages: 2, number: 1, size: 20 },
+    ];
+    const fixture = setup(true, (page = 0) => (calls.push(page), of(pages[page])));
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const loadMore = () =>
+      Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Load more purchases') as HTMLButtonElement | undefined;
+
+    expect(el.querySelectorAll('[id^="order-"]').length).toBe(1);
+    loadMore()!.click();
+    fixture.detectChanges();
+
+    expect(calls).toEqual([0, 1]);
+    expect(Array.from(el.querySelectorAll('[id^="order-"]')).map((li) => li.id)).toEqual(['order-app-1', 'order-app-2']);
+    expect(loadMore()).toBeUndefined();
+  });
+
+  it('keeps the loaded purchases and says so when Load more fails', () => {
+    const fixture = setup(true, (page = 0) =>
+      page === 0
+        ? of({ content: [row('app-1', 'DECLINED')], totalElements: 2, totalPages: 2, number: 0, size: 20 })
+        : throwError(() => new Error('500')),
+    );
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    (Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.trim() === 'Load more purchases') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(el.querySelector('#order-app-1')).not.toBeNull();
+    expect(el.textContent).toContain('Could not load more purchases.');
+    expect(el.textContent).not.toContain('Could not load your purchases.');
+  });
 });
