@@ -126,5 +126,14 @@ restarts them (so a pod a concurrent deploy started before the drop is replaced)
 sudo k3s kubectl -n bridgepay create job --from=cronjob/demo-reset demo-reset-manual
 ```
 
+### Database logins
+
+In prod each database-backed service (and Keycloak) logs in as its own non-superuser role that owns only
+its schema: `applicant_service`, `application_service`, `repayment_reconciliation_service`,
+`notifications_service`, `api_gateway` (schema `audit`), `keycloak`. Credentials are hand-made Secrets
+`db-<deployment>` (`DB_USERNAME`/`DB_PASSWORD`) in the service's namespace. The roles can't create schemas;
+the superuser (`bridgepay-credentials`, used only by `demo-reset`) creates them owned by the right role.
+Local compose and k3d still use the superuser.
+
 If it fails part-way, the services may stay at 0:
 `sudo k3s kubectl -n bridgepay scale deploy applicant-service application-service repayment-reconciliation-service notifications-service api-gateway --replicas=1`.

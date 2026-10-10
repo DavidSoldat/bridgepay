@@ -92,6 +92,33 @@ patches:
                   - { name: KC_HOSTNAME, value: "https://auth.bridgepay.duckdns.org" }
                   # Admin console only via `kubectl port-forward` (/admin is not on the Ingress).
                   - { name: KC_HOSTNAME_ADMIN, value: "http://localhost:8080" }
+                  # Own login owning only the keycloak schema (see "Database logins" in the README).
+                  - name: KC_DB_USERNAME
+                    valueFrom: { secretKeyRef: { name: db-keycloak, key: DB_USERNAME } }
+                  - name: KC_DB_PASSWORD
+                    valueFrom: { secretKeyRef: { name: db-keycloak, key: DB_PASSWORD } }
+  # One non-superuser login per service, owning only its schema (hand-made db-<deployment> Secrets).
+  # The test op fails the render if base's envFrom order changes.
+  - target: { kind: Deployment, name: applicant-service }
+    patch: |-
+      - { op: test, path: /spec/template/spec/containers/0/envFrom/1/secretRef/name, value: bridgepay-credentials }
+      - { op: replace, path: /spec/template/spec/containers/0/envFrom/1/secretRef/name, value: db-applicant-service }
+  - target: { kind: Deployment, name: application-service }
+    patch: |-
+      - { op: test, path: /spec/template/spec/containers/0/envFrom/1/secretRef/name, value: bridgepay-credentials }
+      - { op: replace, path: /spec/template/spec/containers/0/envFrom/1/secretRef/name, value: db-application-service }
+  - target: { kind: Deployment, name: repayment-reconciliation-service }
+    patch: |-
+      - { op: test, path: /spec/template/spec/containers/0/envFrom/1/secretRef/name, value: bridgepay-credentials }
+      - { op: replace, path: /spec/template/spec/containers/0/envFrom/1/secretRef/name, value: db-repayment-reconciliation-service }
+  - target: { kind: Deployment, name: notifications-service }
+    patch: |-
+      - { op: test, path: /spec/template/spec/containers/0/envFrom/1/secretRef/name, value: bridgepay-credentials }
+      - { op: replace, path: /spec/template/spec/containers/0/envFrom/1/secretRef/name, value: db-notifications-service }
+  - target: { kind: Deployment, name: api-gateway }
+    patch: |-
+      - { op: test, path: /spec/template/spec/containers/0/envFrom/1/secretRef/name, value: bridgepay-credentials }
+      - { op: replace, path: /spec/template/spec/containers/0/envFrom/1/secretRef/name, value: db-api-gateway }
   # Frontend Ingress: real hosts, TLS, redirect + headers. The test ops fail the render if base's rule order changes.
   - target: { kind: Ingress, name: frontends }
     patch: |-

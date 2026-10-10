@@ -19,7 +19,8 @@ metadata: { name: demo-reset, namespace: bridgepay }
 subjects: [{ kind: ServiceAccount, name: demo-reset, namespace: bridgepay }]
 roleRef: { apiGroup: rbac.authorization.k8s.io, kind: Role, name: demo-reset }
 ---
-# Public demo: erase everything visitors typed, nightly. Flyway re-creates schemas and seeds on start.
+# Public demo: erase everything visitors typed, nightly. The superuser re-creates each schema empty and owned
+# by its service's login (which can't create schemas itself); Flyway re-creates the tables and seeds on start.
 # keycloak schema untouched (fixed demo users). Kafka untouched (offsets committed; consumers skip unknown ids).
 # ponytail: if a step fails after scale-down, the 5 services stay at 0 until a retry succeeds
 # (backoffLimit 2); a job that gives up leaves the demo down until the next night or a manual
@@ -56,6 +57,11 @@ spec:
                 - >-
                   PGPASSWORD="$DB_PASSWORD" psql -v ON_ERROR_STOP=1 -h postgres.platform -U "$DB_USERNAME" -d bridgepay
                   -c 'DROP SCHEMA IF EXISTS applicant, application, repayment, notifications, audit CASCADE'
+                  -c 'CREATE SCHEMA applicant AUTHORIZATION applicant_service'
+                  -c 'CREATE SCHEMA application AUTHORIZATION application_service'
+                  -c 'CREATE SCHEMA repayment AUTHORIZATION repayment_reconciliation_service'
+                  -c 'CREATE SCHEMA notifications AUTHORIZATION notifications_service'
+                  -c 'CREATE SCHEMA audit AUTHORIZATION api_gateway'
             - name: flush-redis
               image: redis:7-alpine
               command: [redis-cli, -h, redis.platform, FLUSHALL]
