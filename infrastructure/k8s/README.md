@@ -131,8 +131,10 @@ sudo k3s kubectl -n bridgepay create job --from=cronjob/demo-reset demo-reset-ma
 In prod each database-backed service (and Keycloak) logs in as its own non-superuser role that owns only
 its schema: `applicant_service`, `application_service`, `repayment_reconciliation_service`,
 `notifications_service`, `api_gateway` (schema `audit`), `keycloak`. Credentials are hand-made Secrets
-`db-<deployment>` (`DB_USERNAME`/`DB_PASSWORD`) in the service's namespace. The roles can't create schemas;
-the superuser (`bridgepay-credentials`, used only by `demo-reset`) creates them owned by the right role.
+`db-<deployment>` (`DB_USERNAME`/`DB_PASSWORD`) in the service's namespace. The roles have CREATE on the
+`bridgepay` database (the Flyway V1s run `CREATE SCHEMA IF NOT EXISTS`, which Postgres checks against the
+database even when the schema exists) but no access to each other's schemas. The superuser
+(`bridgepay-credentials`, used only by `demo-reset`) re-creates the schemas owned by the right role.
 Local compose and k3d still use the superuser.
 
 If it fails part-way, the services may stay at 0:
