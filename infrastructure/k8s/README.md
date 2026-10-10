@@ -59,8 +59,11 @@ the `deploy` user. Its key is `restrict,command="/usr/local/bin/bridgepay-deploy
 every rollout. Its kubeconfig is a ServiceAccount bound to `admin` in `platform` and `bridgepay` only
 (both namespaces enforce Pod Security `baseline`, so it can't run privileged or hostPath pods).
 
-Rollback: re-run an older green run's `deploy` job. The deploy never prunes; delete removed
-resources by hand.
+Rollback: re-run an older green run's `deploy` job. The deploy prunes: an object labeled
+`app.kubernetes.io/managed-by=bridgepay-ci` (the prod overlay labels everything it renders) that is no
+longer in the manifests is deleted, for the kinds on the script's allowlist. Secrets and PVCs are not on
+it, so removing one of those is still a manual `kubectl delete`. The script lives on the VM, not in the
+image: after changing it, copy it to `/usr/local/bin/bridgepay-deploy` by hand.
 
 ### One-time host setup (already done)
 

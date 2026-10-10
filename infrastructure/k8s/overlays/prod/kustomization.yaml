@@ -7,6 +7,11 @@ resources:
   - middlewares.yaml
   - network-policies.yaml
   - demo-reset.yaml
+# Marks everything CI deploys; prod-host/bridgepay-deploy prunes only objects carrying it.
+# Selectors untouched: Deployment selectors are immutable.
+labels:
+  - pairs: { app.kubernetes.io/managed-by: bridgepay-ci }
+    includeSelectors: false
 # CI rewrites "newTag: latest" to the pushed git SHA before rendering (ci.yml, deploy job).
 images:
   - { name: ghcr.io/davidsoldat/bridgepay-applicant-service, newTag: latest }
