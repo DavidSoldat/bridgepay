@@ -12,6 +12,9 @@ import tools.jackson.databind.ObjectMapper;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -31,7 +34,8 @@ class PaddleWebhookControllerTest {
     @Mock
     private PaddleWebhookService webhookService;
 
-    private final PaddleSignatureVerifier verifier = new PaddleSignatureVerifier(SECRET);
+    private final PaddleSignatureVerifier verifier = new PaddleSignatureVerifier(SECRET,
+            Clock.fixed(Instant.ofEpochSecond(1700000000), ZoneOffset.UTC));
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private String sign(String timestamp, String body) throws Exception {

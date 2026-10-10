@@ -1,5 +1,6 @@
 package com.bridgepay.repayment.web;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -7,6 +8,7 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,15 +17,25 @@ import java.util.Map;
  * "Paddle-Signature: ts=<unix>;h1=<hex>", the signed payload is the literal
  * string "{ts}:{rawBody}", hashed with HMAC-SHA256 against the webhook
  * secret. Comparison is timing-safe (MessageDigest.isEqual), same guard
- * Paddle's own docs recommend.
+ * Paddle's own docs recommend. A ts more than 5 s from now is refused, so a
+ * captured request can't be replayed later; Paddle signs each retry afresh.
  */
 @Component
 public class PaddleSignatureVerifier {
 
-    private final String webhookSecret;
+    private static final long TOLERANCE_SECONDS = 5;
 
+    private final String webhookSecret;
+    private final Clock clock;
+
+    @Autowired
     public PaddleSignatureVerifier(@Value("${paddle.webhook-secret}") String webhookSecret) {
+        this(webhookSecret, Clock.systemUTC());
+    }
+
+    PaddleSignatureVerifier(String webhookSecret, Clock clock) {
         this.webhookSecret = webhookSecret;
+        this.clock = clock;
     }
 
     public boolean verify(String signatureHeader, String rawBody) {
@@ -33,7 +45,7 @@ public class PaddleSignatureVerifier {
         Map<String, String> parts = parseHeader(signatureHeader);
         String timestamp = parts.get("ts");
         String providedHash = parts.get("h1");
-        if (timestamp == null || providedHash == null) {
+        if (timestamp == null || providedHash == null || !isFresh(timestamp)) {
             return false;
         }
 
@@ -41,6 +53,14 @@ public class PaddleSignatureVerifier {
         return MessageDigest.isEqual(
                 expectedHash.getBytes(StandardCharsets.UTF_8),
                 providedHash.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private boolean isFresh(String timestamp) {
+        try {
+            return Math.abs(clock.instant().getEpochSecond() - Long.parseLong(timestamp)) <= TOLERANCE_SECONDS;
+        } catch (NumberFormatException ex) {
+            return false;
+        }
     }
 
     private static Map<String, String> parseHeader(String header) {
