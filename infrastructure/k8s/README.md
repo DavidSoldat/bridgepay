@@ -119,8 +119,8 @@ generates its own on first import.
 The landing page publishes the demo logins. Demo users can't change their password or profile
 (no account roles), and the storefront signup says not to enter real details. A CronJob,
 `bridgepay/demo-reset`, runs at 03:00 UTC: it scales the five database-backed services to 0, drops
-their schemas (`applicant`, `application`, `repayment`, `notifications`, `audit`), flushes Redis and
-scales back up; Flyway re-creates the schemas and the demo seed. Run it now:
+their schemas (`applicant`, `application`, `repayment`, `notifications`, `audit`), flushes Redis,
+restarts them (so a pod a concurrent deploy started before the drop is replaced) and scales back up; Flyway re-creates the schemas and the demo seed. Run it now:
 
 ```sh
 sudo k3s kubectl -n bridgepay create job --from=cronjob/demo-reset demo-reset-manual

@@ -41,11 +41,11 @@ spec:
           # registry.k8s.io/kubectl is distroless (no shell): each kubectl step is its own container.
           initContainers:
             - name: scale-down
-              image: registry.k8s.io/kubectl:v1.33.0
+              image: registry.k8s.io/kubectl:v1.36.5
               args: [scale, deploy, applicant-service, application-service, repayment-reconciliation-service,
                      notifications-service, api-gateway, --replicas=0]
             - name: wait-for-pods-gone
-              image: registry.k8s.io/kubectl:v1.33.0
+              image: registry.k8s.io/kubectl:v1.36.5
               args: [wait, --for=delete, pod, --timeout=180s,
                      -l, "app in (applicant-service,application-service,repayment-reconciliation-service,notifications-service,api-gateway)"]
             - name: drop-schemas
@@ -59,8 +59,15 @@ spec:
             - name: flush-redis
               image: redis:7-alpine
               command: [redis-cli, -h, redis.platform, FLUSHALL]
+            # A deploy during the reset re-applies replicas: 1, so a pod can start (and run Flyway)
+            # before the drop and keep running on dropped tables. Restarting after the drop replaces it;
+            # every pod from here on starts on empty schemas.
+            - name: restart
+              image: registry.k8s.io/kubectl:v1.36.5
+              args: [rollout, restart, deploy, applicant-service, application-service, repayment-reconciliation-service,
+                     notifications-service, api-gateway]
           containers:
             - name: scale-up
-              image: registry.k8s.io/kubectl:v1.33.0
+              image: registry.k8s.io/kubectl:v1.36.5
               args: [scale, deploy, applicant-service, application-service, repayment-reconciliation-service,
                      notifications-service, api-gateway, --replicas=1]
