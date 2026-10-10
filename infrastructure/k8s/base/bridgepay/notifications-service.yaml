@@ -21,16 +21,21 @@ spec:
           envFrom:
             - configMapRef: { name: bridgepay-env }
             - secretRef: { name: bridgepay-credentials }
+          # 5 s timeouts (default 1 s): on a cold start beside every other service, the Kafka consumer-group
+          # rebalance pegs ~1 CPU and health checks took >1 s, so the kubelet kept killing a healthy pod.
           startupProbe:
             httpGet: { path: /actuator/health/liveness, port: 8085 }
+            timeoutSeconds: 5
             periodSeconds: 5
             failureThreshold: 30
           livenessProbe:
             httpGet: { path: /actuator/health/liveness, port: 8085 }
             periodSeconds: 10
+            timeoutSeconds: 5
           readinessProbe:
             httpGet: { path: /actuator/health/readiness, port: 8085 }
             periodSeconds: 5
+            timeoutSeconds: 5
           # Above spec section 13's 256Mi/384Mi: measured ~360Mi at idle on k3d, and the
           # Dockerfile's MaxRAMPercentage=75 leaves too little non-heap room at 384Mi.
           resources:
