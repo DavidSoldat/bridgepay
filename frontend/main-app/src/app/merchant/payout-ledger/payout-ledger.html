@@ -36,3 +36,11 @@
     </table>
   }
 </div>
+
+@if (!loadError() && rows().length > 0) {
+  <div class="mt-4 flex items-center justify-between text-sm">
+    <button type="button" (click)="prevPage()" [disabled]="page() === 0" class="btn-secondary">Prev</button>
+    <span class="font-mono text-ink-muted">Page {{ page() + 1 }} of {{ totalPages() || 1 }}</span>
+    <button type="button" (click)="nextPage()" [disabled]="page() + 1 >= totalPages()" class="btn-secondary">Next</button>
+  </div>
+}

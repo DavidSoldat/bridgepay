@@ -1,10 +1,9 @@
-import { Component, inject, signal } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
+import { Component, computed, inject, signal } from '@angular/core';
+import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { DatePipe, DecimalPipe } from '@angular/common';
-import { catchError, finalize, map, of } from 'rxjs';
+import { catchError, finalize, of, switchMap } from 'rxjs';
 import { Payouts } from '../payouts';
 import { Auth } from '../../core/auth';
-import { MerchantPayoutResponse } from '../../shared/models/merchant-payout';
 import { StatusBadge } from '../../shared/ui/status-badge/status-badge';
 import { EmptyState } from '../../shared/ui/empty-state/empty-state';
 import { SkeletonRows } from '../../shared/ui/skeleton-rows/skeleton-rows';
@@ -19,18 +18,37 @@ export class PayoutLedger {
   private readonly payouts = inject(Payouts);
   private readonly auth = inject(Auth);
 
+  private readonly merchantId = this.auth.merchantId() ?? '';
+
   protected readonly loadError = signal(false);
   protected readonly loading = signal(true);
+  protected readonly page = signal(0);
 
-  protected readonly rows = toSignal(
-    this.payouts.listPayouts(this.auth.merchantId() ?? '').pipe(
-      map((page) => page.content),
-      catchError(() => {
-        this.loadError.set(true);
-        return of([] as MerchantPayoutResponse[]);
+  private readonly result = toSignal(
+    toObservable(this.page).pipe(
+      switchMap((page) => {
+        this.loadError.set(false);
+        this.loading.set(true);
+        return this.payouts.listPayouts(this.merchantId, page).pipe(
+          catchError(() => {
+            this.loadError.set(true);
+            return of(null);
+          }),
+          finalize(() => this.loading.set(false)),
+        );
       }),
-      finalize(() => this.loading.set(false)),
     ),
-    { initialValue: [] as MerchantPayoutResponse[] },
+    { initialValue: null },
   );
+
+  protected readonly rows = computed(() => this.result()?.content ?? []);
+  protected readonly totalPages = computed(() => this.result()?.totalPages ?? 0);
+
+  protected prevPage(): void {
+    this.page.update((p) => Math.max(0, p - 1));
+  }
+
+  protected nextPage(): void {
+    this.page.update((p) => p + 1);
+  }
 }

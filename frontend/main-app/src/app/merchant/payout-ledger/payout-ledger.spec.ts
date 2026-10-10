@@ -126,5 +126,35 @@ describe('PayoutLedger', () => {
     expect(el.querySelector('tbody td')?.classList).toContain('line-through');
     expect(el.textContent).toContain('Refunded');
   });
-});
 
+  it('pages forward with Next and disables Prev on the first page and Next on the last', () => {
+    const calls: number[] = [];
+    const pageOf = (n: number): Page<MerchantPayoutResponse> => ({
+      content: [{ id: `p-${n}`, applicationId: `a-${n}`, amount: 10 + n, feeAmount: 1, status: 'PAID', paidAt: null }],
+      totalElements: 2, totalPages: 2, number: n, size: 20,
+    });
+    TestBed.configureTestingModule({
+      imports: [PayoutLedger],
+      providers: [
+        { provide: Payouts, useValue: { listPayouts: (_id: string, page: number) => (calls.push(page), of(pageOf(page))) } },
+        { provide: Auth, useValue: { merchantId: () => 'm-1' } },
+      ],
+    });
+    const fixture = TestBed.createComponent(PayoutLedger);
+    fixture.detectChanges();
+    const el = fixture.nativeElement as HTMLElement;
+    const button = (label: string) =>
+      Array.from(el.querySelectorAll('button')).find((b) => b.textContent?.trim() === label) as HTMLButtonElement;
+
+    expect(el.textContent).toContain('Page 1 of 2');
+    expect(button('Prev').disabled).toBe(true);
+    button('Next').click();
+    fixture.detectChanges();
+
+    expect(calls).toEqual([0, 1]);
+    expect(el.textContent).toContain('11.00');
+    expect(el.textContent).toContain('Page 2 of 2');
+    expect(button('Next').disabled).toBe(true);
+    expect(button('Prev').disabled).toBe(false);
+  });
+});
